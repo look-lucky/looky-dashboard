@@ -1,0 +1,116 @@
+import { useState, useEffect } from 'react';
+import { Plus, School } from 'lucide-react';
+import { OrganizationList } from '../features/organizations/OrganizationList';
+import { OrganizationModal } from '../features/organizations/OrganizationModal';
+import { UniversityService } from '../shared/api/services/UniversityService';
+import type { UniversityResponse } from '../shared/api/models/UniversityResponse';
+import type { OrganizationResponse } from '../shared/api/models/OrganizationResponse';
+
+export function OrganizationPage() {
+    const [universities, setUniversities] = useState<UniversityResponse[]>([]);
+    const [selectedUniversityId, setSelectedUniversityId] = useState<number | null>(null);
+    const [showModal, setShowModal] = useState(false);
+    const [selectedOrg, setSelectedOrg] = useState<OrganizationResponse | null>(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    useEffect(() => {
+        async function fetchUniversities() {
+            try {
+                const response = await UniversityService.getUniversities();
+                if (response.data) {
+                    setUniversities(response.data);
+                    if (response.data.length > 0) {
+                        setSelectedUniversityId(response.data[0].id || null);
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        fetchUniversities();
+    }, []);
+
+    const handleEdit = (org: OrganizationResponse) => {
+        setSelectedOrg(org);
+        setShowModal(true);
+    };
+
+    const handleCreate = () => {
+        if (!selectedUniversityId) {
+            alert('대학을 먼저 선택해주세요.');
+            return;
+        }
+        setSelectedOrg(null);
+        setShowModal(true);
+    };
+
+    const handleSuccess = () => {
+        setShowModal(false);
+        setRefreshTrigger(prev => prev + 1);
+    };
+
+    const handleClose = () => {
+        setShowModal(false);
+        setSelectedOrg(null);
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h1 className="text-2xl font-bold text-gray-900">소속/단체 관리</h1>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleCreate}
+                        disabled={!selectedUniversityId}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                        <Plus className="-ml-1 mr-2 h-4 w-4" />
+                        소속 등록
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">대학 선택</label>
+                    <div className="relative">
+                        <select
+                            value={selectedUniversityId || ''}
+                            onChange={(e) => setSelectedUniversityId(Number(e.target.value))}
+                            className="block w-full pl-10 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+                        >
+                            <option value="" disabled>대학을 선택하세요</option>
+                            {universities.map((uni) => (
+                                <option key={uni.id} value={uni.id}>{uni.name}</option>
+                            ))}
+                        </select>
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <School className="w-5 h-5 text-gray-400" />
+                        </div>
+                    </div>
+                </div>
+
+                {selectedUniversityId ? (
+                    <OrganizationList
+                        universityId={selectedUniversityId}
+                        refreshTrigger={refreshTrigger}
+                        onEdit={handleEdit}
+                    />
+                ) : (
+                    <div className="text-center py-12 text-gray-500">
+                        관리할 대학을 선택해주세요.
+                    </div>
+                )}
+            </div>
+
+            {showModal && selectedUniversityId && (
+                <OrganizationModal
+                    universityId={selectedUniversityId}
+                    onClose={handleClose}
+                    onSuccess={handleSuccess}
+                    initialData={selectedOrg}
+                />
+            )}
+        </div>
+    );
+}
