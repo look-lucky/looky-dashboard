@@ -4,10 +4,12 @@ import { HomePage } from '../pages/HomePage';
 import { StoreReviewPage } from '../pages/StoreReviewPage';
 import { CommercialAreaPage } from '../pages/CommercialAreaPage';
 import { PartnershipPage } from '../pages/PartnershipPage';
-import { UniversityPage } from '../pages/UniversityPage';
-import { OrganizationPage } from '../pages/OrganizationPage';
+import { UniversityOrgPage } from '../pages/UniversityOrgPage';
+import { EventPage } from '../pages/EventPage';
 import { LoginPage } from '../pages/LoginPage';
 import { AuthGuard } from '../widgets/auth/AuthGuard';
+import { UniversityProvider } from '../shared/contexts/UniversityContext';
+import { UniversityLayout } from '../widgets/layout/UniversityLayout';
 
 function App() {
     return (
@@ -17,11 +19,18 @@ function App() {
                 <Route element={<AuthGuard />}>
                     <Route path="/" element={<DashboardLayout />}>
                         <Route index element={<HomePage />} />
+                        <Route path="universities" element={<UniversityOrgPage />} />
                         <Route path="reviews" element={<StoreReviewPage />} />
-                        <Route path="commercial-areas" element={<CommercialAreaPage />} />
-                        <Route path="partnerships" element={<PartnershipPage />} />
-                        <Route path="universities" element={<UniversityPage />} />
-                        <Route path="organizations" element={<OrganizationPage />} />
+
+                        <Route element={
+                            <UniversityProvider>
+                                <UniversityLayout />
+                            </UniversityProvider>
+                        }>
+                            <Route path="events" element={<EventPage />} />
+                            <Route path="partnerships" element={<PartnershipPage />} />
+                            <Route path="commercial-areas" element={<CommercialAreaPage />} />
+                        </Route>
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>
                 </Route>

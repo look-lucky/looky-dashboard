@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StoreClaimService } from '../../shared/api/services/StoreClaimService';
 import { StoreClaimResponse } from '../../shared/api/models/StoreClaimResponse';
-import { Building2, User } from 'lucide-react';
+import { Building2, User, Search } from 'lucide-react';
 import clsx from 'clsx';
 import { StoreClaimDetailModal } from './StoreClaimDetailModal';
 
@@ -13,6 +13,13 @@ export function StoreClaimList({ status }: StoreClaimListProps) {
     const [claims, setClaims] = useState<StoreClaimResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedClaim, setSelectedClaim] = useState<StoreClaimResponse | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredClaims = claims.filter(claim =>
+        claim.storeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        claim.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        claim.bizRegNo?.includes(searchTerm)
+    );
 
     useEffect(() => {
         fetchClaims();
@@ -51,6 +58,19 @@ export function StoreClaimList({ status }: StoreClaimListProps) {
                     </div>
                 )}
 
+                <div className="p-4 border-b border-gray-100">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="상점명, 신청자 또는 사업자번호 검색..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                        />
+                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    </div>
+                </div>
+
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
@@ -63,14 +83,14 @@ export function StoreClaimList({ status }: StoreClaimListProps) {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {claims.length === 0 ? (
+                        {filteredClaims.length === 0 ? (
                             <tr>
                                 <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                                    데이터가 없습니다.
+                                    {searchTerm ? '검색 결과가 없습니다.' : '데이터가 없습니다.'}
                                 </td>
                             </tr>
                         ) : (
-                            claims.map((claim) => (
+                            filteredClaims.map((claim) => (
                                 <tr key={claim.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedClaim(claim)}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">

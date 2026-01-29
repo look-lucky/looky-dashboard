@@ -2,13 +2,23 @@ import { useState } from 'react';
 import { CommercialAreaUpload } from '../features/commercial-area/CommercialAreaUpload';
 import { StoreManualRegistrationModal } from '../features/commercial-area/StoreManualRegistrationModal';
 import { Plus } from 'lucide-react';
+import { useUniversity } from '../shared/contexts/UniversityContext';
 
 export function CommercialAreaPage() {
+    const { selectedUniversityId } = useUniversity();
     const [showManualModal, setShowManualModal] = useState(false);
 
     const handleUploadSuccess = () => {
         alert('업로드가 성공적으로 완료되었습니다.');
     };
+
+    if (!selectedUniversityId) {
+        return (
+            <div className="flex items-center justify-center h-full text-gray-500">
+                상권을 관리할 대학을 선택해주세요.
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -30,6 +40,7 @@ export function CommercialAreaPage() {
                     <p>상권 분석 데이터와 상점 정보를 포함한 엑셀 파일을 업로드해주세요.</p>
                     <p>업로드가 완료되면 데이터가 즉시 반영됩니다.</p>
                 </div>
+                {/* TODO: If upload needs universityId, pass it here */}
                 <CommercialAreaUpload onSuccess={handleUploadSuccess} />
             </div>
 

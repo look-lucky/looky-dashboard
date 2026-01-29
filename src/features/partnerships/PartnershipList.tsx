@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react';
+import { Trash2, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { PartnershipService } from '../../shared/api/services/PartnershipService';
 import type { PartnershipResponse } from '../../shared/api/models/PartnershipResponse';
@@ -11,6 +11,13 @@ interface PartnershipListProps {
 export function PartnershipList({ universityId, refreshTrigger }: PartnershipListProps) {
     const [partnerships, setPartnerships] = useState<PartnershipResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredPartnerships = partnerships.filter(p =>
+        p.organizationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.benefit?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     useEffect(() => {
         if (universityId) {
@@ -49,50 +56,63 @@ export function PartnershipList({ universityId, refreshTrigger }: PartnershipLis
     }
 
     return (
-        <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                    <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">대상 조직</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">구분</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">혜택 내용</th>
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                    {partnerships.length === 0 ? (
+        <div className="space-y-4">
+            <div className="relative">
+                <input
+                    type="text"
+                    placeholder="조직명, 분류 또는 혜택 내용 검색..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                />
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
                         <tr>
-                            <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                                등록된 제휴 혜택이 없습니다.
-                            </td>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">대상 조직</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">구분</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">혜택 내용</th>
+                            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                         </tr>
-                    ) : (
-                        partnerships.map((partnership) => (
-                            <tr key={partnership.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {partnership.organizationName}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {partnership.category}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-500">
-                                    {partnership.benefit}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button
-                                        onClick={() => partnership.id && handleDelete(partnership.id)}
-                                        className="text-red-600 hover:text-red-900 transition-colors p-2 hover:bg-red-50 rounded-full"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredPartnerships.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                    {searchTerm ? '검색 결과가 없습니다.' : '등록된 제휴 혜택이 없습니다.'}
                                 </td>
                             </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
+                        ) : (
+                            filteredPartnerships.map((partnership) => (
+                                <tr key={partnership.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                        {partnership.organizationName}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {partnership.category}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                        {partnership.benefit}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button
+                                            onClick={() => partnership.id && handleDelete(partnership.id)}
+                                            className="text-red-600 hover:text-red-900 transition-colors p-2 hover:bg-red-50 rounded-full"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

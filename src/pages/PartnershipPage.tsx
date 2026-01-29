@@ -1,33 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PartnershipList } from '../features/partnerships/PartnershipList';
 import { PartnershipUpload } from '../features/partnerships/PartnershipUpload';
 import { PartnershipCreateModal } from '../features/partnerships/PartnershipCreateModal';
-import { Plus, School } from 'lucide-react';
-import { UniversityService } from '../shared/api/services/UniversityService';
-import type { UniversityResponse } from '../shared/api/models/UniversityResponse';
+import { Plus } from 'lucide-react';
+import { useUniversity } from '../shared/contexts/UniversityContext';
 
 export function PartnershipPage() {
-    const [universities, setUniversities] = useState<UniversityResponse[]>([]);
-    const [selectedUniversityId, setSelectedUniversityId] = useState<number | null>(null);
+    const { selectedUniversityId } = useUniversity();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-    useEffect(() => {
-        async function fetchUniversities() {
-            try {
-                const response = await UniversityService.getUniversities();
-                if (response.data) {
-                    setUniversities(response.data);
-                    if (response.data.length > 0) {
-                        setSelectedUniversityId(response.data[0].id || null);
-                    }
-                }
-            } catch (error) {
-                console.error(error);
-            }
-        }
-        fetchUniversities();
-    }, []);
 
     const handleCreateSuccess = () => {
         setRefreshTrigger(prev => prev + 1);
@@ -59,25 +40,6 @@ export function PartnershipPage() {
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">대학 선택</label>
-                    <div className="relative">
-                        <select
-                            value={selectedUniversityId || ''}
-                            onChange={(e) => setSelectedUniversityId(Number(e.target.value))}
-                            className="block w-full pl-10 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
-                        >
-                            <option value="" disabled>대학을 선택하세요</option>
-                            {universities.map((uni) => (
-                                <option key={uni.id} value={uni.id}>{uni.name}</option>
-                            ))}
-                        </select>
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <School className="w-5 h-5 text-gray-400" />
-                        </div>
-                    </div>
-                </div>
-
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">제휴 혜택 일괄 등록 (Excel)</h2>
                 <PartnershipUpload
                     universityId={selectedUniversityId}

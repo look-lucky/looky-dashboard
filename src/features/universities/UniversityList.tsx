@@ -6,9 +6,11 @@ import type { UniversityResponse } from '../../shared/api/models/UniversityRespo
 interface UniversityListProps {
     refreshTrigger: number;
     onEdit: (university: UniversityResponse) => void;
+    onSelect?: (university: UniversityResponse) => void;
+    selectedId?: number;
 }
 
-export function UniversityList({ refreshTrigger, onEdit }: UniversityListProps) {
+export function UniversityList({ refreshTrigger, onEdit, onSelect, selectedId }: UniversityListProps) {
     const [universities, setUniversities] = useState<UniversityResponse[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -22,6 +24,8 @@ export function UniversityList({ refreshTrigger, onEdit }: UniversityListProps) 
             const response = await UniversityService.getUniversities();
             if (response.data) {
                 setUniversities(response.data);
+                // Auto-select first one if none selected and onSelect provided? 
+                // Let's leave that to parent if desired.
             }
         } catch (error) {
             console.error('Failed to fetch universities', error);
@@ -55,25 +59,28 @@ export function UniversityList({ refreshTrigger, onEdit }: UniversityListProps) 
             <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">대학명</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이메일 도메인</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">도메인</th>
                         <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                     </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                     {universities.map((uni) => (
-                        <tr key={uni.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                #{uni.id}
-                            </td>
+                        <tr
+                            key={uni.id}
+                            onClick={() => onSelect && onSelect(uni)}
+                            className={`transition-colors cursor-pointer ${selectedId === uni.id ? 'bg-blue-50' : 'hover:bg-gray-50'
+                                }`}
+                        >
                             <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-blue-100 rounded-full text-blue-600">
-                                        <School className="w-5 h-5" />
+                                    <div className={`flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full ${selectedId === uni.id ? 'bg-blue-200 text-blue-700' : 'bg-gray-100 text-gray-500'
+                                        }`}>
+                                        <School className="w-4 h-4" />
                                     </div>
-                                    <div className="ml-4">
-                                        <div className="text-sm font-medium text-gray-900">{uni.name}</div>
+                                    <div className="ml-3">
+                                        <div className={`text-sm font-medium ${selectedId === uni.id ? 'text-blue-900' : 'text-gray-900'
+                                            }`}>{uni.name}</div>
                                     </div>
                                 </div>
                             </td>
@@ -82,13 +89,13 @@ export function UniversityList({ refreshTrigger, onEdit }: UniversityListProps) 
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button
-                                    onClick={() => onEdit(uni)}
+                                    onClick={(e) => { e.stopPropagation(); onEdit(uni); }}
                                     className="text-blue-600 hover:text-blue-900 mr-3"
                                 >
                                     <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
-                                    onClick={() => uni.id && handleDelete(uni.id)}
+                                    onClick={(e) => { e.stopPropagation(); uni.id && handleDelete(uni.id); }}
                                     className="text-red-600 hover:text-red-900"
                                 >
                                     <Trash2 className="w-4 h-4" />
