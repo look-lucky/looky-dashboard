@@ -35,7 +35,7 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
         try {
             // Using AdminPartnershipService for partnership upload
             // Note: organizationId query param is optional in the API, assuming excel has required columns
-            await AdminPartnershipService.uploadPartnershipData1(undefined, { file });
+            await AdminPartnershipService.uploadPartnershipData(undefined, { file });
             setFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
@@ -58,7 +58,7 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
 
         setLoadingTemplate(true);
         try {
-            const blob = await AdminPartnershipService.exportPartnershipTemplate1(universityId);
+            const blob = await AdminPartnershipService.exportPartnershipTemplate(universityId);
 
             // Create blob url and download
             // Note: generated service returns string (binary), but axios might return it as data.

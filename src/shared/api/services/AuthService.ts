@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CommonResponseBoolean } from '../models/CommonResponseBoolean';
 import type { CommonResponseLoginResponse } from '../models/CommonResponseLoginResponse';
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
@@ -10,6 +11,7 @@ import type { CouncilSignupRequest } from '../models/CouncilSignupRequest';
 import type { LoginRequest } from '../models/LoginRequest';
 import type { OwnerSignupRequest } from '../models/OwnerSignupRequest';
 import type { StudentSignupRequest } from '../models/StudentSignupRequest';
+import type { WithdrawRequest } from '../models/WithdrawRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -149,6 +151,45 @@ export class AuthService {
                 400: `잘못된 요청`,
                 404: `사용자 없음`,
                 409: `이미 존재하는 소셜 정보`,
+            },
+        });
+    }
+    /**
+     * [공통] 아이디 중복 확인
+     * 아이디 사용 가능 여부를 확인합니다. (true: 사용 가능, false: 중복)
+     * @param username
+     * @returns CommonResponseBoolean OK
+     * @throws ApiError
+     */
+    public static checkUsernameAvailability(
+        username: string,
+    ): CancelablePromise<CommonResponseBoolean> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/auth/check-username',
+            query: {
+                'username': username,
+            },
+        });
+    }
+    /**
+     * [공통] 회원 탈퇴
+     * 회원을 탈퇴 처리합니다. (Soft Delete)
+     * @param requestBody
+     * @returns void
+     * @throws ApiError
+     */
+    public static withdraw(
+        requestBody: WithdrawRequest,
+    ): CancelablePromise<void> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/auth/withdraw',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `잘못된 요청 (기타 사유 미입력 등)`,
+                401: `인증 실패`,
             },
         });
     }

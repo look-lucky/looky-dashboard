@@ -19,7 +19,7 @@ export class AdminPartnershipService {
      * @returns CommonResponseListPartnershipResponse 조회 성공
      * @throws ApiError
      */
-    public static getPartnershipsByOrganization1(
+    public static getPartnershipsByOrganization(
         universityId: number,
         organizationId: number,
     ): CancelablePromise<CommonResponseListPartnershipResponse> {
@@ -41,7 +41,7 @@ export class AdminPartnershipService {
      * @returns CommonResponseLong 제휴 등록 성공
      * @throws ApiError
      */
-    public static createPartnership1(
+    public static createPartnership(
         universityId: number,
         organizationId: number,
         requestBody: CreatePartnershipRequest,
@@ -64,14 +64,14 @@ export class AdminPartnershipService {
         });
     }
     /**
-     * [학생회/관리자] 제휴 엑셀 업로드
+     * [학생회/관리자] 제휴 엑셀로 등록
      * 엑셀 파일을 업로드하여 제휴 정보를 일괄 등록/수정합니다.
      * @param organizationId 대상 조직 ID (관리자용)
      * @param formData
      * @returns CommonResponseVoid 업로드 성공
      * @throws ApiError
      */
-    public static uploadPartnershipData1(
+    public static uploadPartnershipData(
         organizationId?: number,
         formData?: {
             /**
@@ -101,7 +101,7 @@ export class AdminPartnershipService {
      * @returns void
      * @throws ApiError
      */
-    public static deletePartnership1(
+    public static deletePartnership(
         partnershipId: number,
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
@@ -124,7 +124,7 @@ export class AdminPartnershipService {
      * @returns CommonResponseVoid 제휴 혜택 수정 성공
      * @throws ApiError
      */
-    public static updatePartnershipBenefit1(
+    public static updatePartnershipBenefit(
         partnershipId: number,
         requestBody: UpdatePartnershipRequest,
     ): CancelablePromise<CommonResponseVoid> {
@@ -149,7 +149,7 @@ export class AdminPartnershipService {
      * @returns CommonResponseListPartnershipResponse 조회 성공
      * @throws ApiError
      */
-    public static getPartnershipsByUniversity1(
+    public static getPartnershipsByUniversity(
         universityId: number,
     ): CancelablePromise<CommonResponseListPartnershipResponse> {
         return __request(OpenAPI, {
@@ -167,7 +167,7 @@ export class AdminPartnershipService {
      * @returns string 다운로드 성공
      * @throws ApiError
      */
-    public static exportPartnershipTemplate1(
+    public static exportPartnershipTemplate(
         universityId: number,
     ): CancelablePromise<string> {
         return __request(OpenAPI, {

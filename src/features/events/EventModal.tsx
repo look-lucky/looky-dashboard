@@ -1,13 +1,16 @@
 import { X, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { EventService } from '../../shared/api/services/EventService';
-import type { EventResponse, EventType } from '../../shared/api/models/Event';
+import { AdminEventService } from '../../shared/api/services/AdminEventService';
+import type { EventResponse } from '../../shared/api/models/EventResponse';
+import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
 
 interface EventModalProps {
     onClose: () => void;
     onSuccess: () => void;
     initialData?: EventResponse | null;
 }
+
+type EventType = 'FOOD_EVENT' | 'POPUP_STORE' | 'SCHOOL_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'COMMUNITY';
 
 const EVENT_TYPES: { value: EventType; label: string }[] = [
     { value: 'FOOD_EVENT', label: '푸드 이벤트' },
@@ -37,13 +40,13 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
     useEffect(() => {
         if (initialData) {
-            setTitle(initialData.title);
-            setDescription(initialData.description);
-            setSelectedTypes(initialData.eventTypes);
-            setLatitude(initialData.latitude);
-            setLongitude(initialData.longitude);
-            setStartDateTime(formatDateForInput(initialData.startDateTime));
-            setEndDateTime(formatDateForInput(initialData.endDateTime));
+            setTitle(initialData.title || '');
+            setDescription(initialData.description || '');
+            setSelectedTypes(initialData.eventTypes as EventType[] || []);
+            setLatitude(initialData.latitude || 37.5665);
+            setLongitude(initialData.longitude || 126.9780);
+            setStartDateTime(formatDateForInput(initialData.startDateTime || ''));
+            setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
             setPreviewUrls(initialData.imageUrls || []);
         }
     }, [initialData]);
@@ -81,7 +84,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
         setLoading(true);
         try {
-            const eventData = {
+            const eventData: CreateEventRequest = {
                 title,
                 description,
                 eventTypes: selectedTypes,
@@ -95,7 +98,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                 console.log('Update not fully implemented with images, sending JSON');
                 alert('수정 기능은 현재 구현 중입니다. (이미지 제외 텍스트 수정 가능 예상)');
             } else {
-                await EventService.createEvent(eventData, images);
+                await AdminEventService.createEvent({
+                    request: eventData,
+                    images: images
+                });
                 alert('이벤트가 등록되었습니다.');
             }
             onSuccess();
@@ -150,8 +156,8 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                     type="button"
                                     onClick={() => toggleType(type.value)}
                                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${selectedTypes.includes(type.value)
-                                            ? 'bg-blue-600 text-white border-blue-600'
-                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        ? 'bg-blue-600 text-white border-blue-600'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     {type.label}

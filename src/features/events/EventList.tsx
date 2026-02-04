@@ -1,7 +1,8 @@
 import { Edit2, Trash2, Calendar, MapPin, Tag, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { EventService } from '../../shared/api/services/EventService';
-import type { EventResponse } from '../../shared/api/models/Event';
+import { AdminEventService } from '../../shared/api/services/AdminEventService';
+import type { EventResponse } from '../../shared/api/models/EventResponse';
 
 interface EventListProps {
     refreshTrigger: number;
@@ -16,8 +17,8 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     const [searchTerm, setSearchTerm] = useState('');
 
     const filteredEvents = events.filter(event =>
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchTerm.toLowerCase())
+        event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     useEffect(() => {
@@ -27,10 +28,10 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     const fetchEvents = async () => {
         setLoading(true);
         try {
-            const response = await EventService.getEvents(page, 10);
-            if (response.data && response.data.data) { // Assuming PageResponse structure
-                setEvents(response.data.data.content);
-                setTotalPages(response.data.data.totalPages);
+            const response = await EventService.getEvents({ page, size: 10 });
+            if (response.data) {
+                setEvents(response.data.content || []);
+                setTotalPages(response.data.totalPages || 0);
             }
         } catch (error) {
             console.error('Failed to fetch events', error);
@@ -45,7 +46,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         if (!confirm('정말 삭제하시겠습니까?')) return;
 
         try {
-            await EventService.deleteEvent(id);
+            await AdminEventService.deleteEvent(id);
             // Refresh list
             fetchEvents();
         } catch (error) {
@@ -108,7 +109,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
-                                        {event.eventTypes.map(type => (
+                                        {(event.eventTypes || []).map(type => (
                                             <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center">
                                                 <Tag className="w-3 h-3 mr-1" /> {type}
                                             </span>
@@ -119,8 +120,8 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                     <div className="flex items-center text-sm text-gray-500">
                                         <Calendar className="w-4 h-4 mr-2" />
                                         <div className="flex flex-col">
-                                            <span>{new Date(event.startDateTime).toLocaleDateString()}</span>
-                                            <span className="text-xs">~ {new Date(event.endDateTime).toLocaleDateString()}</span>
+                                            <span>{event.startDateTime ? new Date(event.startDateTime).toLocaleDateString() : '-'}</span>
+                                            <span className="text-xs">~ {event.endDateTime ? new Date(event.endDateTime).toLocaleDateString() : '-'}</span>
                                         </div>
                                     </div>
                                 </td>

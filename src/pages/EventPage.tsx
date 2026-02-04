@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { EventList } from '../features/events/EventList';
 import { EventModal } from '../features/events/EventModal';
-import type { EventResponse } from '../shared/api/models/Event';
+import type { EventResponse } from '../shared/api/models/EventResponse';
 import { useUniversity } from '../shared/contexts/UniversityContext';
 
 export function EventPage() {

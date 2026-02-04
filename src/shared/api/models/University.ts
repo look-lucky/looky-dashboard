@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type SortObject = {
-    sorted?: boolean;
-    empty?: boolean;
-    unsorted?: boolean;
+export type University = {
+    id?: number;
+    name?: string;
+    emailDomain?: string;
 };
 

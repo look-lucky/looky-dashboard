@@ -1,6 +1,6 @@
 import { Trash2, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { PartnershipService } from '../../shared/api/services/PartnershipService';
+import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { PartnershipResponse } from '../../shared/api/models/PartnershipResponse';
 
 interface PartnershipListProps {
@@ -28,7 +28,7 @@ export function PartnershipList({ universityId, refreshTrigger }: PartnershipLis
     const fetchPartnerships = async () => {
         setIsLoading(true);
         try {
-            const response = await PartnershipService.getPartnershipsByUniversity(universityId);
+            const response = await AdminPartnershipService.getPartnershipsByUniversity(universityId);
             if (response.data) {
                 setPartnerships(response.data);
             }
@@ -42,7 +42,7 @@ export function PartnershipList({ universityId, refreshTrigger }: PartnershipLis
     const handleDelete = async (id: number) => {
         if (confirm('정말 삭제하시겠습니까?')) {
             try {
-                await PartnershipService.deletePartnership(id);
+                await AdminPartnershipService.deletePartnership(id);
                 fetchPartnerships();
             } catch (error) {
                 console.error('Failed to delete partnership:', error);

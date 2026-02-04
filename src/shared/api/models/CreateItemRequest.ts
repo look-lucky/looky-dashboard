@@ -8,6 +8,7 @@ export type CreateItemRequest = {
     description?: string;
     itemOrder?: number;
     badge?: CreateItemRequest.badge;
+    itemCategoryId?: number;
     hidden?: boolean;
     soldOut?: boolean;
     representative?: boolean;

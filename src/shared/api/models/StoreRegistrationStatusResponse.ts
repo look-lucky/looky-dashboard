@@ -2,9 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type SortObject = {
-    sorted?: boolean;
-    empty?: boolean;
-    unsorted?: boolean;
+export type StoreRegistrationStatusResponse = {
+    hasMenu?: boolean;
+    hasStoreInfo?: boolean;
 };
 

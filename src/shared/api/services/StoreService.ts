@@ -5,6 +5,7 @@
 import type { CommonResponseListStoreResponse } from '../models/CommonResponseListStoreResponse';
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponsePageResponseStoreResponse } from '../models/CommonResponsePageResponseStoreResponse';
+import type { CommonResponseStoreRegistrationStatusResponse } from '../models/CommonResponseStoreRegistrationStatusResponse';
 import type { CommonResponseStoreResponse } from '../models/CommonResponseStoreResponse';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
 import type { CreateStoreRequest } from '../models/CreateStoreRequest';
@@ -20,21 +21,27 @@ export class StoreService {
      * 전체 상점 목록을 페이징하여 조회합니다.
      * @param pageable 페이징 정보 (page, size, sort)
      * @param keyword 검색 키워드 (상점 이름)
-     * @param category 카테고리 필터
+     * @param categories 카테고리 필터 (복수 선택 가능)
+     * @param moods 분위기 필터 (복수 선택 가능)
+     * @param universityId 대학(상권) ID 필터
      * @returns CommonResponsePageResponseStoreResponse 상점 목록 조회 성공
      * @throws ApiError
      */
     public static getStores(
         pageable: Pageable,
         keyword?: string,
-        category?: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC',
+        categories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>,
+        moods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>,
+        universityId?: number,
     ): CancelablePromise<CommonResponsePageResponseStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores',
             query: {
                 'keyword': keyword,
-                'category': category,
+                'categories': categories,
+                'moods': moods,
+                'universityId': universityId,
                 'pageable': pageable,
             },
         });
@@ -163,6 +170,51 @@ export class StoreService {
                 403: `권한 없음 (본인 소유 상점 아님)`,
                 404: `상점 없음`,
                 409: `이미 존재하는 상점 이름`,
+            },
+        });
+    }
+    /**
+     * [점주] 상점 등록 상태 조회
+     * 상점의 정보 및 메뉴 등록 여부를 조회합니다.
+     * @param storeId 상점 ID
+     * @returns CommonResponseStoreRegistrationStatusResponse 조회 성공
+     * @throws ApiError
+     */
+    public static getStoreRegistrationStatus(
+        storeId: number,
+    ): CancelablePromise<CommonResponseStoreRegistrationStatusResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/stores/{storeId}/registration-status',
+            path: {
+                'storeId': storeId,
+            },
+            errors: {
+                404: `상점 없음`,
+            },
+        });
+    }
+    /**
+     * [공통] 주위 상점 조회
+     * 위도, 경도, 반경(km)을 기준으로 주위 상점을 조회합니다.
+     * @param latitude 위도
+     * @param longitude 경도
+     * @param radius 반경(km)
+     * @returns CommonResponseListStoreResponse 상점 목록 조회 성공
+     * @throws ApiError
+     */
+    public static getNearbyStores(
+        latitude: number,
+        longitude: number,
+        radius: number,
+    ): CancelablePromise<CommonResponseListStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/stores/nearby',
+            query: {
+                'latitude': latitude,
+                'longitude': longitude,
+                'radius': radius,
             },
         });
     }

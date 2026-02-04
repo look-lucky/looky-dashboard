@@ -6,16 +6,16 @@ import type { PageableObject } from './PageableObject';
 import type { SortObject } from './SortObject';
 import type { StoreClaimResponse } from './StoreClaimResponse';
 export type PageStoreClaimResponse = {
-    totalPages?: number;
     totalElements?: number;
+    totalPages?: number;
+    pageable?: PageableObject;
+    first?: boolean;
     size?: number;
     content?: Array<StoreClaimResponse>;
     number?: number;
     sort?: SortObject;
-    first?: boolean;
-    last?: boolean;
-    pageable?: PageableObject;
     numberOfElements?: number;
+    last?: boolean;
     empty?: boolean;
 };
 

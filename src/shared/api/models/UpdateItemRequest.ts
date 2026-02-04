@@ -11,6 +11,8 @@ export type UpdateItemRequest = {
     isRepresentative?: boolean;
     isHidden?: boolean;
     badge?: UpdateItemRequest.badge;
+    itemCategoryId?: number;
+    removeItemCategory?: boolean;
 };
 export namespace UpdateItemRequest {
     export enum badge {

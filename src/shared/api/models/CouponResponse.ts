@@ -13,6 +13,7 @@ export type CouponResponse = {
     totalQuantity?: number;
     limitPerUser?: number;
     status?: CouponResponse.status;
+    isIssued?: boolean;
 };
 export namespace CouponResponse {
     export enum status {

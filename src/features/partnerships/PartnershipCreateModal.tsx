@@ -84,7 +84,7 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
 
         setLoading(true);
         try {
-            await AdminPartnershipService.createPartnership1(
+            await AdminPartnershipService.createPartnership(
                 universityId,
                 Number(selectedOrgId),
                 {
