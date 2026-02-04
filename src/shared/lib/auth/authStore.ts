@@ -1,10 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { OpenAPI } from '../../api/core/OpenAPI';
+import { jwtDecode } from 'jwt-decode';
+
+interface DecodedToken {
+    role: string;
+    sub: string;
+    username: string;
+    type: string;
+    exp: number;
+    iat: number;
+}
 
 interface AuthState {
     accessToken: string | null;
     isAuthenticated: boolean;
+    role: string | null;
     login: (token: string) => void;
     logout: () => void;
 }
@@ -14,12 +25,18 @@ export const useAuthStore = create<AuthState>()(
         (set) => ({
             accessToken: null,
             isAuthenticated: false,
+            role: null,
             login: (token: string) => {
-                set({ accessToken: token, isAuthenticated: true });
-                OpenAPI.TOKEN = token;
+                try {
+                    const decoded = jwtDecode<DecodedToken>(token);
+                    set({ accessToken: token, isAuthenticated: true, role: decoded.role });
+                    OpenAPI.TOKEN = token;
+                } catch (error) {
+                    console.error("Invalid token:", error);
+                }
             },
             logout: () => {
-                set({ accessToken: null, isAuthenticated: false });
+                set({ accessToken: null, isAuthenticated: false, role: null });
                 OpenAPI.TOKEN = undefined;
             },
         }),
@@ -34,8 +51,13 @@ export const useAuthStore = create<AuthState>()(
     )
 );
 
-// Initialize token from storage if exists (handled by persist middleware but good to force init if needed)
-const token = localStorage.getItem('auth-storage') ? JSON.parse(localStorage.getItem('auth-storage')!).state.accessToken : null;
-if (token) {
-    OpenAPI.TOKEN = token;
+// Initialize token from storage if exists
+const storage = localStorage.getItem('auth-storage');
+if (storage) {
+    const parsed = JSON.parse(storage);
+    const token = parsed.state?.accessToken;
+    if (token) {
+        OpenAPI.TOKEN = token;
+        // Optionally re-decode or rely on persisted role
+    }
 }

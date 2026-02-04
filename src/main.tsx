@@ -5,7 +5,7 @@ import './index.css'
 import { OpenAPI } from './shared/api/core/OpenAPI';
 
 // 환경 변수에서 API 기본 URL 설정
-if (import.meta.env.VITE_API_BASE_URL) {
+if (typeof import.meta.env.VITE_API_BASE_URL === 'string') {
   OpenAPI.BASE = import.meta.env.VITE_API_BASE_URL;
 }
 
