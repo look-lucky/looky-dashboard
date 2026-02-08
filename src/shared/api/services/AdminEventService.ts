@@ -29,8 +29,8 @@ export class AdminEventService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/admin/events',
-            body: requestBody,
-            mediaType: 'application/json',
+            formData: requestBody,
+            mediaType: 'multipart/form-data',
             errors: {
                 400: `잘못된 요청 데이터`,
                 403: `권한 없음`,
@@ -83,8 +83,8 @@ export class AdminEventService {
             path: {
                 'eventId': eventId,
             },
-            body: requestBody,
-            mediaType: 'application/json',
+            formData: requestBody,
+            mediaType: 'multipart/form-data',
             errors: {
                 403: `권한 없음`,
                 404: `이벤트 없음`,
