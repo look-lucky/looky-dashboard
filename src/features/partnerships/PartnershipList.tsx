@@ -5,10 +5,11 @@ import type { PartnershipResponse } from '../../shared/api/models/PartnershipRes
 
 interface PartnershipListProps {
     universityId: number;
+    organizationId?: number | null;
     refreshTrigger: number;
 }
 
-export function PartnershipList({ universityId, refreshTrigger }: PartnershipListProps) {
+export function PartnershipList({ universityId, organizationId, refreshTrigger }: PartnershipListProps) {
     const [partnerships, setPartnerships] = useState<PartnershipResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -23,12 +24,18 @@ export function PartnershipList({ universityId, refreshTrigger }: PartnershipLis
         if (universityId) {
             fetchPartnerships();
         }
-    }, [universityId, refreshTrigger]);
+    }, [universityId, organizationId, refreshTrigger]);
 
     const fetchPartnerships = async () => {
         setIsLoading(true);
         try {
-            const response = await AdminPartnershipService.getPartnershipsByUniversity(universityId);
+            let response;
+            if (organizationId) {
+                response = await AdminPartnershipService.getPartnershipsByOrganization(universityId, organizationId);
+            } else {
+                response = await AdminPartnershipService.getPartnershipsByUniversity(universityId);
+            }
+
             if (response.data) {
                 setPartnerships(response.data);
             }

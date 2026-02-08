@@ -1,14 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PartnershipList } from '../features/partnerships/PartnershipList';
 import { PartnershipUpload } from '../features/partnerships/PartnershipUpload';
 import { PartnershipCreateModal } from '../features/partnerships/PartnershipCreateModal';
 import { Plus } from 'lucide-react';
 import { useUniversity } from '../shared/contexts/UniversityContext';
+import { OrganizationService } from '../shared/api/services/OrganizationService';
+import type { OrganizationResponse } from '../shared/api/models/OrganizationResponse';
 
 export function PartnershipPage() {
     const { selectedUniversityId } = useUniversity();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
+    const [selectedOrganizationId, setSelectedOrganizationId] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (selectedUniversityId) {
+            fetchOrganizations(selectedUniversityId);
+        } else {
+            setOrganizations([]);
+        }
+        setSelectedOrganizationId(null);
+    }, [selectedUniversityId]);
+
+    const fetchOrganizations = async (universityId: number) => {
+        try {
+            const response = await OrganizationService.getOrganizations(universityId);
+            if (response.data) {
+                setOrganizations(response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch organizations:', error);
+        }
+    };
 
     const handleCreateSuccess = () => {
         setRefreshTrigger(prev => prev + 1);
@@ -48,11 +72,29 @@ export function PartnershipPage() {
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
+                <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <h2 className="text-lg font-semibold text-gray-900">제휴 현황</h2>
+                    {selectedUniversityId && (
+                        <select
+                            value={selectedOrganizationId || ''}
+                            onChange={(e) => setSelectedOrganizationId(e.target.value ? Number(e.target.value) : null)}
+                            className="block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                        >
+                            <option value="">전체 (모든 조직)</option>
+                            {organizations.map((org) => (
+                                <option key={org.id} value={org.id}>
+                                    {org.name} ({org.category})
+                                </option>
+                            ))}
+                        </select>
+                    )}
                 </div>
                 {selectedUniversityId ? (
-                    <PartnershipList universityId={selectedUniversityId} refreshTrigger={refreshTrigger} />
+                    <PartnershipList
+                        universityId={selectedUniversityId}
+                        organizationId={selectedOrganizationId}
+                        refreshTrigger={refreshTrigger}
+                    />
                 ) : (
                     <div className="text-center py-12 text-gray-500">
                         대학을 선택해주세요.
