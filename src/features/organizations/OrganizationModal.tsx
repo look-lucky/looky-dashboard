@@ -10,12 +10,16 @@ interface OrganizationModalProps {
     onClose: () => void;
     onSuccess: () => void;
     initialData?: OrganizationResponse | null;
+    defaultCategory?: CreateOrganizationRequest.category;
+    defaultParentId?: number;
 }
 
-export function OrganizationModal({ universityId, onClose, onSuccess, initialData }: OrganizationModalProps) {
-    const [category, setCategory] = useState<CreateOrganizationRequest.category>(CreateOrganizationRequest.category.DEPARTMENT);
+export function OrganizationModal({ universityId, onClose, onSuccess, initialData, defaultCategory, defaultParentId }: OrganizationModalProps) {
+    const [category, setCategory] = useState<CreateOrganizationRequest.category>(
+        defaultCategory || CreateOrganizationRequest.category.DEPARTMENT
+    );
     const [name, setName] = useState('');
-    const [parentId, setParentId] = useState<string>('');
+    const [parentId, setParentId] = useState<string>(defaultParentId ? String(defaultParentId) : '');
     const [loading, setLoading] = useState(false);
     const [colleges, setColleges] = useState<OrganizationResponse[]>([]);
 

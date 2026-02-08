@@ -5,6 +5,7 @@ import { UniversityList } from '../features/universities/UniversityList';
 import { UniversityModal } from '../features/universities/UniversityModal';
 import { OrganizationList } from '../features/organizations/OrganizationList';
 import { OrganizationModal } from '../features/organizations/OrganizationModal';
+import { CreateOrganizationRequest } from '../shared/api/models/CreateOrganizationRequest';
 import { UniversityService } from '../shared/api/services/UniversityService';
 import type { UniversityResponse } from '../shared/api/models/UniversityResponse';
 import type { OrganizationResponse } from '../shared/api/models/OrganizationResponse';
@@ -281,6 +282,8 @@ export function UniversityOrgPage() {
                     onClose={() => setShowOrgModal(false)}
                     onSuccess={handleOrgSuccess}
                     initialData={editingOrg}
+                    defaultCategory={categoryFilter === 'DEPARTMENT' && !editingOrg ? CreateOrganizationRequest.category.DEPARTMENT : undefined}
+                    defaultParentId={categoryFilter === 'DEPARTMENT' && !editingOrg && selectedCollege?.id ? selectedCollege.id : undefined}
                 />
             )}
         </div>
