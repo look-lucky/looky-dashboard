@@ -179,6 +179,7 @@ export class AdminPartnershipService {
             headers: {
                 'Accept': '*/*',
             },
+            responseType: 'blob',
             errors: {
                 403: `권한 없음`,
             },
