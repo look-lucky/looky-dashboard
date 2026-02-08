@@ -9,6 +9,8 @@ export type PartnershipResponse = {
     universityName?: string;
     category?: PartnershipResponse.category;
     benefit?: string;
+    storeId?: number;
+    storeName?: string;
 };
 export namespace PartnershipResponse {
     export enum category {

@@ -183,7 +183,6 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
                 </p>
                 <ul className="text-xs text-blue-600 list-disc list-inside space-y-1">
                     <li>날짜 입력 시 <strong>yyyy-MM-dd</strong> 형식을 정확히 지켜주세요 (예: 2026-02-08).</li>
-                    <li>엑셀에서 날짜 형식이 깨질 경우, 값 앞에 <strong>작은따옴표(')</strong>를 붙여 입력하세요 (예: '2026-02-08).</li>
                 </ul>
             </div>
         </div>

@@ -99,9 +99,10 @@ export function PartnershipPage() {
                             <select
                                 value={selectedOrganizationId || ''}
                                 onChange={(e) => setSelectedOrganizationId(e.target.value ? Number(e.target.value) : null)}
-                                className="block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                                disabled={!selectedCategory}
+                                className="block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md disabled:bg-gray-100 disabled:text-gray-500"
                             >
-                                <option value="">{selectedCategory ? '조직 선택' : '전체 (모든 조직)'}</option>
+                                <option value="">{selectedCategory ? '전체 (모든 조직)' : '카테고리를 먼저 선택하세요'}</option>
                                 {filteredOrganizations.map((org) => (
                                     <option key={org.id} value={org.id}>
                                         {org.name}
