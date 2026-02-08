@@ -4,7 +4,7 @@ interface JobStatusListProps {
     refreshTrigger: number;
 }
 
-export function JobStatusList({ refreshTrigger }: JobStatusListProps) {
+export function JobStatusList({ }: JobStatusListProps) {
     return (
         <div className="rounded-md bg-blue-50 p-4">
             <div className="flex">
