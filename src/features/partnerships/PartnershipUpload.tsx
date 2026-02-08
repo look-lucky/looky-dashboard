@@ -1,6 +1,8 @@
-import { Upload, FileSpreadsheet, Loader2, AlertCircle, Download } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { Upload, FileSpreadsheet, Loader2, AlertCircle, Download, Users } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
+import { OrganizationService } from '../../shared/api/services/OrganizationService';
+import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 
 interface PartnershipUploadProps {
     universityId: number | null;
@@ -12,7 +14,34 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
     const [uploading, setUploading] = useState(false);
     const [loadingTemplate, setLoadingTemplate] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
+    const [selectedOrganizationId, setSelectedOrganizationId] = useState<number | ''>('');
+    const [loadingOrgs, setLoadingOrgs] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const fetchOrganizations = async () => {
+            if (!universityId) {
+                setOrganizations([]);
+                setSelectedOrganizationId('');
+                return;
+            }
+
+            setLoadingOrgs(true);
+            try {
+                const response = await OrganizationService.getOrganizations(universityId);
+                setOrganizations(response.data || []);
+                setSelectedOrganizationId('');
+            } catch (err) {
+                console.error('Failed to fetch organizations', err);
+                setError('조직 목록을 불러오는데 실패했습니다.');
+            } finally {
+                setLoadingOrgs(false);
+            }
+        };
+
+        fetchOrganizations();
+    }, [universityId]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -28,14 +57,16 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
 
     const handleUpload = async () => {
         if (!file) return;
+        if (!selectedOrganizationId) {
+            setError('조직을 선택해주세요.');
+            return;
+        }
 
         setUploading(true);
         setError(null);
 
         try {
-            // Using AdminPartnershipService for partnership upload
-            // Note: organizationId query param is optional in the API, assuming excel has required columns
-            await AdminPartnershipService.uploadPartnershipData(undefined, { file });
+            await AdminPartnershipService.uploadPartnershipData(Number(selectedOrganizationId), { file });
             setFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
@@ -59,18 +90,7 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
         setLoadingTemplate(true);
         try {
             const blob = await AdminPartnershipService.exportPartnershipTemplate(universityId);
-
-            // Create blob url and download
-            // Note: generated service returns string (binary), but axios might return it as data.
-            // If the client is configured to return blob, we use it. 
-            // If it returns string, we might need to convert.
-            // Assuming the client handles 'format: byte' correctly or we receive a Blob/String.
-            // Let's assume it returns a Blob or url string.
-            // Actually, generated code says returns `string` but with `format: byte`, it typically is binary.
-            // However, typical axios setting for blob responseType is manual.
-            // Let's try basic download logic.
-
-            const url = window.URL.createObjectURL(new Blob([blob as any])); /* Cast to any because TS might think it is string */
+            const url = window.URL.createObjectURL(new Blob([blob as any]));
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `partnerships_template_${universityId}.xlsx`);
@@ -96,6 +116,27 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
                     {loadingTemplate ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                     템플릿 양식 다운로드
                 </button>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    제휴 등록 대상 조직
+                </label>
+                <select
+                    value={selectedOrganizationId}
+                    onChange={(e) => setSelectedOrganizationId(e.target.value ? Number(e.target.value) : '')}
+                    disabled={loadingOrgs || !universityId}
+                    className="w-full p-2.5 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block"
+                >
+                    <option value="">조직을 선택하세요</option>
+                    {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                            {org.name} ({org.category})
+                        </option>
+                    ))}
+                </select>
+                {loadingOrgs && <p className="text-xs text-gray-500">조직 목록을 불러오는 중...</p>}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -125,7 +166,7 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
 
                 <button
                     onClick={handleUpload}
-                    disabled={!file || uploading}
+                    disabled={!file || uploading || !selectedOrganizationId}
                     className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center font-medium"
                 >
                     {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
