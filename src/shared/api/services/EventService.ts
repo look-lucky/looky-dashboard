@@ -24,6 +24,7 @@ export class EventService {
         keyword?: string,
         eventTypes?: Array<'FOOD_EVENT' | 'POPUP_STORE' | 'SCHOOL_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'COMMUNITY'>,
         status?: 'UPCOMING' | 'LIVE' | 'ENDED',
+        universityId?: number,
     ): CancelablePromise<CommonResponsePageResponseEventResponse> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -32,6 +33,7 @@ export class EventService {
                 'keyword': keyword,
                 'eventTypes': eventTypes,
                 'status': status,
+                'universityId': universityId,
                 'pageable': pageable,
             },
         });
