@@ -17,6 +17,7 @@ export function OrganizationModal({ universityId, onClose, onSuccess, initialDat
     const [name, setName] = useState('');
     const [parentId, setParentId] = useState<string>('');
     const [loading, setLoading] = useState(false);
+    const [colleges, setColleges] = useState<OrganizationResponse[]>([]);
 
     useEffect(() => {
         if (initialData) {
@@ -26,8 +27,32 @@ export function OrganizationModal({ universityId, onClose, onSuccess, initialDat
                 setCategory(initialData.category as unknown as CreateOrganizationRequest.category);
             }
             // if initialData has parentId, set it here
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if ((initialData as any).parentId) {
+                setParentId(String((initialData as any).parentId));
+            }
         }
     }, [initialData]);
+
+    // Fetch colleges when modal opens
+    useEffect(() => {
+        const fetchOrganizations = async () => {
+            try {
+                const response = await OrganizationService.getOrganizations(universityId);
+                if (response.data) {
+                    // Filter only colleges
+                    const collegeList = response.data.filter(org => org.category === 'COLLEGE');
+                    setColleges(collegeList);
+                }
+            } catch (error) {
+                console.error('Failed to fetch organizations', error);
+            }
+        };
+
+        if (universityId) {
+            fetchOrganizations();
+        }
+    }, [universityId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,12 +61,17 @@ export function OrganizationModal({ universityId, onClose, onSuccess, initialDat
             return;
         }
 
+        if (category === CreateOrganizationRequest.category.DEPARTMENT && !parentId) {
+            alert('소속될 단과대학을 선택해주세요.');
+            return;
+        }
+
         setLoading(true);
         try {
             const payload = {
                 category,
                 name,
-                parentId: parentId ? Number(parentId) : undefined
+                parentId: (category === CreateOrganizationRequest.category.DEPARTMENT && parentId) ? Number(parentId) : undefined
             };
 
             if (initialData && initialData.id) {
@@ -77,12 +107,18 @@ export function OrganizationModal({ universityId, onClose, onSuccess, initialDat
                         <label className="block text-sm font-medium text-gray-700 mb-1">유형</label>
                         <select
                             value={category}
-                            onChange={(e) => setCategory(e.target.value as CreateOrganizationRequest.category)}
+                            onChange={(e) => {
+                                setCategory(e.target.value as CreateOrganizationRequest.category);
+                                // Reset parentId when category changes
+                                if (e.target.value !== CreateOrganizationRequest.category.DEPARTMENT) {
+                                    setParentId('');
+                                }
+                            }}
                             className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                         >
                             <option value={CreateOrganizationRequest.category.COLLEGE}>단과대학</option>
                             <option value={CreateOrganizationRequest.category.DEPARTMENT}>학과</option>
-                            <option value={CreateOrganizationRequest.category.STUDENT_COUNCIL}>상위기구(총학/단과대)</option>
+                            <option value={CreateOrganizationRequest.category.STUDENT_COUNCIL}>학생회(총학생회/총동아리연합회 등)</option>
                         </select>
                     </div>
 
@@ -93,22 +129,32 @@ export function OrganizationModal({ universityId, onClose, onSuccess, initialDat
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="예: 컴퓨터공학과"
+                            placeholder={category === 'DEPARTMENT' ? "예: 컴퓨터공학과" : "예: 공과대학 or 총학생회"}
                             required
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">상위 조직 ID (선택)</label>
-                        <input
-                            type="number"
-                            value={parentId}
-                            onChange={(e) => setParentId(e.target.value)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="상위 조직 ID 입력"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">예: 공과대학(ID:10) 소속인 경우 10 입력</p>
-                    </div>
+                    {category === CreateOrganizationRequest.category.DEPARTMENT && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">소속 단과대학</label>
+                            <select
+                                value={parentId}
+                                onChange={(e) => setParentId(e.target.value)}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                required={category === CreateOrganizationRequest.category.DEPARTMENT}
+                            >
+                                <option value="">단과대학 선택</option>
+                                {colleges.map((college) => (
+                                    <option key={college.id} value={college.id}>
+                                        {college.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {colleges.length === 0 && (
+                                <p className="text-xs text-red-500 mt-1">등록된 단과대학이 없습니다. 단과대학을 먼저 등록해주세요.</p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="pt-4 flex justify-end gap-3">
                         <button
