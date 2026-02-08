@@ -7,17 +7,41 @@ interface OrganizationListProps {
     universityId: number;
     refreshTrigger: number;
     onEdit: (org: OrganizationResponse) => void;
+    categoryFilter?: string;
+    parentIdFilter?: number;
+    collegeSelectMode?: boolean;
+    selectedCollegeId?: number;
+    onCollegeSelect?: (org: OrganizationResponse) => void;
 }
 
-export function OrganizationList({ universityId, refreshTrigger, onEdit }: OrganizationListProps) {
+export function OrganizationList({
+    universityId,
+    refreshTrigger,
+    onEdit,
+    categoryFilter,
+    parentIdFilter,
+    collegeSelectMode,
+    selectedCollegeId,
+    onCollegeSelect,
+}: OrganizationListProps) {
     const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredOrganizations = organizations.filter(org =>
-        (org.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (org.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredOrganizations = organizations.filter(org => {
+        // Category filter
+        if (categoryFilter && org.category !== categoryFilter) return false;
+        // Parent ID filter (for departments under a specific college)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (parentIdFilter !== undefined && (org as any).parentId !== parentIdFilter) return false;
+        // Search filter
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            return (org.name || '').toLowerCase().includes(term) ||
+                (org.category || '').toLowerCase().includes(term);
+        }
+        return true;
+    });
 
     useEffect(() => {
         if (universityId) {
@@ -69,6 +93,46 @@ export function OrganizationList({ universityId, refreshTrigger, onEdit }: Organ
         return <div className="py-8 text-center text-gray-500">등록된 소속/단체가 없습니다.</div>;
     }
 
+    // College select mode: simplified clickable list for the left panel in department view
+    if (collegeSelectMode) {
+        const colleges = filteredOrganizations;
+        if (colleges.length === 0) {
+            return <div className="py-8 text-center text-gray-500 text-sm">등록된 단과대학이 없습니다.</div>;
+        }
+        return (
+            <div className="divide-y divide-gray-100">
+                {colleges.map((org) => (
+                    <div
+                        key={org.id}
+                        onClick={() => onCollegeSelect?.(org)}
+                        className={`flex items-center justify-between px-4 py-3 cursor-pointer transition-colors ${
+                            selectedCollegeId === org.id
+                                ? 'bg-blue-50 border-l-4 border-blue-500'
+                                : 'hover:bg-gray-50 border-l-4 border-transparent'
+                        }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-gray-400" />
+                            <span className={`text-sm font-medium ${
+                                selectedCollegeId === org.id ? 'text-blue-900' : 'text-gray-700'
+                            }`}>
+                                {org.name}
+                            </span>
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(org); }}
+                            className="text-gray-400 hover:text-blue-600 p-1"
+                            title="수정"
+                        >
+                            <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    // Normal table view
     return (
         <div className="space-y-4">
             <div className="relative">
@@ -82,61 +146,64 @@ export function OrganizationList({ universityId, refreshTrigger, onEdit }: Organ
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">유형</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상위조직 ID</th>
-                            <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredOrganizations.map((org) => (
-                            <tr key={org.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    #{org.id}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${org.category === 'COLLEGE' ? 'bg-purple-100 text-purple-800' :
-                                        org.category === 'DEPARTMENT' ? 'bg-blue-100 text-blue-800' :
-                                            'bg-orange-100 text-orange-800'
-                                        }`}>
-                                        {getCategoryLabel(org.category)}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <Users className="w-4 h-4 text-gray-400 mr-2" />
-                                        <div className="text-sm font-medium text-gray-900">{org.name}</div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {/* Assuming API response doesn't strictly adhere to TS definition or we use parentId if available in future */}
-                                    {/* org.parentId ? `#${org.parentId}` : '-' */}
-                                    -
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button
-                                        onClick={() => onEdit(org)}
-                                        className="text-blue-600 hover:text-blue-900 mr-3"
-                                    >
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => org.id && handleDelete(org.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </td>
+            {filteredOrganizations.length === 0 ? (
+                <div className="py-8 text-center text-gray-500">조건에 맞는 소속이 없습니다.</div>
+            ) : (
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">유형</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">이름</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상위조직 ID</th>
+                                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredOrganizations.map((org) => (
+                                <tr key={org.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        #{org.id}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <span className={`px-2 py-1 rounded text-xs font-medium ${org.category === 'COLLEGE' ? 'bg-purple-100 text-purple-800' :
+                                            org.category === 'DEPARTMENT' ? 'bg-blue-100 text-blue-800' :
+                                                'bg-orange-100 text-orange-800'
+                                            }`}>
+                                            {getCategoryLabel(org.category)}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <Users className="w-4 h-4 text-gray-400 mr-2" />
+                                            <div className="text-sm font-medium text-gray-900">{org.name}</div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                        {(org as any).parentId ? `#${(org as any).parentId}` : '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button
+                                            onClick={() => onEdit(org)}
+                                            className="text-blue-600 hover:text-blue-900 mr-3"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => org.id && handleDelete(org.id)}
+                                            className="text-red-600 hover:text-red-900"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 }
