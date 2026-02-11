@@ -71,8 +71,8 @@ export function OrganizationModal({
         }
     }, [universityId]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
 
         if (category === '') {
             alert('유형을 선택해주세요.');
@@ -153,7 +153,7 @@ export function OrganizationModal({
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="p-6 space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">유형</label>
                         <select
@@ -251,14 +251,15 @@ export function OrganizationModal({
                             취소
                         </button>
                         <button
-                            type="submit"
+                            type="button"
+                            onClick={() => handleSubmit()}
                             disabled={loading}
                             className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
                         >
                             {loading ? '처리중...' : (initialData ? '수정하기' : '등록하기')}
                         </button>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     );
