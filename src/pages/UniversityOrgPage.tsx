@@ -250,7 +250,9 @@ export function UniversityOrgPage() {
                                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200"
                                 >
                                     <Plus className="w-4 h-4" />
-                                    소속 등록
+                                    {categoryFilter === 'COLLEGE' ? '단과대학 등록' :
+                                        categoryFilter === 'STUDENT_COUNCIL' ? '학생회 등록' :
+                                            '소속 등록'}
                                 </button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-4">
@@ -282,8 +284,15 @@ export function UniversityOrgPage() {
                     onClose={() => setShowOrgModal(false)}
                     onSuccess={handleOrgSuccess}
                     initialData={editingOrg}
-                    defaultCategory={categoryFilter === 'DEPARTMENT' && !editingOrg ? CreateOrganizationRequest.category.DEPARTMENT : undefined}
+                    defaultCategory={
+                        categoryFilter === 'COLLEGE' ? CreateOrganizationRequest.category.COLLEGE :
+                            categoryFilter === 'DEPARTMENT' ? CreateOrganizationRequest.category.DEPARTMENT :
+                                categoryFilter === 'STUDENT_COUNCIL' ? CreateOrganizationRequest.category.STUDENT_COUNCIL :
+                                    undefined
+                    }
                     defaultParentId={categoryFilter === 'DEPARTMENT' && !editingOrg && selectedCollege?.id ? selectedCollege.id : undefined}
+                    fixedCategory={categoryFilter !== 'ALL' && !editingOrg}
+                    fixedParentId={categoryFilter === 'DEPARTMENT' && !!selectedCollege && !editingOrg}
                 />
             )}
         </div>
