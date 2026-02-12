@@ -5,6 +5,6 @@
 export type UniversityResponse = {
     id?: number;
     name?: string;
-    emailDomain?: string;
+    emailDomains?: Array<string>;
 };
 
