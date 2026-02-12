@@ -31,16 +31,19 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
 
         setLoading(true);
         try {
+            // 콤마로 구분된 문자열을 배열로 변환하고 공백 제거
+            const domains = emailDomain.split(',').map(d => d.trim()).filter(d => d.length > 0);
+
             if (initialData && initialData.id) {
                 await UniversityService.updateUniversity(initialData.id, {
                     name,
-                    emailDomain
+                    emailDomains: domains
                 });
                 alert('수정되었습니다.');
             } else {
                 await UniversityService.createUniversity({
                     name,
-                    emailDomain
+                    emailDomains: domains
                 });
                 alert('등록되었습니다.');
             }

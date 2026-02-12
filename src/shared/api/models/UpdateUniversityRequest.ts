@@ -4,6 +4,6 @@
 /* eslint-disable */
 export type UpdateUniversityRequest = {
     name: string;
-    emailDomain: string;
+    emailDomains: Array<string>;
 };
 
