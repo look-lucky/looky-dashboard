@@ -42,7 +42,7 @@ export class StoreService {
                 'categories': categories,
                 'moods': moods,
                 'universityId': universityId,
-                'pageable': pageable,
+                ...pageable,
             },
         });
     }
