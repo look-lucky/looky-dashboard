@@ -6,6 +6,7 @@ export type StoreResponse = {
     id?: number;
     userId?: number;
     name?: string;
+    branch?: string;
     roadAddress?: string;
     jibunAddress?: string;
     latitude?: number;

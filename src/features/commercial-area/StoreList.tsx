@@ -8,6 +8,17 @@ interface StoreListProps {
     universityId: number;
 }
 
+const CATEGORY_MAP: Record<string, string> = {
+    'BAR': '주점',
+    'CAFE': '카페',
+    'RESTAURANT': '맛집',
+    'ENTERTAINMENT': '문화/여가',
+    'BEAUTY_HEALTH': '뷰티/건강',
+    'ETC': '기타'
+};
+
+const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as Array<keyof typeof CATEGORY_MAP>;
+
 export function StoreList({ universityId }: StoreListProps) {
     const [allStores, setAllStores] = useState<StoreResponse[]>([]);
     const [loading, setLoading] = useState(false);
@@ -54,8 +65,9 @@ export function StoreList({ universityId }: StoreListProps) {
             const nameMatch = store.name?.toLowerCase().includes(searchLower);
             const roadAddrMatch = store.roadAddress?.toLowerCase().includes(searchLower);
             const jibunAddrMatch = store.jibunAddress?.toLowerCase().includes(searchLower);
+            const branchMatch = store.branch?.toLowerCase().includes(searchLower);
 
-            return nameMatch || roadAddrMatch || jibunAddrMatch;
+            return nameMatch || roadAddrMatch || jibunAddrMatch || branchMatch;
         });
     }, [allStores, searchTerm]);
 
@@ -95,10 +107,12 @@ export function StoreList({ universityId }: StoreListProps) {
         if (!selectedStore) return;
         setEditForm({
             name: selectedStore.name,
+            branch: selectedStore.branch || '',
             roadAddress: selectedStore.roadAddress,
             jibunAddress: selectedStore.jibunAddress,
             phone: selectedStore.phone || '',
             introduction: selectedStore.introduction || '',
+            storeCategories: selectedStore.storeCategories || [],
         });
         setIsEditMode(true);
     };
@@ -129,8 +143,19 @@ export function StoreList({ universityId }: StoreListProps) {
         }
     };
 
-    const handleInputChange = (field: keyof UpdateStoreRequest, value: string) => {
+    const handleInputChange = (field: keyof UpdateStoreRequest, value: any) => {
         setEditForm(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleCategoryToggle = (category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC') => {
+        setEditForm(prev => {
+            const currentCategories = prev.storeCategories || [];
+            if (currentCategories.includes(category)) {
+                return { ...prev, storeCategories: currentCategories.filter(c => c !== category) };
+            } else {
+                return { ...prev, storeCategories: [...currentCategories, category] };
+            }
+        });
     };
 
     if (loading && allStores.length === 0) {
@@ -149,7 +174,7 @@ export function StoreList({ universityId }: StoreListProps) {
                     <input
                         type="text"
                         className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        placeholder="상점명, 주소 검색"
+                        placeholder="상점명, 지점명, 주소 검색"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -161,7 +186,7 @@ export function StoreList({ universityId }: StoreListProps) {
                     <thead className="bg-gray-50">
                         <tr>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점명</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점명 (지점)</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">주소</th>
                         </tr>
@@ -179,12 +204,15 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 <StoreIcon className="w-4 h-4" />
                                             </div>
                                             <div className="ml-3">
-                                                <div className="text-sm font-medium text-gray-900">{store.name}</div>
+                                                <div className="text-sm font-medium text-gray-900">
+                                                    {store.name}
+                                                    {store.branch && <span className="text-gray-500 font-normal ml-1">({store.branch})</span>}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {store.storeCategories?.join(', ') || '-'}
+                                        {store.storeCategories?.map(c => CATEGORY_MAP[c] || c).join(', ') || '-'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {store.roadAddress || store.jibunAddress || '-'}
@@ -323,9 +351,36 @@ export function StoreList({ universityId }: StoreListProps) {
                                             </div>
                                         ) : isEditMode ? (
                                             <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">상점명</label>
+                                                        <input type="text" value={editForm.name || ''} onChange={e => handleInputChange('name', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">지점명</label>
+                                                        <input type="text" value={editForm.branch || ''} onChange={e => handleInputChange('branch', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="예: 본점, 강남점" />
+                                                    </div>
+                                                </div>
+
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700">상점명</label>
-                                                    <input type="text" value={editForm.name || ''} onChange={e => handleInputChange('name', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">카테고리 (중복 선택 가능)</label>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {CATEGORY_KEYS.map((key) => (
+                                                            <div key={key} className="flex items-center">
+                                                                <input
+                                                                    id={`category-${key}`}
+                                                                    name="storeCategories"
+                                                                    type="checkbox"
+                                                                    checked={editForm.storeCategories?.includes(key as any)}
+                                                                    onChange={() => handleCategoryToggle(key as any)}
+                                                                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor={`category-${key}`} className="ml-2 block text-sm text-gray-900">
+                                                                    {CATEGORY_MAP[key]}
+                                                                </label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
 
                                                 <div>
@@ -352,8 +407,17 @@ export function StoreList({ universityId }: StoreListProps) {
                                                     <dd className="text-sm text-gray-900 col-span-2">{selectedStore.id}</dd>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
+                                                    <dt className="text-sm font-medium text-gray-500">상점명</dt>
+                                                    <dd className="text-sm text-gray-900 col-span-2">
+                                                        {selectedStore.name}
+                                                        {selectedStore.branch && <span className="text-gray-500 ml-1">({selectedStore.branch})</span>}
+                                                    </dd>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4">
                                                     <dt className="text-sm font-medium text-gray-500">카테고리</dt>
-                                                    <dd className="text-sm text-gray-900 col-span-2">{selectedStore.storeCategories?.join(', ') || '-'}</dd>
+                                                    <dd className="text-sm text-gray-900 col-span-2">
+                                                        {selectedStore.storeCategories?.map(c => CATEGORY_MAP[c] || c).join(', ') || '-'}
+                                                    </dd>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <dt className="text-sm font-medium text-gray-500">주소</dt>
@@ -425,3 +489,4 @@ export function StoreList({ universityId }: StoreListProps) {
         </div>
     );
 }
+
