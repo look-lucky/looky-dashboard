@@ -37,12 +37,14 @@ export function useNaverGeocoding() {
             }, (status: any, response: any) => {
                 if (status === 200 && response.v2.addresses.length > 0) {
                     const item = response.v2.addresses[0];
+                    console.log('Geocoding success:', item); // Debug log
                     resolve({
                         latitude: parseFloat(item.y),
                         longitude: parseFloat(item.x),
                         jibunAddress: item.jibunAddress || ''
                     });
                 } else {
+                    console.error('Geocoding failed:', status, response);
                     resolve(null);
                 }
             });

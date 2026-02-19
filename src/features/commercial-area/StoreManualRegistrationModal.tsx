@@ -10,6 +10,17 @@ interface StoreManualRegistrationModalProps {
     onClose: () => void;
 }
 
+const CATEGORY_MAP: Record<string, string> = {
+    'BAR': '주점',
+    'CAFE': '카페',
+    'RESTAURANT': '맛집',
+    'ENTERTAINMENT': '문화/여가',
+    'BEAUTY_HEALTH': '뷰티/건강',
+    'ETC': '기타'
+};
+
+const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as Array<keyof typeof CATEGORY_MAP>;
+
 export function StoreManualRegistrationModal({ onClose }: StoreManualRegistrationModalProps) {
     const { universities, selectedUniversityId } = useUniversity();
     const { geocodeAddress } = useNaverGeocoding();
@@ -22,7 +33,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         branch: string;
         address: string;
         jibunAddress: string;
-        category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC';
+        storeCategories: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
         description: string;
         phone: string;
         latitude: number;
@@ -33,7 +44,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         branch: '',
         address: '',
         jibunAddress: '',
-        category: 'ETC',
+        storeCategories: [],
         description: '',
         phone: '',
         latitude: 0,
@@ -43,7 +54,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
     const handleAddressComplete = async (data: any) => {
         const roadAddr = data.roadAddress;
-        const jibunAddr = data.jibunAddress;
+        const jibunAddr = data.jibunAddress || data.autoJibunAddress || '';
 
         // Update form with address first
         setFormData(prev => ({
@@ -59,8 +70,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 ...prev,
                 latitude: coords.latitude,
                 longitude: coords.longitude,
-                // Ensure jibun is set if Daum didn't provide one (unlikely but safe)
-                jibunAddress: prev.jibunAddress || coords.jibunAddress
+                jibunAddress: prev.jibunAddress || coords.jibunAddress || ''
             }));
         }
     };
@@ -77,10 +87,10 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             const requestPayload: CreateStoreRequest = {
                 name: formData.name,
                 branch: formData.branch,
-                bizRegNo: '000-00-00000', // Dummy
+                bizRegNo: '000-00-00000',
                 roadAddress: formData.address,
                 jibunAddress: formData.jibunAddress,
-                storeCategories: [formData.category],
+                storeCategories: formData.storeCategories,
                 storePhone: formData.phone,
                 introduction: formData.description,
                 latitude: formData.latitude,
@@ -111,6 +121,17 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             ...prev,
             [name]: name === 'latitude' || name === 'longitude' ? parseFloat(value) : value
         }));
+    };
+
+    const handleCategoryToggle = (category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC') => {
+        setFormData(prev => {
+            const currentCategories = prev.storeCategories;
+            if (currentCategories.includes(category)) {
+                return { ...prev, storeCategories: currentCategories.filter(c => c !== category) };
+            } else {
+                return { ...prev, storeCategories: [...currentCategories, category] };
+            }
+        });
     };
 
     const handleUniversityToggle = (id: number) => {
@@ -157,8 +178,12 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     </div>
 
                     <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">기본 정보</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex justify-between items-center border-b pb-2">
+                            <h3 className="text-sm font-semibold text-gray-900">기본 정보</h3>
+                            <span className="text-xs text-gray-500">* 필수 입력</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">상점명 *</label>
                                 <input
@@ -168,7 +193,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                     value={formData.name}
                                     onChange={handleChange}
                                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                    placeholder="상점 이름을 입력하세요"
+                                    placeholder="상점/법인 명"
                                 />
                             </div>
                             <div>
@@ -184,40 +209,42 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">카테고리 *</label>
-                                <select
-                                    name="category"
-                                    value={formData.category}
-                                    onChange={handleChange}
-                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                >
-                                    <option value="RESTAURANT">음식점</option>
-                                    <option value="CAFE">카페</option>
-                                    <option value="BAR">주점</option>
-                                    <option value="ENTERTAINMENT">문화/여가</option>
-                                    <option value="BEAUTY_HEALTH">뷰티/헬스</option>
-                                    <option value="ETC">기타</option>
-                                </select>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">카테고리 (중복 선택 가능)</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {CATEGORY_KEYS.map((key) => (
+                                    <div key={key} className="flex items-center">
+                                        <input
+                                            id={`reg-category-${key}`}
+                                            type="checkbox"
+                                            checked={formData.storeCategories.includes(key as any)}
+                                            onChange={() => handleCategoryToggle(key as any)}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <label htmlFor={`reg-category-${key}`} className="ml-2 block text-sm text-gray-900">
+                                            {CATEGORY_MAP[key]}
+                                        </label>
+                                    </div>
+                                ))}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">도로명 주소 *</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        name="address"
-                                        required
-                                        readOnly
-                                        value={formData.address}
-                                        onClick={() => setIsAddressModalOpen(true)}
-                                        className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm cursor-pointer bg-gray-50"
-                                        placeholder="주소를 검색하세요"
-                                    />
-                                    <button type="button" onClick={() => setIsAddressModalOpen(true)} className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap">
-                                        <Search className="w-4 h-4" />
-                                    </button>
-                                </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">도로명 주소 *</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    name="address"
+                                    required
+                                    readOnly
+                                    value={formData.address}
+                                    onClick={() => setIsAddressModalOpen(true)}
+                                    className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm cursor-pointer bg-gray-50"
+                                    placeholder="주소를 검색하세요"
+                                />
+                                <button type="button" onClick={() => setIsAddressModalOpen(true)} className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap">
+                                    <Search className="w-4 h-4" />
+                                </button>
                             </div>
                         </div>
 
@@ -229,38 +256,16 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 value={formData.jibunAddress}
                                 onChange={handleChange}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                placeholder="지번 주소"
+                                placeholder="자동 입력됩니다"
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">위도 (Latitude)</label>
-                                <input
-                                    type="number"
-                                    name="latitude"
-                                    step="any"
-                                    value={formData.latitude}
-                                    onChange={handleChange}
-                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-gray-50"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">경도 (Longitude)</label>
-                                <input
-                                    type="number"
-                                    name="longitude"
-                                    step="any"
-                                    value={formData.longitude}
-                                    onChange={handleChange}
-                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-gray-50"
-                                />
-                            </div>
+                        {/* Lat/Lng for verification */}
+                        <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded text-xs text-gray-500">
+                            <div>위도: {formData.latitude}</div>
+                            <div>경도: {formData.longitude}</div>
                         </div>
-                    </div>
 
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">추가 정보</h3>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
                             <input
@@ -269,53 +274,55 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 value={formData.phone}
                                 onChange={handleChange}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                placeholder="02-1234-5678"
+                                placeholder="02-0000-0000"
                             />
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">소개</label>
                             <textarea
                                 name="description"
-                                rows={3}
                                 value={formData.description}
                                 onChange={handleChange}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                placeholder="상점에 대한 간단한 설명을 입력하세요."
+                                rows={3}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm resize-none"
+                                placeholder="상점에 대한 간단한 소개를 입력하세요"
                             />
                         </div>
                     </div>
+
+                    <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 -mx-6 -mb-6 mt-6">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                            disabled={loading}
+                        >
+                            취소
+                        </button>
+                        <button
+                            type="submit"
+                            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>Processing...</>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4 mr-2" />
+                                    등록하기
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </form>
 
-                <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                        disabled={loading}
-                    >
-                        취소
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <>Processing...</>
-                        ) : (
-                            <>
-                                <Save className="w-4 h-4 mr-2" />
-                                등록하기
-                            </>
-                        )}
-                    </button>
-                </div>
+                <AddressSearchModal
+                    isOpen={isAddressModalOpen}
+                    onClose={() => setIsAddressModalOpen(false)}
+                    onComplete={handleAddressComplete}
+                />
             </div>
-
-            <AddressSearchModal
-                isOpen={isAddressModalOpen}
-                onClose={() => setIsAddressModalOpen(false)}
-                onComplete={handleAddressComplete}
-            />
         </div>
     );
 }

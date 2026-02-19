@@ -24,9 +24,13 @@ export function AddressSearchModal({ isOpen, onClose, onComplete }: AddressSearc
             fullAddress += (extraAddress !== '' ? ` (${extraAddress})` : '');
         }
 
+        // Use autoJibunAddress if jibunAddress is empty
+        const effectiveJibunAddress = data.jibunAddress || data.autoJibunAddress || '';
+
         onComplete({
             ...data,
-            fullAddress // Convenient field for display
+            jibunAddress: effectiveJibunAddress, // Override/Ensure this is set
+            fullAddress
         });
         onClose();
     };

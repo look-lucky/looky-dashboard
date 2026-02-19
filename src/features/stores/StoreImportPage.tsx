@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
-import { Search, Download, Loader2, MapPin, Store } from 'lucide-react';
+import { Search as SearchIcon, Download, Loader2, MapPin, Store } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import axios from 'axios';
-import { useDaumPostcodePopup } from 'react-daum-postcode';
+import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
+import { useNaverGeocoding } from '../../shared/hooks/useNaverGeocoding';
 
 interface StoreItem {
     bizesId: string; // 상가업소번호
@@ -49,128 +50,52 @@ interface StoreItem {
 
 export function StoreImportPage() {
     const { universities, selectedUniversityId } = useUniversity();
+    const { geocodeAddress } = useNaverGeocoding();
+
+    // Search State
     const [address, setAddress] = useState('');
+    const [searchCoords, setSearchCoords] = useState<{ lat: number, lng: number } | null>(null);
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
     const [radius, setRadius] = useState<number>(1);
     const [stores, setStores] = useState<StoreItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
-
-
-    // Daum Postcode
-    const openPostcode = useDaumPostcodePopup('https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js');
-
-    // Create a separate axios instance for external APIs to avoid global interceptors (which handle 401 by logging out)
+    // Create a separate axios instance
     const externalApi = axios.create();
 
-    const handleAddressComplete = (data: any) => {
-        let fullAddress = data.address;
-        let extraAddress = '';
+    const handleAddressComplete = async (data: any) => {
+        const roadAddr = data.roadAddress;
+        setAddress(roadAddr);
 
-        if (data.addressType === 'R') {
-            if (data.bname !== '') {
-                extraAddress += data.bname;
-            }
-            if (data.buildingName !== '') {
-                extraAddress += (extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName);
-            }
-            fullAddress += (extraAddress !== '' ? ` (${extraAddress})` : '');
+        // Auto-geocode
+        const coords = await geocodeAddress(roadAddr);
+        if (coords) {
+            setSearchCoords({ lat: coords.latitude, lng: coords.longitude });
+        } else {
+            alert('위치 좌표를 찾을 수 없습니다. 다시 시도해주세요.');
         }
-
-        setAddress(fullAddress);
-        // Optional: Auto-trigger search or just let user click
     };
-
-    const handleClickAddressSearch = () => {
-        openPostcode({ onComplete: handleAddressComplete });
-    };
-
-    // Data.go.kr API Key - using placeholder service key in request for now
 
     const handleSearch = async () => {
-        if (!address) {
-            alert('주소를 입력해주세요.');
+        if (!address || !searchCoords) {
+            alert('주소를 검색하여 위치를 설정해주세요.');
+            setIsAddressModalOpen(true);
             return;
         }
 
         setIsLoading(true);
-        setLoadingMessage('좌표를 검색 중입니다...');
+        setLoadingMessage('상권 데이터를 불러오는 중입니다...');
         setStores([]);
         setSelectedItems(new Set());
 
         try {
-            // 1. Geocoding via Nominatim
-            const fetchGeo = async (query: string) => {
-                try {
-                    return await externalApi.get('https://nominatim.openstreetmap.org/search', {
-                        params: {
-                            q: query,
-                            format: 'json',
-                            limit: 1,
-                            email: 'example@email.com' // Nominatim Usage Policy Compliance (Change this to real email if possible)
-                        },
-                        validateStatus: (status) => status < 500 // Resolve even if 4xx to handle manually
-                    });
-                } catch (error) {
-                    console.error('Nominatim API Error:', error);
-                    return null;
-                }
-            };
+            const centerLat = searchCoords.lat;
+            const centerLon = searchCoords.lng;
 
-            let geoResponse = await fetchGeo(address);
-
-            // Handle API failure (e.g. 425 Too Early)
-            if (!geoResponse || geoResponse.status !== 200) {
-                const msg = geoResponse ? `주소 검색 API 오류: ${geoResponse.status} ${geoResponse.statusText}` : '주소 검색 중 네트워크 오류가 발생했습니다.';
-                alert(msg + '\n잠시 후 다시 시도해주세요.');
-                setIsLoading(false);
-                return;
-            }
-
-            // Retry logic 1: If no result and address contains parentheses (e.g., from Daum Postcode), try removing them
-            if (geoResponse.data.length === 0 && address.includes('(')) {
-                // Remove content within parentheses and trim extra spaces
-                const addressWithoutParentheses = address.replace(/\s*\(.*?\)\s*/g, '').trim();
-                // console.log(`Retrying without parentheses: ${addressWithoutParentheses}`);
-                if (address !== addressWithoutParentheses) {
-                    const retryResponse = await fetchGeo(addressWithoutParentheses);
-                    if (retryResponse && retryResponse.status === 200 && retryResponse.data.length > 0) {
-                        geoResponse = retryResponse;
-                        // Update address state to show cleaned address to user (optional, but good for clarity)
-                        setAddress(addressWithoutParentheses);
-                    }
-                }
-            }
-
-            // Retry logic 2: If no result and address ends with [text][number], try adding a space
-            if (geoResponse.data.length === 0) {
-                // Check for patterns like "관악로1" -> "관악로 1"
-                // Regex looks for (non-digit)(digit+) at the end of string
-                const match = address.match(/(\D)(\d+)$/);
-                if (match) {
-                    const correctedAddress = address.replace(/(\D)(\d+)$/, '$1 $2');
-                    // console.log(`Retrying with corrected address: ${correctedAddress}`);
-                    const retryResponse = await fetchGeo(correctedAddress);
-                    if (retryResponse && retryResponse.status === 200 && retryResponse.data.length > 0) {
-                        geoResponse = retryResponse;
-                    }
-                }
-            }
-
-            if (geoResponse.data.length === 0) {
-                alert('주소를 찾을 수 없습니다. 도로명과 번호 사이에 띄어쓰기가 있는지 확인해주세요. (예: 관악로 1)');
-                setIsLoading(false);
-                return;
-            }
-
-            const { lat, lon } = geoResponse.data[0];
-            const centerLat = parseFloat(lat);
-            const centerLon = parseFloat(lon);
-
-            setLoadingMessage('상권 데이터를 불러오는 중입니다...');
-
-            // 2. Calculate Bounding Box (Approximate)
+            // 1. Calculate Bounding Box (Approximate)
             // 1 degree of latitude = ~111km
             // 1 degree of longitude = ~111km * cos(latitude)
             const latDelta = radius / 111;
@@ -181,11 +106,7 @@ export function StoreImportPage() {
             const minLon = Number((centerLon - lonDelta).toFixed(7));
             const maxLon = Number((centerLon + lonDelta).toFixed(7));
 
-            // 3. Call Data.go.kr API via Proxy
-            // Service Key needs to be decoded if usage requires it, commonly passed as is.
-            // We will try decoding first if it's double encoded, or use as provided.
-            // Assuming VITE_DATA_GO_KR_API_KEY is the *Decoded* key for axios params usually.
-
+            // 2. Call Data.go.kr API via Proxy
             const serviceKey = import.meta.env.VITE_DATA_GO_KR_API_KEY;
             const decodedKey = serviceKey ? decodeURIComponent(serviceKey) : '';
 
@@ -217,16 +138,6 @@ export function StoreImportPage() {
                         type: 'json'
                     }
                 });
-
-                // LOGGING FOR DEBUGGING
-                if (pageNo === 1) {
-                    console.log('Sending Request Params:', {
-                        minx: minLon, miny: minLat, maxx: maxLon, maxy: maxLat,
-                        originalKeyLength: serviceKey?.length,
-                        decodedKeyLength: decodedKey?.length
-                    });
-                    console.log('API Raw Response (Page 1):', response.data);
-                }
 
                 let items: StoreItem[] = [];
                 let errorMsg = null;
@@ -374,21 +285,21 @@ export function StoreImportPage() {
                             <div className="relative flex-grow">
                                 <input
                                     type="text"
+                                    readOnly
                                     value={address}
-                                    onChange={(e) => setAddress(e.target.value)}
+                                    onClick={() => setIsAddressModalOpen(true)}
                                     placeholder={
                                         selectedUniversityId
                                             ? `${universities?.find(u => u.id === selectedUniversityId)?.name || '대학교'} 주소를 입력해주세요`
-                                            : "주소를 입력하거나 검색하세요"
+                                            : "주소를 검색하세요"
                                     }
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border cursor-pointer bg-gray-50"
                                 />
                                 <MapPin className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
                             </div>
                             <button
                                 type="button"
-                                onClick={handleClickAddressSearch}
+                                onClick={() => setIsAddressModalOpen(true)}
                                 className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                             >
                                 주소 검색
@@ -425,7 +336,7 @@ export function StoreImportPage() {
                                 </>
                             ) : (
                                 <>
-                                    <Search className="-ml-1 mr-2 h-4 w-4" />
+                                    <SearchIcon className="-ml-1 mr-2 h-4 w-4" />
                                     데이터 불러오기
                                 </>
                             )}
@@ -516,6 +427,12 @@ export function StoreImportPage() {
                     </div>
                 </div>
             )}
+
+            <AddressSearchModal
+                isOpen={isAddressModalOpen}
+                onClose={() => setIsAddressModalOpen(false)}
+                onComplete={handleAddressComplete}
+            />
         </div>
     );
 }

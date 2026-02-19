@@ -210,6 +210,7 @@ export function StoreList({ universityId }: StoreListProps) {
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점명 (지점)</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">주소</th>
                         </tr>
                     </thead>
@@ -235,6 +236,21 @@ export function StoreList({ universityId }: StoreListProps) {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {store.storeCategories?.map(c => CATEGORY_MAP[c] || c).join(', ') || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        {store.storeStatus === 'ACTIVE' ? (
+                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                입점 완료
+                                            </span>
+                                        ) : store.storeStatus === 'BANNED' ? (
+                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                정지
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                미입점
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {store.roadAddress || store.jibunAddress || '-'}
@@ -506,22 +522,30 @@ export function StoreList({ universityId }: StoreListProps) {
                                         </>
                                     ) : (
                                         <>
-                                            <button
-                                                type="button"
-                                                onClick={handleEditClick}
-                                                className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-indigo-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
-                                            >
-                                                <Edit2 className="w-4 h-4 mr-2" />
-                                                수정
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setDeleteConfirm(true)}
-                                                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
-                                            >
-                                                <Trash2 className="w-4 h-4 mr-2" />
-                                                삭제
-                                            </button>
+                                            {selectedStore.storeStatus === 'ACTIVE' ? (
+                                                <div className="w-full text-center sm:text-right text-sm text-gray-500 py-2">
+                                                    * 입점된 상점은 수정/삭제할 수 없습니다.
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleEditClick}
+                                                        className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-indigo-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                                    >
+                                                        <Edit2 className="w-4 h-4 mr-2" />
+                                                        수정
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDeleteConfirm(true)}
+                                                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-2" />
+                                                        삭제
+                                                    </button>
+                                                </>
+                                            )}
                                         </>
                                     )}
                                 </div>
