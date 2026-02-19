@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CommercialAreaUpload } from '../features/commercial-area/CommercialAreaUpload';
 import { StoreManualRegistrationModal } from '../features/commercial-area/StoreManualRegistrationModal';
 import { StoreList } from '../features/commercial-area/StoreList';
-import { StoreClaimList } from '../features/commercial-area/StoreClaimList';
+
 import { Plus } from 'lucide-react';
 import { useUniversity } from '../shared/contexts/UniversityContext';
 
@@ -46,8 +46,7 @@ export function CommercialAreaPage() {
                 <CommercialAreaUpload onSuccess={handleUploadSuccess} />
             </div>
 
-            {/* Store Occupation Review Section (Placed first as requested by urgency/workflow) */}
-            <StoreClaimList />
+
 
             {/* Store List Section */}
             <StoreList universityId={selectedUniversityId} />
