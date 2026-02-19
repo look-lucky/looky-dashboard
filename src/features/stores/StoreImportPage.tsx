@@ -125,7 +125,22 @@ export function StoreImportPage() {
                 return;
             }
 
-            // Retry logic: If no result and address ends with [text][number], try adding a space
+            // Retry logic 1: If no result and address contains parentheses (e.g., from Daum Postcode), try removing them
+            if (geoResponse.data.length === 0 && address.includes('(')) {
+                // Remove content within parentheses and trim extra spaces
+                const addressWithoutParentheses = address.replace(/\s*\(.*?\)\s*/g, '').trim();
+                // console.log(`Retrying without parentheses: ${addressWithoutParentheses}`);
+                if (address !== addressWithoutParentheses) {
+                    const retryResponse = await fetchGeo(addressWithoutParentheses);
+                    if (retryResponse && retryResponse.status === 200 && retryResponse.data.length > 0) {
+                        geoResponse = retryResponse;
+                        // Update address state to show cleaned address to user (optional, but good for clarity)
+                        setAddress(addressWithoutParentheses);
+                    }
+                }
+            }
+
+            // Retry logic 2: If no result and address ends with [text][number], try adding a space
             if (geoResponse.data.length === 0) {
                 // Check for patterns like "관악로1" -> "관악로 1"
                 // Regex looks for (non-digit)(digit+) at the end of string
@@ -134,7 +149,7 @@ export function StoreImportPage() {
                     const correctedAddress = address.replace(/(\D)(\d+)$/, '$1 $2');
                     // console.log(`Retrying with corrected address: ${correctedAddress}`);
                     const retryResponse = await fetchGeo(correctedAddress);
-                    if (retryResponse && retryResponse.status === 200) {
+                    if (retryResponse && retryResponse.status === 200 && retryResponse.data.length > 0) {
                         geoResponse = retryResponse;
                     }
                 }
