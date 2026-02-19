@@ -1,35 +1,23 @@
-const axios = require('axios');
 
-const address = '서울특별시 관악구 관악로1';
-const addressWithSpace = '서울특별시 관악구 관악로 1';
+// Using native fetch in Node 18+
+const address = '전북특별자치도 전주시 덕진구 백제대로 567 (금암동, 전북대학교)';
 
-async function testNominatim(query, headers = {}) {
+async function fetchNominatim(query) {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
+    console.log(`Querying: ${url}`);
+
     try {
-        console.log(`Testing query: "${query}" with headers:`, headers);
-        const response = await axios.get('https://nominatim.openstreetmap.org/search', {
-            params: {
-                q: query,
-                format: 'json',
-                limit: 1
-            },
-            headers: headers
+        const response = await fetch(url, {
+            headers: { 'User-Agent': 'TestScript/1.0' }
         });
-        console.log(`Result count: ${response.data.length}`);
-        if (response.data.length > 0) {
-            console.log('First result:', response.data[0].display_name);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    } catch (error) {
-        console.error('Error:', error.message);
+        const json = await response.json();
+        console.log('Result:', JSON.stringify(json, null, 2));
+    } catch (e) {
+        console.error('Error:', e);
     }
 }
 
-(async () => {
-    console.log('--- Test 1: No User-Agent, original query ---');
-    await testNominatim(address);
-
-    console.log('\n--- Test 2: With User-Agent, original query ---');
-    await testNominatim(address, { 'User-Agent': 'LookyDashboard/1.0' });
-
-    console.log('\n--- Test 3: With User-Agent, with space ---');
-    await testNominatim(addressWithSpace, { 'User-Agent': 'LookyDashboard/1.0' });
-})();
+fetchNominatim(address);

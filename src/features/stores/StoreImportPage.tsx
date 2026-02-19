@@ -175,7 +175,41 @@ export function StoreImportPage() {
 
             // Response structure handling
             // The API response structure might vary slightly, typically body.items
-            const items = response.data?.body?.items;
+            console.log('API Raw Response:', response.data);
+
+            let items = null;
+            let errorMsg = null;
+
+            if (typeof response.data === 'string') {
+                // Handle XML response (likely error)
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(response.data, "text/xml");
+                const resultMsg = xmlDoc.querySelector('resultMsg')?.textContent;
+                const returnAuthMsg = xmlDoc.querySelector('returnAuthMsg')?.textContent;
+
+                if (resultMsg || returnAuthMsg) {
+                    errorMsg = resultMsg || returnAuthMsg;
+                } else {
+                    errorMsg = "API 응답이 XML 형식이지만 에러 메시지를 찾을 수 없습니다.";
+                }
+            } else if (typeof response.data === 'object') {
+                // Handle JSON response
+                // Case 1: Standard response.data.body.items
+                if (response.data?.body?.items) {
+                    items = response.data.body.items;
+                }
+                // Case 2: Wrapped response (response.data.response.body.items)
+                else if (response.data?.response?.body?.items) {
+                    items = response.data.response.body.items;
+                }
+                // Case 3: Error in JSON header
+                else if (response.data?.header?.resultMsg) {
+                    errorMsg = `${response.data.header.resultMsg} (Code: ${response.data.header.resultCode})`;
+                }
+                else if (response.data?.response?.header?.resultMsg) {
+                    errorMsg = `${response.data.response.header.resultMsg} (Code: ${response.data.response.header.resultCode})`;
+                }
+            }
 
             if (items && Array.isArray(items)) {
                 setStores(items);
@@ -183,12 +217,11 @@ export function StoreImportPage() {
                 const allIds = new Set(items.map((item: StoreItem) => item.bizesId));
                 setSelectedItems(allIds);
             } else {
-                if (response.data?.header?.resultMsg) {
-                    alert(`API Error: ${response.data.header.resultMsg} (Code: ${response.data.header.resultCode})`);
+                if (errorMsg) {
+                    alert(`API Error: ${errorMsg}`);
                 } else {
-                    alert('조회된 데이터가 없거나 API 응답 형식이 올바르지 않습니다. (결과 없음)');
+                    alert('조회된 데이터가 없거나 API 응답 형식이 올바르지 않습니다. (결과 없음)\n\n개발자 도구(F12) > Console 탭에서 "API Raw Response"를 확인해주세요.');
                 }
-                console.error('API Response:', response.data);
             }
 
         } catch (error) {
