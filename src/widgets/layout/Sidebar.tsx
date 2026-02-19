@@ -8,17 +8,18 @@ type MenuItem = {
     path?: string;
     icon: any;
     children?: MenuItem[];
+    end?: boolean;
 };
 
 const MENU_ITEMS: MenuItem[] = [
-    { name: '홈', path: '/', icon: Home },
+    { name: '홈', path: '/', icon: Home, end: true },
     {
         name: '가게 관리',
         icon: Store,
         children: [
-            { name: '상가 데이터 불러오기', path: '/commercial-areas/import', icon: Download },
             { name: '가게 점유 심사', path: '/reviews', icon: ClipboardList },
-            { name: '대학별 상권 관리', path: '/commercial-areas', icon: MapPin },
+            { name: '대학별 상권 관리', path: '/commercial-areas', icon: MapPin, end: true },
+            { name: '상가 데이터 불러오기', path: '/commercial-areas/import', icon: Download },
         ]
     },
     { name: '대학 / 소속 관리', path: '/universities', icon: GraduationCap },
@@ -91,6 +92,7 @@ export function Sidebar() {
             <NavLink
                 key={item.path}
                 to={item.path!}
+                end={item.end}
                 className={({ isActive }) =>
                     clsx(
                         'group flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200',

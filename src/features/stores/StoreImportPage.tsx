@@ -196,78 +196,109 @@ export function StoreImportPage() {
                 return;
             }
 
-            // LOGGING FOR DEBUGGING
-            console.log('Sending Request Params:', {
-                minx: minLon, miny: minLat, maxx: maxLon, maxy: maxLat,
-                originalKeyLength: serviceKey?.length,
-                decodedKeyLength: decodedKey?.length
-            });
+            let pageNo = 1;
+            const numOfRows = 1000;
+            let allStores: StoreItem[] = [];
+            let totalCount = 0;
+            const maxPages = 50; // Safety break
 
-            const response = await externalApi.get('/external-api/data-go-kr/B553077/api/open/sdsc2/storeListInRectangle', {
-                params: {
-                    serviceKey: decodedKey,
-                    pageNo: 1,
-                    numOfRows: 1000,
-                    minx: minLon,
-                    miny: minLat,
-                    maxx: maxLon,
-                    maxy: maxLat,
-                    type: 'json'
-                }
-            });
+            while (pageNo <= maxPages) {
+                setLoadingMessage(`상권 데이터를 불러오는 중입니다... (${pageNo} 페이지)`);
 
-            // Response structure handling
-            // The API response structure might vary slightly, typically body.items
-            console.log('API Raw Response:', response.data);
+                const response = await externalApi.get('/external-api/data-go-kr/B553077/api/open/sdsc2/storeListInRectangle', {
+                    params: {
+                        serviceKey: decodedKey,
+                        pageNo: pageNo,
+                        numOfRows: numOfRows,
+                        minx: minLon,
+                        miny: minLat,
+                        maxx: maxLon,
+                        maxy: maxLat,
+                        type: 'json'
+                    }
+                });
 
-            let items = null;
-            let errorMsg = null;
+                // LOGGING FOR DEBUGGING
+                if (pageNo === 1) {
+                    console.log('Sending Request Params:', {
+                        minx: minLon, miny: minLat, maxx: maxLon, maxy: maxLat,
+                        originalKeyLength: serviceKey?.length,
+                        decodedKeyLength: decodedKey?.length
+                    });
+                    console.log('API Raw Response (Page 1):', response.data);
+                }
 
-            if (typeof response.data === 'string') {
-                // Handle XML response (likely error)
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(response.data, "text/xml");
-                const resultMsg = xmlDoc.querySelector('resultMsg')?.textContent;
-                const returnAuthMsg = xmlDoc.querySelector('returnAuthMsg')?.textContent;
+                let items: StoreItem[] = [];
+                let errorMsg = null;
 
-                if (resultMsg || returnAuthMsg) {
-                    errorMsg = resultMsg || returnAuthMsg;
-                } else {
-                    // Show raw snippet to debug
-                    const rawSnippet = response.data.substring(0, 200).replace(/\n/g, ' ');
-                    errorMsg = `API 응답이 XML 형식이지만 에러 메시지를 찾을 수 없습니다.\n내용: ${rawSnippet}...`;
-                }
-            } else if (typeof response.data === 'object') {
-                // Handle JSON response
-                // Case 1: Standard response.data.body.items
-                if (response.data?.body?.items) {
-                    items = response.data.body.items;
-                }
-                // Case 2: Wrapped response (response.data.response.body.items)
-                else if (response.data?.response?.body?.items) {
-                    items = response.data.response.body.items;
-                }
-                // Case 3: Error in JSON header
-                else if (response.data?.header?.resultMsg) {
-                    errorMsg = `${response.data.header.resultMsg} (Code: ${response.data.header.resultCode})`;
-                }
-                else if (response.data?.response?.header?.resultMsg) {
-                    errorMsg = `${response.data.response.header.resultMsg} (Code: ${response.data.response.header.resultCode})`;
-                }
-            }
+                if (typeof response.data === 'string') {
+                    // Handle XML response (likely error)
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(response.data, "text/xml");
+                    const resultMsg = xmlDoc.querySelector('resultMsg')?.textContent;
+                    const returnAuthMsg = xmlDoc.querySelector('returnAuthMsg')?.textContent;
 
-            if (items && Array.isArray(items)) {
-                setStores(items);
-                // Select all by default
-                const allIds = new Set(items.map((item: StoreItem) => item.bizesId));
-                setSelectedItems(allIds);
-            } else {
+                    if (resultMsg || returnAuthMsg) {
+                        errorMsg = resultMsg || returnAuthMsg;
+                    } else {
+                        // Show raw snippet to debug
+                        const rawSnippet = response.data.substring(0, 200).replace(/\n/g, ' ');
+                        errorMsg = `API 응답이 XML 형식이지만 에러 메시지를 찾을 수 없습니다.\n내용: ${rawSnippet}...`;
+                    }
+                } else if (typeof response.data === 'object') {
+                    // Handle JSON response
+                    // Case 1: Standard response.data.body.items
+                    if (response.data?.body?.items) {
+                        items = response.data.body.items;
+                        totalCount = response.data.body.totalCount;
+                    }
+                    // Case 2: Wrapped response (response.data.response.body.items)
+                    else if (response.data?.response?.body?.items) {
+                        items = response.data.response.body.items;
+                        totalCount = response.data.response.body.totalCount;
+                    }
+                    // Case 3: Error in JSON header
+                    else if (response.data?.header?.resultMsg) {
+                        errorMsg = `${response.data.header.resultMsg} (Code: ${response.data.header.resultCode})`;
+                    }
+                    else if (response.data?.response?.header?.resultMsg) {
+                        errorMsg = `${response.data.response.header.resultMsg} (Code: ${response.data.response.header.resultCode})`;
+                    }
+                }
+
                 if (errorMsg) {
-                    alert(`API Error: ${errorMsg}`);
+                    // If error on first page, show alert. If error on subsequent pages, stop and show partial results.
+                    if (pageNo === 1) {
+                        alert(`API Error: ${errorMsg}`);
+                        return;
+                    } else {
+                        console.warn(`Error fetching page ${pageNo}: ${errorMsg}`);
+                        break;
+                    }
+                }
+
+                if (items && Array.isArray(items) && items.length > 0) {
+                    allStores = [...allStores, ...items];
+
+                    // Check if we fetched all items
+                    if (allStores.length >= totalCount || items.length < numOfRows) {
+                        break;
+                    }
+                    pageNo++;
                 } else {
-                    alert('조회된 데이터가 없거나 API 응답 형식이 올바르지 않습니다. (결과 없음)\n\n개발자 도구(F12) > Console 탭에서 "API Raw Response"를 확인해주세요.');
+                    // No items returned or invalid format
+                    if (pageNo === 1 && (!items || items.length === 0)) {
+                        alert('조회된 데이터가 없거나 API 응답 형식이 올바르지 않습니다. (결과 없음)\n\n개발자 도구(F12) > Console 탭에서 "API Raw Response"를 확인해주세요.');
+                        return;
+                    }
+                    break;
                 }
             }
+
+            setStores(allStores);
+            // Select all by default
+            const allIds = new Set(allStores.map((item: StoreItem) => item.bizesId));
+            setSelectedItems(allIds);
 
         } catch (error) {
             console.error('Error fetching data:', error);
