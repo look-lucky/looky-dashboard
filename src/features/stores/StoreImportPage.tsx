@@ -99,16 +99,31 @@ export function StoreImportPage() {
         try {
             // 1. Geocoding via Nominatim
             const fetchGeo = async (query: string) => {
-                return await axios.get('https://nominatim.openstreetmap.org/search', {
-                    params: {
-                        q: query,
-                        format: 'json',
-                        limit: 1
-                    }
-                });
+                try {
+                    return await axios.get('https://nominatim.openstreetmap.org/search', {
+                        params: {
+                            q: query,
+                            format: 'json',
+                            limit: 1,
+                            email: 'example@email.com' // Nominatim Usage Policy Compliance (Change this to real email if possible)
+                        },
+                        validateStatus: (status) => status < 500 // Resolve even if 4xx to handle manually
+                    });
+                } catch (error) {
+                    console.error('Nominatim API Error:', error);
+                    return null;
+                }
             };
 
             let geoResponse = await fetchGeo(address);
+
+            // Handle API failure (e.g. 425 Too Early)
+            if (!geoResponse || geoResponse.status !== 200) {
+                const msg = geoResponse ? `주소 검색 API 오류: ${geoResponse.status} ${geoResponse.statusText}` : '주소 검색 중 네트워크 오류가 발생했습니다.';
+                alert(msg + '\n잠시 후 다시 시도해주세요.');
+                setIsLoading(false);
+                return;
+            }
 
             // Retry logic: If no result and address ends with [text][number], try adding a space
             if (geoResponse.data.length === 0) {
@@ -118,7 +133,10 @@ export function StoreImportPage() {
                 if (match) {
                     const correctedAddress = address.replace(/(\D)(\d+)$/, '$1 $2');
                     // console.log(`Retrying with corrected address: ${correctedAddress}`);
-                    geoResponse = await fetchGeo(correctedAddress);
+                    const retryResponse = await fetchGeo(correctedAddress);
+                    if (retryResponse && retryResponse.status === 200) {
+                        geoResponse = retryResponse;
+                    }
                 }
             }
 
