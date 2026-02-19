@@ -1,8 +1,10 @@
-import { X, Save, MapPin } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { X, Save, Search } from 'lucide-react';
+import { useState } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
+import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
+import { useNaverGeocoding } from '../../shared/hooks/useNaverGeocoding';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -10,7 +12,11 @@ interface StoreManualRegistrationModalProps {
 
 export function StoreManualRegistrationModal({ onClose }: StoreManualRegistrationModalProps) {
     const { universities, selectedUniversityId } = useUniversity();
+    const { geocodeAddress } = useNaverGeocoding();
+
     const [loading, setLoading] = useState(false);
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
     const [formData, setFormData] = useState<{
         name: string;
         branch: string;
@@ -35,52 +41,28 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         universityIds: selectedUniversityId ? [selectedUniversityId] : [],
     });
 
-    useEffect(() => {
-        const scriptId = 'naver-map-script';
-        const existingScript = document.getElementById(scriptId);
+    const handleAddressComplete = async (data: any) => {
+        const roadAddr = data.roadAddress;
+        const jibunAddr = data.jibunAddress;
 
-        if (!existingScript) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${import.meta.env.VITE_NAVER_MAP_CLIENT_ID}&submodules=geocoder`;
-            script.async = true;
-            document.head.appendChild(script);
+        // Update form with address first
+        setFormData(prev => ({
+            ...prev,
+            address: roadAddr,
+            jibunAddress: jibunAddr
+        }));
+
+        // Trigger Geocoding
+        const coords = await geocodeAddress(roadAddr);
+        if (coords) {
+            setFormData(prev => ({
+                ...prev,
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                // Ensure jibun is set if Daum didn't provide one (unlikely but safe)
+                jibunAddress: prev.jibunAddress || coords.jibunAddress
+            }));
         }
-    }, []);
-
-    const geocodeAddress = (query: string) => {
-        if (!query) return;
-        // @ts-ignore
-        if (!window.naver || !window.naver.maps || !window.naver.maps.Service) {
-            console.warn('Naver Maps API not loaded properly');
-            return;
-        }
-
-        // @ts-ignore
-        window.naver.maps.Service.geocode({
-            query: query
-        }, (status: any, response: any) => {
-            if (status === 200 && response.v2.addresses.length > 0) {
-                const item = response.v2.addresses[0];
-                setFormData(prev => ({
-                    ...prev,
-                    latitude: parseFloat(item.y),
-                    longitude: parseFloat(item.x),
-                    // Optional: Update jibun address if available and empty
-                    jibunAddress: prev.jibunAddress || item.jibunAddress || ''
-                }));
-            }
-        });
-    };
-
-    // Auto-geocode when address changes (debounced slightly implies user finished typing, but here on blur or specific action might be better. 
-    // User requested "address changes -> auto fill". 
-    // I will trigger it when the user stops typing or on blur? 
-    // Let's trigger on blur for now to avoid too many calls, or add a button "Find Coordinates". 
-    // Actually user said "주소가 바뀌면... 자동으로". I will use useEffect on address with debounce, 
-    // or just trigger on blur of address field.
-    const handleAddressBlur = () => {
-        geocodeAddress(formData.address);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -95,7 +77,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             const requestPayload: CreateStoreRequest = {
                 name: formData.name,
                 branch: formData.branch,
-                bizRegNo: '000-00-00000', // Dummy as requested to remove input
+                bizRegNo: '000-00-00000', // Dummy
                 roadAddress: formData.address,
                 jibunAddress: formData.jibunAddress,
                 storeCategories: [formData.category],
@@ -110,7 +92,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
             await StoreService.createStore({
                 request: requestPayload,
-                images: [] // Removed image upload
+                images: []
             });
 
             alert('상점이 성공적으로 등록되었습니다.');
@@ -226,14 +208,14 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         type="text"
                                         name="address"
                                         required
+                                        readOnly
                                         value={formData.address}
-                                        onChange={handleChange}
-                                        onBlur={handleAddressBlur}
-                                        className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                        placeholder="서울시 강남구 ..."
+                                        onClick={() => setIsAddressModalOpen(true)}
+                                        className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm cursor-pointer bg-gray-50"
+                                        placeholder="주소를 검색하세요"
                                     />
-                                    <button type="button" onClick={() => geocodeAddress(formData.address)} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-300 text-sm">
-                                        <MapPin className="w-4 h-4" />
+                                    <button type="button" onClick={() => setIsAddressModalOpen(true)} className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap">
+                                        <Search className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
@@ -328,6 +310,12 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     </button>
                 </div>
             </div>
+
+            <AddressSearchModal
+                isOpen={isAddressModalOpen}
+                onClose={() => setIsAddressModalOpen(false)}
+                onComplete={handleAddressComplete}
+            />
         </div>
     );
 }

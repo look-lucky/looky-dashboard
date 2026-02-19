@@ -3,6 +3,8 @@ import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle } from 'lucide-react';
+import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
+import { useNaverGeocoding } from '../../shared/hooks/useNaverGeocoding';
 
 interface StoreListProps {
     universityId: number;
@@ -31,6 +33,26 @@ export function StoreList({ universityId }: StoreListProps) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [editForm, setEditForm] = useState<UpdateStoreRequest>({});
     const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+    // Address Search State
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+    const { geocodeAddress } = useNaverGeocoding();
+
+    const handleAddressComplete = async (data: any) => {
+        const roadAddr = data.roadAddress;
+        const jibunAddr = data.jibunAddress;
+
+        // Trigger Geocoding
+        const coords = await geocodeAddress(roadAddr);
+
+        setEditForm(prev => ({
+            ...prev,
+            roadAddress: roadAddr,
+            jibunAddress: jibunAddr || coords?.jibunAddress || prev.jibunAddress,
+            latitude: coords ? coords.latitude : prev.latitude,
+            longitude: coords ? coords.longitude : prev.longitude
+        }));
+    };
 
     useEffect(() => {
         if (universityId) {
@@ -385,12 +407,34 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700">도로명 주소</label>
-                                                    <input type="text" value={editForm.roadAddress || ''} onChange={e => handleInputChange('roadAddress', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            readOnly
+                                                            value={editForm.roadAddress || ''}
+                                                            onClick={() => setIsAddressModalOpen(true)}
+                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-50 cursor-pointer"
+                                                            placeholder="주소를 검색하세요"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsAddressModalOpen(true)}
+                                                            className="mt-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap"
+                                                        >
+                                                            <Search className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700">지번 주소</label>
                                                     <input type="text" value={editForm.jibunAddress || ''} onChange={e => handleInputChange('jibunAddress', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                                                 </div>
+
+                                                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded text-xs text-gray-500">
+                                                    <div>위도: {editForm.latitude}</div>
+                                                    <div>경도: {editForm.longitude}</div>
+                                                </div>
+
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700">전화번호</label>
                                                     <input type="text" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
@@ -486,6 +530,12 @@ export function StoreList({ universityId }: StoreListProps) {
                     </div>
                 </div>
             )}
+
+            <AddressSearchModal
+                isOpen={isAddressModalOpen}
+                onClose={() => setIsAddressModalOpen(false)}
+                onComplete={handleAddressComplete}
+            />
         </div>
     );
 }
