@@ -189,6 +189,13 @@ export function StoreImportPage() {
             const serviceKey = import.meta.env.VITE_DATA_GO_KR_API_KEY;
             const decodedKey = serviceKey ? decodeURIComponent(serviceKey) : '';
 
+            // Check if API key is present
+            if (!serviceKey) {
+                alert('API 키가 설정되지 않았습니다. Vercel 환경변수에 VITE_DATA_GO_KR_API_KEY를 추가하고 재배포해주세요.');
+                setIsLoading(false);
+                return;
+            }
+
             // LOGGING FOR DEBUGGING
             console.log('Sending Request Params:', {
                 minx: minLon, miny: minLat, maxx: maxLon, maxy: maxLat,
