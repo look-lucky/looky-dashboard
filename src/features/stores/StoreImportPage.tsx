@@ -61,6 +61,9 @@ export function StoreImportPage() {
     // Daum Postcode
     const openPostcode = useDaumPostcodePopup('https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js');
 
+    // Create a separate axios instance for external APIs to avoid global interceptors (which handle 401 by logging out)
+    const externalApi = axios.create();
+
     const handleAddressComplete = (data: any) => {
         let fullAddress = data.address;
         let extraAddress = '';
@@ -100,7 +103,7 @@ export function StoreImportPage() {
             // 1. Geocoding via Nominatim
             const fetchGeo = async (query: string) => {
                 try {
-                    return await axios.get('https://nominatim.openstreetmap.org/search', {
+                    return await externalApi.get('https://nominatim.openstreetmap.org/search', {
                         params: {
                             q: query,
                             format: 'json',
@@ -193,7 +196,7 @@ export function StoreImportPage() {
                 decodedKeyLength: decodedKey?.length
             });
 
-            const response = await axios.get('/external-api/data-go-kr/B553077/api/open/sdsc2/storeListInRectangle', {
+            const response = await externalApi.get('/external-api/data-go-kr/B553077/api/open/sdsc2/storeListInRectangle', {
                 params: {
                     serviceKey: decodedKey,
                     pageNo: 1,
