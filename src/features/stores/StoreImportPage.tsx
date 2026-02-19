@@ -208,7 +208,9 @@ export function StoreImportPage() {
                 if (resultMsg || returnAuthMsg) {
                     errorMsg = resultMsg || returnAuthMsg;
                 } else {
-                    errorMsg = "API 응답이 XML 형식이지만 에러 메시지를 찾을 수 없습니다.";
+                    // Show raw snippet to debug
+                    const rawSnippet = response.data.substring(0, 200).replace(/\n/g, ' ');
+                    errorMsg = `API 응답이 XML 형식이지만 에러 메시지를 찾을 수 없습니다.\n내용: ${rawSnippet}...`;
                 }
             } else if (typeof response.data === 'object') {
                 // Handle JSON response

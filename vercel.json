@@ -5,6 +5,10 @@
             "destination": "https://api.looky.kr/:path*"
         },
         {
+            "source": "/external-api/data-go-kr/:match*",
+            "destination": "http://apis.data.go.kr/:match*"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
