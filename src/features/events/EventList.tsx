@@ -4,12 +4,15 @@ import { EventService } from '../../shared/api/services/EventService';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import type { EventResponse } from '../../shared/api/models/EventResponse';
 
+import { useUniversity } from '../../shared/contexts/UniversityContext';
+
 interface EventListProps {
     refreshTrigger: number;
     onEdit: (event: EventResponse) => void;
 }
 
 export function EventList({ refreshTrigger, onEdit }: EventListProps) {
+    const { selectedUniversityId } = useUniversity();
     const [events, setEvents] = useState<EventResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
@@ -22,13 +25,16 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     );
 
     useEffect(() => {
-        fetchEvents();
-    }, [refreshTrigger, page]);
+        if (selectedUniversityId) {
+            fetchEvents();
+        }
+    }, [refreshTrigger, page, selectedUniversityId]);
 
     const fetchEvents = async () => {
+        if (!selectedUniversityId) return;
         setLoading(true);
         try {
-            const response = await EventService.getEvents({ page, size: 10 });
+            const response = await EventService.getEvents({ page, size: 10 }, undefined, undefined, undefined, selectedUniversityId);
             if (response.data) {
                 setEvents(response.data.content || []);
                 setTotalPages(response.data.totalPages || 0);

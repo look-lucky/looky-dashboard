@@ -176,6 +176,10 @@ export class AdminPartnershipService {
             query: {
                 'universityId': universityId,
             },
+            headers: {
+                'Accept': '*/*',
+            },
+            responseType: 'blob',
             errors: {
                 403: `권한 없음`,
             },

@@ -82,9 +82,17 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             return;
         }
 
+        // Date Validation
+        const start = new Date(startDateTime);
+        const end = new Date(endDateTime);
+        if (end <= start) {
+            alert('종료 일시는 시작 일시보다 이후여야 합니다.');
+            return;
+        }
+
         setLoading(true);
         try {
-            const eventData: CreateEventRequest = {
+            const eventData: CreateEventRequest = { // CreateEventRequest fits UpdateEventRequest for shared fields
                 title,
                 description,
                 eventTypes: selectedTypes,
@@ -95,9 +103,14 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             };
 
             if (initialData && initialData.id) {
-                console.log('Update not fully implemented with images, sending JSON');
-                alert('수정 기능은 현재 구현 중입니다. (이미지 제외 텍스트 수정 가능 예상)');
+                // Update Event
+                await AdminEventService.updateEvent(initialData.id, {
+                    request: eventData, // UpdateEventRequest structure matches CreateEventRequest for these fields
+                    images: images.length > 0 ? images : undefined // Send images only if new ones are added
+                });
+                alert('이벤트가 수정되었습니다.');
             } else {
+                // Create Event
                 await AdminEventService.createEvent({
                     request: eventData,
                     images: images
@@ -171,7 +184,13 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             <input
                                 type="datetime-local"
                                 value={startDateTime}
-                                onChange={(e) => setStartDateTime(e.target.value)}
+                                onChange={(e) => {
+                                    setStartDateTime(e.target.value);
+                                    // If end date is before new start date, update it (optional user experience preference, here we just validate on submit or min)
+                                    if (endDateTime && new Date(endDateTime) < new Date(e.target.value)) {
+                                        setEndDateTime('');
+                                    }
+                                }}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                                 required
                             />
@@ -181,6 +200,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             <input
                                 type="datetime-local"
                                 value={endDateTime}
+                                min={startDateTime} // Prevent selecting a date before start date
                                 onChange={(e) => setEndDateTime(e.target.value)}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                                 required

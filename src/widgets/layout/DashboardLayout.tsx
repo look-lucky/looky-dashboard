@@ -16,7 +16,7 @@ export function DashboardLayout() {
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
             <Sidebar />
             <div className="flex-1 flex flex-col ml-64 transition-all duration-300">
-                <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-10 flex items-center justify-between px-8 shadow-sm">
+                <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200/60 sticky top-0 z-50 flex items-center justify-between px-8 shadow-sm">
                     <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                         Looky Dashboard
                     </h2>

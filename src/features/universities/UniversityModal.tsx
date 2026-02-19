@@ -17,7 +17,8 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
     useEffect(() => {
         if (initialData) {
             setName(initialData.name || '');
-            setEmailDomain(initialData.emailDomain || '');
+            // 도메인 배열을 콤마로 구분된 문자열로 변환하여 표시 (수정 시)
+            setEmailDomain(initialData.emailDomains ? initialData.emailDomains.join(', ') : '');
         }
     }, [initialData]);
 
@@ -30,16 +31,19 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
 
         setLoading(true);
         try {
+            // 콤마로 구분된 문자열을 배열로 변환하고 공백 제거
+            const domains = emailDomain.split(',').map(d => d.trim()).filter(d => d.length > 0);
+
             if (initialData && initialData.id) {
                 await UniversityService.updateUniversity(initialData.id, {
                     name,
-                    emailDomain
+                    emailDomains: domains
                 });
                 alert('수정되었습니다.');
             } else {
                 await UniversityService.createUniversity({
                     name,
-                    emailDomain
+                    emailDomains: domains
                 });
                 alert('등록되었습니다.');
             }
@@ -87,7 +91,7 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
                             placeholder="예: korea.ac.kr"
                             required
                         />
-                        <p className="text-xs text-gray-500 mt-1">학생 인증 시 사용되는 이메일 도메인입니다.</p>
+                        <p className="text-xs text-gray-500 mt-1">학생 인증 시 사용되는 이메일 도메인입니다. 여러 개일 경우 콤마(,)로 구분해주세요.</p>
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3">

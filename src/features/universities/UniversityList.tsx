@@ -85,7 +85,9 @@ export function UniversityList({ refreshTrigger, onEdit, onSelect, selectedId }:
                                 </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">@{uni.emailDomain}</span>
+                                <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">
+                                    {uni.emailDomains ? uni.emailDomains.join(', ') : '-'}
+                                </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button
