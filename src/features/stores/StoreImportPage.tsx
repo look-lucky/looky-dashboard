@@ -371,8 +371,12 @@ export function StoreImportPage() {
                             onChange={(e) => setRadius(Number(e.target.value))}
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                         >
+                            <option value={0.1}>0.1 km</option>
+                            <option value={0.3}>0.3 km</option>
                             <option value={0.5}>0.5 km</option>
+                            <option value={0.8}>0.8 km</option>
                             <option value={1}>1 km</option>
+                            <option value={1.5}>1.5 km</option>
                             <option value={2}>2 km</option>
                             <option value={3}>3 km</option>
                             <option value={5}>5 km</option>
