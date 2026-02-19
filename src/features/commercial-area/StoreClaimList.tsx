@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
 import { StoreClaimService } from '../../shared/api/services/StoreClaimService';
 import type { StoreClaimResponse } from '../../shared/api/models/StoreClaimResponse';
-import { ChevronLeft, ChevronRight, Check, X, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check, X } from 'lucide-react';
 
 export function StoreClaimList() {
     const [currentTab, setCurrentTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
-    const [completedFilter, setCompletedFilter] = useState<'APPROVED' | 'REJECTED'>('APPROVED');
+    const [completedFilter, setCompletedFilter] = useState<'ALL' | 'APPROVED' | 'REJECTED'>('ALL');
 
     const [claims, setClaims] = useState<StoreClaimResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const pageSize = 10;
     const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
 
     const [selectedClaim, setSelectedClaim] = useState<StoreClaimResponse | null>(null);
     const [rejectReason, setRejectReason] = useState('');
@@ -24,12 +25,16 @@ export function StoreClaimList() {
     const fetchClaims = async () => {
         setLoading(true);
         try {
-            let status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
+            let status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | undefined;
 
             if (currentTab === 'PENDING') {
                 status = 'PENDING';
             } else {
-                status = completedFilter;
+                if (completedFilter === 'ALL') {
+                    status = undefined; // Fetch all statuses
+                } else {
+                    status = completedFilter;
+                }
             }
 
             const response = await StoreClaimService.getStoreClaims(
@@ -40,6 +45,7 @@ export function StoreClaimList() {
             if (response.data) {
                 setClaims(response.data.content || []);
                 setTotalPages(response.data.totalPages || 0);
+                setTotalElements(response.data.totalElements || 0);
             }
         } catch (error) {
             console.error('Failed to fetch claims', error);
@@ -118,6 +124,12 @@ export function StoreClaimList() {
                 {currentTab === 'COMPLETED' && (
                     <div className="flex mt-4 space-x-2">
                         <button
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${completedFilter === 'ALL' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            onClick={() => { setCompletedFilter('ALL'); setPage(0); }}
+                        >
+                            전체
+                        </button>
+                        <button
                             className={`px-3 py-1 rounded-full text-xs font-medium ${completedFilter === 'APPROVED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                             onClick={() => { setCompletedFilter('APPROVED'); setPage(0); }}
                         >
@@ -162,7 +174,7 @@ export function StoreClaimList() {
                                                 ${claim.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
                                                     claim.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
                                                         'bg-yellow-100 text-yellow-800'}`}>
-                                                {claim.status}
+                                                {claim.status === 'PENDING' ? '대기중' : claim.status === 'APPROVED' ? '승인' : '반려'}
                                             </span>
                                         </td>
                                     </tr>
@@ -179,27 +191,86 @@ export function StoreClaimList() {
                 </div>
             )}
 
-            {/* Pagination is simplified here for brevity, can duplicate StoreList pagination if needed */}
+            {/* Pagination Controls */}
             {totalPages > 1 && (
                 <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                    <div className="flex-1 flex justify-between">
+                    <div className="flex-1 flex justify-between sm:hidden">
                         <button
                             onClick={() => setPage(Math.max(0, page - 1))}
                             disabled={page === 0}
                             className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                         >
-                            <ChevronLeft className="h-4 w-4" />
+                            이전
                         </button>
-                        <span className="text-sm text-gray-700 self-center">
-                            {page + 1} / {totalPages}
-                        </span>
                         <button
                             onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                             disabled={page === totalPages - 1}
                             className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                         >
-                            <ChevronRight className="h-4 w-4" />
+                            다음
                         </button>
+                    </div>
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm text-gray-700">
+                                <span className="font-medium">{page * pageSize + 1}</span> - <span className="font-medium">{Math.min((page + 1) * pageSize, totalElements)}</span> / <span className="font-medium">{totalElements}</span>
+                            </p>
+                        </div>
+                        <div>
+                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <button
+                                    onClick={() => setPage(0)}
+                                    disabled={page === 0}
+                                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <span className="sr-only">First</span>
+                                    <ChevronsLeft className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                                <button
+                                    onClick={() => setPage(Math.max(0, page - 1))}
+                                    disabled={page === 0}
+                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <span className="sr-only">Previous</span>
+                                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                                {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                    let p = page - 2 + i;
+                                    if (page < 2) p = i;
+                                    if (page > totalPages - 3) p = totalPages - 5 + i;
+                                    if (p < 0 || p >= totalPages) return null;
+
+                                    return (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPage(p)}
+                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
+                                                ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {p + 1}
+                                        </button>
+                                    );
+                                })}
+                                <button
+                                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                                    disabled={page === totalPages - 1}
+                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <span className="sr-only">Next</span>
+                                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                                <button
+                                    onClick={() => setPage(totalPages - 1)}
+                                    disabled={page === totalPages - 1}
+                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <span className="sr-only">Last</span>
+                                    <ChevronsRight className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                            </nav>
+                        </div>
                     </div>
                 </div>
             )}
@@ -307,16 +378,6 @@ export function StoreClaimList() {
                                             </button>
                                         </div>
                                     )}
-                                </div>
-                            )}
-
-                            {/* Read-only footer for Completed items */}
-                            {currentTab === 'COMPLETED' && (
-                                <div className="mt-5 sm:mt-4 border-t pt-4 text-center">
-                                    <span className="text-sm text-gray-500 flex items-center justify-center">
-                                        <AlertCircle className="w-4 h-4 mr-2" />
-                                        심사가 완료된 건은 수정할 수 없습니다.
-                                    </span>
                                 </div>
                             )}
                         </div>
