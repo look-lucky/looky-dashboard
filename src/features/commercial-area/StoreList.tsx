@@ -1,40 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
-import { ChevronLeft, ChevronRight, Store as StoreIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon } from 'lucide-react';
 
 interface StoreListProps {
     universityId: number;
 }
 
 export function StoreList({ universityId }: StoreListProps) {
-    const [stores, setStores] = useState<StoreResponse[]>([]);
+    const [allStores, setAllStores] = useState<StoreResponse[]>([]);
     const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
     const pageSize = 10;
 
     useEffect(() => {
         if (universityId) {
-            fetchStores();
+            fetchAllStores();
         }
-    }, [universityId, page]);
+    }, [universityId]);
 
-    const fetchStores = async () => {
+    const fetchAllStores = async () => {
         setLoading(true);
         try {
+            // Fetch a large number to get "all" stores for client-side filtering
             const response = await StoreService.getStores(
-                { page, size: pageSize, sort: ['id,desc'] },
+                { page: 0, size: 2000, sort: ['id,asc'] }, // ID Ascending
                 undefined, // keyword
                 undefined, // categories
                 undefined, // moods
                 universityId
             );
             if (response.data) {
-                setStores(response.data.content || []);
-                setTotalPages(response.data.totalPages || 0);
-                setTotalElements(response.data.totalElements || 0);
+                setAllStores(response.data.content || []);
             }
         } catch (error) {
             console.error('Failed to fetch stores', error);
@@ -43,18 +41,54 @@ export function StoreList({ universityId }: StoreListProps) {
         }
     };
 
-    if (loading && stores.length === 0) {
-        return <div className="p-8 text-center text-gray-500">로딩 중...</div>;
-    }
+    // Filter and Sort
+    const filteredStores = useMemo(() => {
+        return allStores.filter(store => {
+            const searchLower = searchTerm.toLowerCase();
+            const nameMatch = store.name?.toLowerCase().includes(searchLower);
+            const roadAddrMatch = store.roadAddress?.toLowerCase().includes(searchLower);
+            const jibunAddrMatch = store.jibunAddress?.toLowerCase().includes(searchLower);
 
-    if (!loading && stores.length === 0) {
-        return <div className="p-8 text-center text-gray-500">등록된 상점이 없습니다.</div>;
+            return nameMatch || roadAddrMatch || jibunAddrMatch;
+        });
+    }, [allStores, searchTerm]);
+
+    const totalElements = filteredStores.length;
+    const totalPages = Math.ceil(totalElements / pageSize);
+
+    // Reset page when search changes
+    useEffect(() => {
+        setPage(0);
+    }, [searchTerm]);
+
+    // Current Page Data
+    const currentStores = useMemo(() => {
+        const start = page * pageSize;
+        return filteredStores.slice(start, start + pageSize);
+    }, [filteredStores, page, pageSize]);
+
+    if (loading && allStores.length === 0) {
+        return <div className="p-8 text-center text-gray-500">데이터를 불러오는 중...</div>;
     }
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h3 className="text-lg font-semibold text-gray-900">등록된 상점 목록 ({totalElements})</h3>
+
+                {/* Search Input */}
+                <div className="relative w-full sm:w-64">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        placeholder="상점명, 주소 검색"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -68,29 +102,37 @@ export function StoreList({ universityId }: StoreListProps) {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {stores.map((store) => (
-                            <tr key={store.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {store.id}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                                            <StoreIcon className="w-4 h-4" />
+                        {currentStores.length > 0 ? (
+                            currentStores.map((store) => (
+                                <tr key={store.id} className="hover:bg-gray-50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {store.id}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                                                <StoreIcon className="w-4 h-4" />
+                                            </div>
+                                            <div className="ml-3">
+                                                <div className="text-sm font-medium text-gray-900">{store.name}</div>
+                                            </div>
                                         </div>
-                                        <div className="ml-3">
-                                            <div className="text-sm font-medium text-gray-900">{store.name}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {store.storeCategories?.join(', ') || '-'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {store.roadAddress || store.jibunAddress || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {store.storeCategories?.join(', ') || '-'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {store.roadAddress || store.jibunAddress || '-'}
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-10 text-center text-gray-500">
+                                    검색 결과가 없습니다.
                                 </td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -123,21 +165,30 @@ export function StoreList({ universityId }: StoreListProps) {
                         <div>
                             <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                                 <button
-                                    onClick={() => setPage(Math.max(0, page - 1))}
+                                    onClick={() => setPage(0)}
                                     disabled={page === 0}
                                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <span className="sr-only">First</span>
+                                    <ChevronsLeft className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                                <button
+                                    onClick={() => setPage(Math.max(0, page - 1))}
+                                    disabled={page === 0}
+                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                                 >
                                     <span className="sr-only">Previous</span>
                                     <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                                 </button>
-                                {/* Simple page numbers: show current, prev, next if available, or just simple */}
+
+                                {/* Simple window pagination */}
                                 {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                                    // Logic to show a window of pages could be complex, simplifying to show first 5 or logic around current page
-                                    // For now, let's just show a simple window around current page
                                     let p = page - 2 + i;
+                                    // Adjust window to stay within bounds
                                     if (page < 2) p = i;
-                                    if (p + 1 > totalPages) return null;
-                                    if (p < 0) return null;
+                                    if (page > totalPages - 3) p = totalPages - 5 + i;
+
+                                    if (p < 0 || p >= totalPages) return null;
 
                                     return (
                                         <button
@@ -152,13 +203,22 @@ export function StoreList({ universityId }: StoreListProps) {
                                         </button>
                                     );
                                 })}
+
                                 <button
                                     onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                                     disabled={page === totalPages - 1}
-                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                                 >
                                     <span className="sr-only">Next</span>
                                     <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                                <button
+                                    onClick={() => setPage(totalPages - 1)}
+                                    disabled={page === totalPages - 1}
+                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    <span className="sr-only">Last</span>
+                                    <ChevronsRight className="h-5 w-5" aria-hidden="true" />
                                 </button>
                             </nav>
                         </div>
