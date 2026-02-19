@@ -1,39 +1,91 @@
-import { X, Save, Plus, Trash2, MapPin } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { X, Save, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
+import { useUniversity } from '../../shared/contexts/UniversityContext';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
 }
 
 export function StoreManualRegistrationModal({ onClose }: StoreManualRegistrationModalProps) {
+    const { universities, selectedUniversityId } = useUniversity();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState<{
         name: string;
-        bizRegNo: string;
+        branch: string;
         address: string;
+        jibunAddress: string;
         category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC';
         description: string;
         phone: string;
         latitude: number;
         longitude: number;
+        universityIds: number[];
     }>({
         name: '',
-        bizRegNo: '',
+        branch: '',
         address: '',
+        jibunAddress: '',
         category: 'ETC',
         description: '',
         phone: '',
         latitude: 0,
         longitude: 0,
+        universityIds: selectedUniversityId ? [selectedUniversityId] : [],
     });
-    const [images, setImages] = useState<File[]>([]);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const scriptId = 'naver-map-script';
+        const existingScript = document.getElementById(scriptId);
+
+        if (!existingScript) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${import.meta.env.VITE_NAVER_MAP_CLIENT_ID}&submodules=geocoder`;
+            script.async = true;
+            document.head.appendChild(script);
+        }
+    }, []);
+
+    const geocodeAddress = (query: string) => {
+        if (!query) return;
+        // @ts-ignore
+        if (!window.naver || !window.naver.maps || !window.naver.maps.Service) {
+            console.warn('Naver Maps API not loaded properly');
+            return;
+        }
+
+        // @ts-ignore
+        window.naver.maps.Service.geocode({
+            query: query
+        }, (status: any, response: any) => {
+            if (status === 200 && response.v2.addresses.length > 0) {
+                const item = response.v2.addresses[0];
+                setFormData(prev => ({
+                    ...prev,
+                    latitude: parseFloat(item.y),
+                    longitude: parseFloat(item.x),
+                    // Optional: Update jibun address if available and empty
+                    jibunAddress: prev.jibunAddress || item.jibunAddress || ''
+                }));
+            }
+        });
+    };
+
+    // Auto-geocode when address changes (debounced slightly implies user finished typing, but here on blur or specific action might be better. 
+    // User requested "address changes -> auto fill". 
+    // I will trigger it when the user stops typing or on blur? 
+    // Let's trigger on blur for now to avoid too many calls, or add a button "Find Coordinates". 
+    // Actually user said "주소가 바뀌면... 자동으로". I will use useEffect on address with debounce, 
+    // or just trigger on blur of address field.
+    const handleAddressBlur = () => {
+        geocodeAddress(formData.address);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name || !formData.address || !formData.bizRegNo) {
+        if (!formData.name || !formData.address) {
             alert('필수 정보를 입력해주세요.');
             return;
         }
@@ -42,21 +94,23 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         try {
             const requestPayload: CreateStoreRequest = {
                 name: formData.name,
-                bizRegNo: formData.bizRegNo,
+                branch: formData.branch,
+                bizRegNo: '000-00-00000', // Dummy as requested to remove input
                 roadAddress: formData.address,
+                jibunAddress: formData.jibunAddress,
                 storeCategories: [formData.category],
                 storePhone: formData.phone,
                 introduction: formData.description,
                 latitude: formData.latitude,
                 longitude: formData.longitude,
-                jibunAddress: '',
                 operatingHours: '',
-                storeMoods: []
+                storeMoods: [],
+                universityIds: formData.universityIds
             };
 
             await StoreService.createStore({
                 request: requestPayload,
-                images: images
+                images: [] // Removed image upload
             });
 
             alert('상점이 성공적으로 등록되었습니다.');
@@ -77,15 +131,15 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         }));
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
-            setImages(prev => [...prev, ...newFiles]);
-        }
-    };
-
-    const removeImage = (index: number) => {
-        setImages(prev => prev.filter((_, i) => i !== index));
+    const handleUniversityToggle = (id: number) => {
+        setFormData(prev => {
+            const isSelected = prev.universityIds.includes(id);
+            if (isSelected) {
+                return { ...prev, universityIds: prev.universityIds.filter(uid => uid !== id) };
+            } else {
+                return { ...prev, universityIds: [...prev.universityIds, id] };
+            }
+        });
     };
 
     return (
@@ -99,6 +153,27 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+                    {/* University Selection */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">대학 선택 (복수 선택 가능)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-32 overflow-y-auto">
+                            {universities.map(uni => (
+                                <div key={uni.id} className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id={`uni-${uni.id}`}
+                                        checked={formData.universityIds.includes(uni.id!)}
+                                        onChange={() => uni.id && handleUniversityToggle(uni.id)}
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                    />
+                                    <label htmlFor={`uni-${uni.id}`} className="ml-2 block text-sm text-gray-900">
+                                        {uni.name}
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     <div className="space-y-4">
                         <h3 className="text-sm font-semibold text-gray-900 border-b pb-2">기본 정보</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -115,15 +190,14 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">사업자 등록번호 *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">지점명</label>
                                 <input
                                     type="text"
-                                    name="bizRegNo"
-                                    required
-                                    value={formData.bizRegNo}
+                                    name="branch"
+                                    value={formData.branch}
                                     onChange={handleChange}
                                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                    placeholder="000-00-00000"
+                                    placeholder="예: 강남점"
                                 />
                             </div>
                         </div>
@@ -146,7 +220,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">주소 *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">도로명 주소 *</label>
                                 <div className="flex gap-2">
                                     <input
                                         type="text"
@@ -154,15 +228,29 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         required
                                         value={formData.address}
                                         onChange={handleChange}
+                                        onBlur={handleAddressBlur}
                                         className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                                         placeholder="서울시 강남구 ..."
                                     />
-                                    <button type="button" className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-300 text-sm">
+                                    <button type="button" onClick={() => geocodeAddress(formData.address)} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 border border-gray-300 text-sm">
                                         <MapPin className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">지번 주소</label>
+                            <input
+                                type="text"
+                                name="jibunAddress"
+                                value={formData.jibunAddress}
+                                onChange={handleChange}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                                placeholder="지번 주소"
+                            />
+                        </div>
+
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">위도 (Latitude)</label>
@@ -172,7 +260,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                     step="any"
                                     value={formData.latitude}
                                     onChange={handleChange}
-                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-gray-50"
                                 />
                             </div>
                             <div>
@@ -183,7 +271,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                     step="any"
                                     value={formData.longitude}
                                     onChange={handleChange}
-                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                                    className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-gray-50"
                                 />
                             </div>
                         </div>
@@ -212,48 +300,6 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                                 placeholder="상점에 대한 간단한 설명을 입력하세요."
                             />
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-2 flex justify-between items-center">
-                            <span>이미지 등록</span>
-                            <span className="text-xs text-gray-500">{images.length}장 선택됨</span>
-                        </h3>
-
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                            <div
-                                onClick={() => fileInputRef.current?.click()}
-                                className="aspect-square rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 flex flex-col items-center justify-center cursor-pointer transition-colors"
-                            >
-                                <Plus className="w-6 h-6 text-gray-400 mb-1" />
-                                <span className="text-xs text-gray-500">추가</span>
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    multiple
-                                    ref={fileInputRef}
-                                    onChange={handleImageChange}
-                                />
-                            </div>
-
-                            {images.map((file, index) => (
-                                <div key={index} className="aspect-square rounded-lg relative group overflow-hidden bg-gray-100 border border-gray-200">
-                                    <img
-                                        src={URL.createObjectURL(file)}
-                                        alt={`preview-${index}`}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeImage(index)}
-                                        className="absolute top-1 right-1 p-1 bg-red-500/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            ))}
                         </div>
                     </div>
                 </form>
