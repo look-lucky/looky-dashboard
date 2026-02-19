@@ -1,4 +1,4 @@
-import { Home, ClipboardList, MapPin, Handshake, GraduationCap, Calendar, Store, ChevronDown, ChevronRight, School } from 'lucide-react';
+import { Home, ClipboardList, MapPin, Handshake, GraduationCap, Calendar, Store, ChevronDown, ChevronRight, School, Download } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
@@ -16,6 +16,7 @@ const MENU_ITEMS: MenuItem[] = [
         name: '가게 관리',
         icon: Store,
         children: [
+            { name: '상가 데이터 불러오기', path: '/commercial-areas/import', icon: Download },
             { name: '가게 점유 심사', path: '/reviews', icon: ClipboardList },
             { name: '대학별 상권 관리', path: '/commercial-areas', icon: MapPin },
         ]

@@ -11,6 +11,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/external-api/data-go-kr': {
+        target: 'http://apis.data.go.kr',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/external-api\/data-go-kr/, ''),
+        secure: false,
+      },
     },
   },
 })

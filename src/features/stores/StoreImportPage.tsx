@@ -1,0 +1,409 @@
+import { useState } from 'react';
+import { useUniversity } from '../../shared/contexts/UniversityContext';
+import { Search, Download, Loader2, MapPin, Store } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import axios from 'axios';
+import { useDaumPostcodePopup } from 'react-daum-postcode';
+
+interface StoreItem {
+    bizesId: string; // 상가업소번호
+    bizesNm: string; // 상호명
+    brchNm: string; // 지점명
+    indsLclsCd: string; // 상권업종대분류코드
+    indsLclsNm: string; // 상권업종대분류명
+    indsMclsCd: string; // 상권업종중분류코드
+    indsMclsNm: string; // 상권업종중분류명
+    indsSclsCd: string; // 상권업종소분류코드
+    indsSclsNm: string; // 상권업종소분류명
+    ksicCd: string; // 표준산업분류코드
+    ksicNm: string; // 표준산업분류명
+    ctprvnCd: string; // 시도코드
+    ctprvnNm: string; // 시도명
+    signguCd: string; // 시군구코드
+    signguNm: string; // 시군구명
+    adongCd: string; // 행정동코드
+    adongNm: string; // 행정동명
+    ldongCd: string; // 법정동코드
+    ldongNm: string; // 법정동명
+    lnoCd: string; // 지번코드
+    plotSctCd: string; // 대지구분코드
+    plotSctNm: string; // 대지구분명
+    lnoMno: string; // 지번본번지
+    lnoSno: string; // 지번부번지
+    lnoAdr: string; // 지번주소
+    rdnmCd: string; // 도로명코드
+    rdnm: string; // 도로명
+    bldMno: string; // 건물본번지
+    bldSno: string; // 건물부번지
+    bldMngNo: string; // 건물관리번호
+    bldNm: string; // 건물명
+    rdnmAdr: string; // 도로명주소
+    oldZipcd: string; // 구우편번호
+    newZipcd: string; // 신우편번호
+    dongNo: string; // 동정보
+    flrNo: string; // 층정보
+    hoNo: string; // 호정보
+    lon: number; // 경도
+    lat: number; // 위도
+}
+
+export function StoreImportPage() {
+    const { universities, selectedUniversityId } = useUniversity();
+    const [address, setAddress] = useState('');
+    const [radius, setRadius] = useState<number>(1);
+    const [stores, setStores] = useState<StoreItem[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
+    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
+
+
+    // Daum Postcode
+    const openPostcode = useDaumPostcodePopup('https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js');
+
+    const handleAddressComplete = (data: any) => {
+        let fullAddress = data.address;
+        let extraAddress = '';
+
+        if (data.addressType === 'R') {
+            if (data.bname !== '') {
+                extraAddress += data.bname;
+            }
+            if (data.buildingName !== '') {
+                extraAddress += (extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName);
+            }
+            fullAddress += (extraAddress !== '' ? ` (${extraAddress})` : '');
+        }
+
+        setAddress(fullAddress);
+        // Optional: Auto-trigger search or just let user click
+    };
+
+    const handleClickAddressSearch = () => {
+        openPostcode({ onComplete: handleAddressComplete });
+    };
+
+    // Data.go.kr API Key - using placeholder service key in request for now
+
+    const handleSearch = async () => {
+        if (!address) {
+            alert('주소를 입력해주세요.');
+            return;
+        }
+
+        setIsLoading(true);
+        setLoadingMessage('좌표를 검색 중입니다...');
+        setStores([]);
+        setSelectedItems(new Set());
+
+        try {
+            // 1. Geocoding via Nominatim
+            const fetchGeo = async (query: string) => {
+                return await axios.get('https://nominatim.openstreetmap.org/search', {
+                    params: {
+                        q: query,
+                        format: 'json',
+                        limit: 1
+                    }
+                });
+            };
+
+            let geoResponse = await fetchGeo(address);
+
+            // Retry logic: If no result and address ends with [text][number], try adding a space
+            if (geoResponse.data.length === 0) {
+                // Check for patterns like "관악로1" -> "관악로 1"
+                // Regex looks for (non-digit)(digit+) at the end of string
+                const match = address.match(/(\D)(\d+)$/);
+                if (match) {
+                    const correctedAddress = address.replace(/(\D)(\d+)$/, '$1 $2');
+                    // console.log(`Retrying with corrected address: ${correctedAddress}`);
+                    geoResponse = await fetchGeo(correctedAddress);
+                }
+            }
+
+            if (geoResponse.data.length === 0) {
+                alert('주소를 찾을 수 없습니다. 도로명과 번호 사이에 띄어쓰기가 있는지 확인해주세요. (예: 관악로 1)');
+                setIsLoading(false);
+                return;
+            }
+
+            const { lat, lon } = geoResponse.data[0];
+            const centerLat = parseFloat(lat);
+            const centerLon = parseFloat(lon);
+
+            setLoadingMessage('상권 데이터를 불러오는 중입니다...');
+
+            // 2. Calculate Bounding Box (Approximate)
+            // 1 degree of latitude = ~111km
+            // 1 degree of longitude = ~111km * cos(latitude)
+            const latDelta = radius / 111;
+            const lonDelta = radius / (111 * Math.cos(centerLat * (Math.PI / 180)));
+
+            const minLat = Number((centerLat - latDelta).toFixed(7));
+            const maxLat = Number((centerLat + latDelta).toFixed(7));
+            const minLon = Number((centerLon - lonDelta).toFixed(7));
+            const maxLon = Number((centerLon + lonDelta).toFixed(7));
+
+            // 3. Call Data.go.kr API via Proxy
+            // Service Key needs to be decoded if usage requires it, commonly passed as is.
+            // We will try decoding first if it's double encoded, or use as provided.
+            // Assuming VITE_DATA_GO_KR_API_KEY is the *Decoded* key for axios params usually.
+
+            const serviceKey = import.meta.env.VITE_DATA_GO_KR_API_KEY;
+            const decodedKey = serviceKey ? decodeURIComponent(serviceKey) : '';
+
+            // LOGGING FOR DEBUGGING
+            console.log('Sending Request Params:', {
+                minx: minLon, miny: minLat, maxx: maxLon, maxy: maxLat,
+                originalKeyLength: serviceKey?.length,
+                decodedKeyLength: decodedKey?.length
+            });
+
+            const response = await axios.get('/external-api/data-go-kr/B553077/api/open/sdsc2/storeListInRectangle', {
+                params: {
+                    serviceKey: decodedKey,
+                    pageNo: 1,
+                    numOfRows: 1000,
+                    minx: minLon,
+                    miny: minLat,
+                    maxx: maxLon,
+                    maxy: maxLat,
+                    type: 'json'
+                }
+            });
+
+            // Response structure handling
+            // The API response structure might vary slightly, typically body.items
+            const items = response.data?.body?.items;
+
+            if (items && Array.isArray(items)) {
+                setStores(items);
+                // Select all by default
+                const allIds = new Set(items.map((item: StoreItem) => item.bizesId));
+                setSelectedItems(allIds);
+            } else {
+                if (response.data?.header?.resultMsg) {
+                    alert(`API Error: ${response.data.header.resultMsg} (Code: ${response.data.header.resultCode})`);
+                } else {
+                    alert('조회된 데이터가 없거나 API 응답 형식이 올바르지 않습니다. (결과 없음)');
+                }
+                console.error('API Response:', response.data);
+            }
+
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            alert('데이터를 불러오는 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage('');
+        }
+    };
+
+    const handleExport = () => {
+        if (selectedItems.size === 0) {
+            alert('내보낼 항목을 선택해주세요.');
+            return;
+        }
+
+        const selectedStores = stores.filter(store => selectedItems.has(store.bizesId));
+
+        // Map to format matching StoreCreateRequest / Backend Model
+        const exportData = selectedStores.map(store => ({
+            universityId: selectedUniversityId,
+            name: store.bizesNm,
+            branch: store.brchNm,
+            roadAddress: store.rdnmAdr,
+            jibunAddress: store.lnoAdr,
+            latitude: Number(store.lat),
+            longitude: Number(store.lon)
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Stores");
+
+        const universityName = universities!.find(u => u.id === selectedUniversityId)?.name || 'University';
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fileName = `${universityName}_상권데이터_${dateStr}.xlsx`;
+
+        XLSX.writeFile(wb, fileName);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedItems.size === stores.length) {
+            setSelectedItems(new Set());
+        } else {
+            setSelectedItems(new Set(stores.map(s => s.bizesId)));
+        }
+    };
+
+    const toggleSelectItem = (id: string) => {
+        const newSet = new Set(selectedItems);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        setSelectedItems(newSet);
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h1 className="text-2xl font-bold text-gray-900">상가 데이터 불러오기</h1>
+                <div className="text-sm text-gray-500">
+                    공공데이터포털(data.go.kr) 소상공인시장진흥공단 상가(상권)정보 API 연동
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">중심 주소</label>
+                        <div className="flex space-x-2">
+                            <div className="relative flex-grow">
+                                <input
+                                    type="text"
+                                    value={address}
+                                    onChange={(e) => setAddress(e.target.value)}
+                                    placeholder={
+                                        selectedUniversityId
+                                            ? `${universities?.find(u => u.id === selectedUniversityId)?.name || '대학교'} 주소를 입력해주세요`
+                                            : "주소를 입력하거나 검색하세요"
+                                    }
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                />
+                                <MapPin className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleClickAddressSearch}
+                                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                주소 검색
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">반경 (km)</label>
+                        <select
+                            value={radius}
+                            onChange={(e) => setRadius(Number(e.target.value))}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                        >
+                            <option value={0.5}>0.5 km</option>
+                            <option value={1}>1 km</option>
+                            <option value={2}>2 km</option>
+                            <option value={3}>3 km</option>
+                            <option value={5}>5 km</option>
+                        </select>
+                    </div>
+                    <div className="flex items-end">
+                        <button
+                            onClick={handleSearch}
+                            disabled={isLoading}
+                            className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300 transition-colors"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                                    검색 중...
+                                </>
+                            ) : (
+                                <>
+                                    <Search className="-ml-1 mr-2 h-4 w-4" />
+                                    데이터 불러오기
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+                {loadingMessage && <p className="text-sm text-blue-600 text-center">{loadingMessage}</p>}
+            </div>
+
+            {stores.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                        <h3 className="text-lg font-medium text-gray-900">
+                            검색 결과: <span className="text-blue-600 font-bold">{stores.length}</span>개
+                        </h3>
+                        <button
+                            onClick={handleExport}
+                            disabled={selectedItems.size === 0}
+                            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Download className="-ml-1 mr-2 h-4 w-4" />
+                            Excel로 내보내기 ({selectedItems.size})
+                        </button>
+                    </div>
+
+                    <div className="overflow-x-auto max-h-[600px]">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedItems.size === stores.length}
+                                            onChange={toggleSelectAll}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        상호명 (지점명)
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        업종
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        주소
+                                    </th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        좌표
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {stores.map((store) => (
+                                    <tr key={store.bizesId} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedItems.has(store.bizesId)}
+                                                onChange={() => toggleSelectItem(store.bizesId)}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <Store className="h-5 w-5 text-gray-400 mr-2" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-gray-900">{store.bizesNm}</div>
+                                                    {store.brchNm && <div className="text-sm text-gray-500">{store.brchNm}</div>}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm text-gray-900">{store.indsMclsNm}</div>
+                                            <div className="text-xs text-gray-500">{store.indsSclsNm}</div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="text-sm text-gray-900">{store.rdnmAdr}</div>
+                                            <div className="text-xs text-gray-500">{store.lnoAdr}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <div>Lat: {store.lat}</div>
+                                            <div>Lon: {store.lon}</div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
