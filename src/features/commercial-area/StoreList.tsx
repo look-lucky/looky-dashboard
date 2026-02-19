@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon } from 'lucide-react';
+import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle } from 'lucide-react';
 
 interface StoreListProps {
     universityId: number;
@@ -14,6 +15,12 @@ export function StoreList({ universityId }: StoreListProps) {
     const [page, setPage] = useState(0);
     const pageSize = 10;
 
+    // Modal State
+    const [selectedStore, setSelectedStore] = useState<StoreResponse | null>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editForm, setEditForm] = useState<UpdateStoreRequest>({});
+    const [deleteConfirm, setDeleteConfirm] = useState(false);
+
     useEffect(() => {
         if (universityId) {
             fetchAllStores();
@@ -23,12 +30,11 @@ export function StoreList({ universityId }: StoreListProps) {
     const fetchAllStores = async () => {
         setLoading(true);
         try {
-            // Fetch a large number to get "all" stores for client-side filtering
             const response = await StoreService.getStores(
-                { page: 0, size: 2000, sort: ['id,asc'] }, // ID Ascending
-                undefined, // keyword
-                undefined, // categories
-                undefined, // moods
+                { page: 0, size: 2000, sort: ['id,asc'] },
+                undefined,
+                undefined,
+                undefined,
                 universityId
             );
             if (response.data) {
@@ -56,16 +62,76 @@ export function StoreList({ universityId }: StoreListProps) {
     const totalElements = filteredStores.length;
     const totalPages = Math.ceil(totalElements / pageSize);
 
-    // Reset page when search changes
     useEffect(() => {
         setPage(0);
     }, [searchTerm]);
 
-    // Current Page Data
     const currentStores = useMemo(() => {
         const start = page * pageSize;
         return filteredStores.slice(start, start + pageSize);
     }, [filteredStores, page, pageSize]);
+
+    // Modal Handlers
+    const openModal = async (store: StoreResponse) => {
+        try {
+            const detailedStore = await StoreService.getStore(store.id!);
+            setSelectedStore(detailedStore.data || store);
+            setEditForm({});
+            setIsEditMode(false);
+            setDeleteConfirm(false);
+        } catch (e) {
+            console.error(e);
+            setSelectedStore(store);
+        }
+    };
+
+    const closeModal = () => {
+        setSelectedStore(null);
+        setIsEditMode(false);
+        setDeleteConfirm(false);
+    };
+
+    const handleEditClick = () => {
+        if (!selectedStore) return;
+        setEditForm({
+            name: selectedStore.name,
+            roadAddress: selectedStore.roadAddress,
+            jibunAddress: selectedStore.jibunAddress,
+            phone: selectedStore.phone || '',
+            introduction: selectedStore.introduction || '',
+        });
+        setIsEditMode(true);
+    };
+
+    const handleSave = async () => {
+        if (!selectedStore?.id || !editForm) return;
+        try {
+            await StoreService.updateStore(selectedStore.id, { request: editForm, images: [] });
+            alert('상점 정보가 수정되었습니다.');
+            closeModal();
+            fetchAllStores();
+        } catch (e) {
+            console.error(e);
+            alert('수정에 실패했습니다.');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedStore?.id) return;
+        try {
+            await StoreService.deleteStore(selectedStore.id);
+            alert('상점이 삭제되었습니다.');
+            closeModal();
+            fetchAllStores();
+        } catch (e) {
+            console.error(e);
+            alert('삭제에 실패했습니다. (본인 소유 상점이 아닐 수 있습니다)');
+        }
+    };
+
+    const handleInputChange = (field: keyof UpdateStoreRequest, value: string) => {
+        setEditForm(prev => ({ ...prev, [field]: value }));
+    };
 
     if (loading && allStores.length === 0) {
         return <div className="p-8 text-center text-gray-500">데이터를 불러오는 중...</div>;
@@ -76,7 +142,6 @@ export function StoreList({ universityId }: StoreListProps) {
             <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <h3 className="text-lg font-semibold text-gray-900">등록된 상점 목록 ({totalElements})</h3>
 
-                {/* Search Input */}
                 <div className="relative w-full sm:w-64">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Search className="h-5 w-5 text-gray-400" />
@@ -104,7 +169,7 @@ export function StoreList({ universityId }: StoreListProps) {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {currentStores.length > 0 ? (
                             currentStores.map((store) => (
-                                <tr key={store.id} className="hover:bg-gray-50">
+                                <tr key={store.id} onClick={() => openModal(store)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {store.id}
                                     </td>
@@ -137,7 +202,7 @@ export function StoreList({ universityId }: StoreListProps) {
                 </table>
             </div>
 
-            {/* Pagination */}
+            {/* Pagination Controls */}
             {totalPages > 1 && (
                 <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                     <div className="flex-1 flex justify-between sm:hidden">
@@ -180,14 +245,10 @@ export function StoreList({ universityId }: StoreListProps) {
                                     <span className="sr-only">Previous</span>
                                     <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                                 </button>
-
-                                {/* Simple window pagination */}
                                 {[...Array(Math.min(5, totalPages))].map((_, i) => {
                                     let p = page - 2 + i;
-                                    // Adjust window to stay within bounds
                                     if (page < 2) p = i;
                                     if (page > totalPages - 3) p = totalPages - 5 + i;
-
                                     if (p < 0 || p >= totalPages) return null;
 
                                     return (
@@ -203,7 +264,6 @@ export function StoreList({ universityId }: StoreListProps) {
                                         </button>
                                     );
                                 })}
-
                                 <button
                                     onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                                     disabled={page === totalPages - 1}
@@ -221,6 +281,143 @@ export function StoreList({ universityId }: StoreListProps) {
                                     <ChevronsRight className="h-5 w-5" aria-hidden="true" />
                                 </button>
                             </nav>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Detail Modal */}
+            {selectedStore && (
+                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+
+                            <div className="absolute top-0 right-0 pt-4 pr-4">
+                                <button type="button" onClick={closeModal} className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
+                                    <span className="sr-only">Close</span>
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </div>
+
+                            <div className="sm:flex sm:items-start">
+                                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                        {isEditMode ? '상점 정보 수정' : selectedStore.name}
+                                    </h3>
+
+                                    <div className="mt-4 border-t border-gray-200 pt-4">
+                                        {deleteConfirm ? (
+                                            <div className="text-center p-4 bg-red-50 rounded-lg">
+                                                <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+                                                <h4 className="text-red-700 font-bold text-lg mb-2">정말 삭제하시겠습니까?</h4>
+                                                <p className="text-red-600 mb-4">
+                                                    상점이 **완전히 삭제**되며, 이 작업은 되돌릴 수 없습니다.<br />
+                                                    리뷰, 소식 등 모든 관련 데이터가 함께 사라질 수 있습니다.
+                                                </p>
+                                                <div className="flex justify-center gap-3">
+                                                    <button onClick={() => setDeleteConfirm(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">취소</button>
+                                                    <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">확인 (삭제)</button>
+                                                </div>
+                                            </div>
+                                        ) : isEditMode ? (
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">상점명</label>
+                                                    <input type="text" value={editForm.name || ''} onChange={e => handleInputChange('name', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">도로명 주소</label>
+                                                    <input type="text" value={editForm.roadAddress || ''} onChange={e => handleInputChange('roadAddress', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">지번 주소</label>
+                                                    <input type="text" value={editForm.jibunAddress || ''} onChange={e => handleInputChange('jibunAddress', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">전화번호</label>
+                                                    <input type="text" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">소개</label>
+                                                    <textarea value={editForm.introduction || ''} onChange={e => handleInputChange('introduction', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" rows={3} />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <dl className="space-y-4">
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <dt className="text-sm font-medium text-gray-500">ID</dt>
+                                                    <dd className="text-sm text-gray-900 col-span-2">{selectedStore.id}</dd>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <dt className="text-sm font-medium text-gray-500">카테고리</dt>
+                                                    <dd className="text-sm text-gray-900 col-span-2">{selectedStore.storeCategories?.join(', ') || '-'}</dd>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <dt className="text-sm font-medium text-gray-500">주소</dt>
+                                                    <dd className="text-sm text-gray-900 col-span-2">
+                                                        {selectedStore.roadAddress}<br />
+                                                        <span className="text-gray-400 text-xs">{selectedStore.jibunAddress}</span>
+                                                    </dd>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <dt className="text-sm font-medium text-gray-500">전화번호</dt>
+                                                    <dd className="text-sm text-gray-900 col-span-2">{selectedStore.phone || '-'}</dd>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <dt className="text-sm font-medium text-gray-500">소개</dt>
+                                                    <dd className="text-sm text-gray-900 col-span-2">{selectedStore.introduction || '-'}</dd>
+                                                </div>
+                                            </dl>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {!deleteConfirm && (
+                                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-2">
+                                    {isEditMode ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={handleSave}
+                                                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                            >
+                                                <Save className="w-4 h-4 mr-2" />
+                                                저장
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsEditMode(false)}
+                                                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                                            >
+                                                취소
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={handleEditClick}
+                                                className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-indigo-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                            >
+                                                <Edit2 className="w-4 h-4 mr-2" />
+                                                수정
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setDeleteConfirm(true)}
+                                                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                삭제
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
