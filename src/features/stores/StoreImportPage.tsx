@@ -410,7 +410,6 @@ export function StoreImportPage() {
                             <option value={1.5}>1.5 km</option>
                             <option value={2}>2 km</option>
                             <option value={3}>3 km</option>
-                            <option value={5}>5 km</option>
                         </select>
                     </div>
                     <div className="flex items-end">

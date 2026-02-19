@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CommercialAreaUpload } from '../features/commercial-area/CommercialAreaUpload';
 import { StoreManualRegistrationModal } from '../features/commercial-area/StoreManualRegistrationModal';
+import { StoreList } from '../features/commercial-area/StoreList';
 import { Plus } from 'lucide-react';
 import { useUniversity } from '../shared/contexts/UniversityContext';
 
@@ -43,6 +44,8 @@ export function CommercialAreaPage() {
                 {/* TODO: If upload needs universityId, pass it here */}
                 <CommercialAreaUpload onSuccess={handleUploadSuccess} />
             </div>
+
+            <StoreList universityId={selectedUniversityId} />
 
             {showManualModal && (
                 <StoreManualRegistrationModal onClose={() => setShowManualModal(false)} />
