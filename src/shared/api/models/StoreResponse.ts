@@ -6,6 +6,7 @@ export type StoreResponse = {
     id?: number;
     userId?: number;
     name?: string;
+    branch?: string;
     roadAddress?: string;
     jibunAddress?: string;
     latitude?: number;
@@ -17,5 +18,6 @@ export type StoreResponse = {
     storeCategories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
     storeMoods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>;
     imageUrls?: Array<string>;
+    storeStatus?: 'UNCLAIMED' | 'ACTIVE' | 'BANNED';
 };
 
