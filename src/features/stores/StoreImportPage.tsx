@@ -378,8 +378,8 @@ export function StoreImportPage() {
                                     onChange={(e) => setAddress(e.target.value)}
                                     placeholder={
                                         selectedUniversityId
-                                            ? `${universities?.find(u => u.id === selectedUniversityId)?.name || '대학교'} 주소를 입력해주세요`
-                                            : "주소를 입력하거나 검색하세요"
+                                            ? `${universities?.find(u => u.id === selectedUniversityId)?.name || '대학교'} 상권 중심의 주소를 입력해주세요`
+                                            : "상권 중심의 주소를 입력해주세요"
                                     }
                                     className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
                                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
