@@ -34,6 +34,7 @@ export class StoreService {
         moods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>,
         universityId?: number,
         hasPartnership?: boolean,
+        storeStatus?: 'UNCLAIMED' | 'ACTIVE' | 'BANNED',
     ): CancelablePromise<CommonResponsePageResponseStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -44,6 +45,7 @@ export class StoreService {
                 'moods': moods,
                 'universityId': universityId,
                 'hasPartnership': hasPartnership,
+                'storeStatus': storeStatus,
                 ...pageable,
             },
         });

@@ -71,7 +71,7 @@ export function StoreList({ universityId }: StoreListProps) {
         if (universityId) {
             fetchAllStores();
         }
-    }, [universityId, partnershipFilter]);
+    }, [universityId, partnershipFilter, statusFilter]);
 
     const fetchAllStores = async () => {
         setLoading(true);
@@ -86,7 +86,8 @@ export function StoreList({ universityId }: StoreListProps) {
                 undefined,
                 undefined,
                 universityId,
-                hasPartnership
+                hasPartnership,
+                statusFilter || undefined,
             );
             if (response.data) {
                 setAllStores(response.data.content || []);
@@ -108,7 +109,8 @@ export function StoreList({ universityId }: StoreListProps) {
             const branchMatch = store.branch?.toLowerCase().includes(searchLower);
             const textMatch = nameMatch || roadAddrMatch || jibunAddrMatch || branchMatch;
 
-            const statusMatch = statusFilter === '' || store.storeStatus === statusFilter;
+            const effectiveStatus = store.storeStatus ?? 'UNCLAIMED';
+            const statusMatch = statusFilter === '' || effectiveStatus === statusFilter;
 
             return textMatch && statusMatch;
         });
@@ -201,10 +203,6 @@ export function StoreList({ universityId }: StoreListProps) {
         });
     };
 
-    if (loading && allStores.length === 0) {
-        return <div className="p-8 text-center text-gray-500">데이터를 불러오는 중...</div>;
-    }
-
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3">
@@ -263,7 +261,18 @@ export function StoreList({ universityId }: StoreListProps) {
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
+                {loading && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <svg className="animate-spin h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            불러오는 중...
+                        </div>
+                    </div>
+                )}
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
@@ -319,8 +328,8 @@ export function StoreList({ universityId }: StoreListProps) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={4} className="px-6 py-10 text-center text-gray-500">
-                                    검색 결과가 없습니다.
+                                <td colSpan={5} className="px-6 py-20 text-center text-gray-500">
+                                    {loading ? '' : '검색 결과가 없습니다.'}
                                 </td>
                             </tr>
                         )}
