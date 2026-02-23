@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
@@ -33,6 +33,11 @@ export function StoreList({ universityId }: StoreListProps) {
     const [page, setPage] = useState(0);
     const pageSize = 10;
 
+    // 체크박스 선택 state
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const selectAllRef = useRef<HTMLInputElement>(null);
+
     // Modal State
     const [selectedStore, setSelectedStore] = useState<StoreResponse | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -46,7 +51,6 @@ export function StoreList({ universityId }: StoreListProps) {
         const roadAddr = data.roadAddress;
         const jibunAddr = data.jibunAddress;
 
-        // Trigger Geocoding
         try {
             const response = await AdminService.getGeocode(roadAddr);
             const coords = response.data || response;
@@ -123,10 +127,77 @@ export function StoreList({ universityId }: StoreListProps) {
         setPage(0);
     }, [searchTerm, statusFilter, partnershipFilter]);
 
+    // 필터/페이지 변경 시 선택 초기화
+    useEffect(() => {
+        setSelectedIds(new Set());
+    }, [searchTerm, statusFilter, partnershipFilter, page]);
+
     const currentStores = useMemo(() => {
         const start = page * pageSize;
         return filteredStores.slice(start, start + pageSize);
     }, [filteredStores, page, pageSize]);
+
+    // 현재 페이지에서 선택 가능한 가게 (입점 완료 제외)
+    const selectableCurrentStores = useMemo(
+        () => currentStores.filter(s => s.storeStatus !== 'ACTIVE'),
+        [currentStores]
+    );
+    const allCurrentSelectable =
+        selectableCurrentStores.length > 0 &&
+        selectableCurrentStores.every(s => selectedIds.has(s.id!));
+    const someCurrentSelected = selectableCurrentStores.some(s => selectedIds.has(s.id!));
+
+    // 전체선택 체크박스 indeterminate 처리
+    useEffect(() => {
+        if (selectAllRef.current) {
+            selectAllRef.current.indeterminate = someCurrentSelected && !allCurrentSelectable;
+        }
+    }, [someCurrentSelected, allCurrentSelectable]);
+
+    // 체크박스 개별 토글
+    const handleCheckboxChange = (id: number) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    // 현재 페이지 전체선택/해제
+    const handleSelectAll = () => {
+        if (allCurrentSelectable) {
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                selectableCurrentStores.forEach(s => next.delete(s.id!));
+                return next;
+            });
+        } else {
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                selectableCurrentStores.forEach(s => next.add(s.id!));
+                return next;
+            });
+        }
+    };
+
+    // 일괄 삭제
+    const handleBulkDelete = async () => {
+        const count = selectedIds.size;
+        if (!window.confirm(`선택한 ${count}개의 상점을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+        setBulkDeleting(true);
+        const ids = Array.from(selectedIds);
+        const results = await Promise.allSettled(ids.map(id => StoreService.deleteStore(id)));
+        const failed = results.filter(r => r.status === 'rejected').length;
+        setBulkDeleting(false);
+        setSelectedIds(new Set());
+        if (failed > 0) {
+            alert(`${count - failed}개 삭제 완료, ${failed}개 삭제 실패`);
+        } else {
+            alert(`${count}개 삭제 완료`);
+        }
+        fetchAllStores();
+    };
 
     // Modal Handlers
     const openModal = async (store: StoreResponse) => {
@@ -207,7 +278,19 @@ export function StoreList({ universityId }: StoreListProps) {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900">등록된 상점 목록 ({totalElements})</h3>
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-gray-900">등록된 상점 목록 ({totalElements})</h3>
+                        {selectedIds.size > 0 && (
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={bulkDeleting}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-md transition-colors"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                {bulkDeleting ? '삭제 중...' : `${selectedIds.size}개 삭제`}
+                            </button>
+                        )}
+                    </div>
 
                     <div className="relative w-full sm:w-64">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -276,6 +359,16 @@ export function StoreList({ universityId }: StoreListProps) {
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
+                            <th scope="col" className="w-12 px-4 py-3">
+                                <input
+                                    ref={selectAllRef}
+                                    type="checkbox"
+                                    checked={allCurrentSelectable}
+                                    onChange={handleSelectAll}
+                                    disabled={selectableCurrentStores.length === 0}
+                                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                                />
+                            </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점명 (지점)</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
@@ -285,50 +378,67 @@ export function StoreList({ universityId }: StoreListProps) {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {currentStores.length > 0 ? (
-                            currentStores.map((store) => (
-                                <tr key={store.id} onClick={() => openModal(store)} className="hover:bg-gray-50 cursor-pointer transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {store.id}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
-                                                <StoreIcon className="w-4 h-4" />
-                                            </div>
-                                            <div className="ml-3">
-                                                <div className="text-sm font-medium text-gray-900">
-                                                    {store.name}
-                                                    {store.branch && <span className="text-gray-500 font-normal ml-1">({store.branch})</span>}
+                            currentStores.map((store) => {
+                                const isActive = store.storeStatus === 'ACTIVE';
+                                const isChecked = selectedIds.has(store.id!);
+                                return (
+                                    <tr
+                                        key={store.id}
+                                        onClick={() => openModal(store)}
+                                        className={`hover:bg-gray-50 cursor-pointer transition-colors ${isChecked ? 'bg-indigo-50 hover:bg-indigo-100' : ''}`}
+                                    >
+                                        <td className="w-12 px-4 py-4" onClick={e => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={() => handleCheckboxChange(store.id!)}
+                                                disabled={isActive}
+                                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                                            />
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {store.id}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                                                    <StoreIcon className="w-4 h-4" />
+                                                </div>
+                                                <div className="ml-3">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {store.name}
+                                                        {store.branch && <span className="text-gray-500 font-normal ml-1">({store.branch})</span>}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {store.storeCategories?.map(c => CATEGORY_MAP[c] || c).join(', ') || '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {store.storeStatus === 'ACTIVE' ? (
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                입점 완료
-                                            </span>
-                                        ) : store.storeStatus === 'BANNED' ? (
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                정지
-                                            </span>
-                                        ) : (
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                                미입점
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {store.roadAddress || store.jibunAddress || '-'}
-                                    </td>
-                                </tr>
-                            ))
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {store.storeCategories?.map(c => CATEGORY_MAP[c] || c).join(', ') || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {store.storeStatus === 'ACTIVE' ? (
+                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                    입점 완료
+                                                </span>
+                                            ) : store.storeStatus === 'BANNED' ? (
+                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                    정지
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                    미입점
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {store.roadAddress || store.jibunAddress || '-'}
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         ) : (
                             <tr>
-                                <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
+                                <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
                                     {loading ? '' : '검색 결과가 없습니다.'}
                                 </td>
                             </tr>
@@ -632,4 +742,3 @@ export function StoreList({ universityId }: StoreListProps) {
         </div>
     );
 }
-
