@@ -261,7 +261,7 @@ export function StoreList({ universityId }: StoreListProps) {
                 </div>
             </div>
 
-            <div className="relative overflow-x-auto">
+            <div className="relative overflow-x-auto min-h-[570px]">
                 {loading && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
                         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -328,7 +328,7 @@ export function StoreList({ universityId }: StoreListProps) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={5} className="px-6 py-20 text-center text-gray-500">
+                                <td colSpan={5} className="px-6 py-10 text-center text-gray-500">
                                     {loading ? '' : '검색 결과가 없습니다.'}
                                 </td>
                             </tr>
