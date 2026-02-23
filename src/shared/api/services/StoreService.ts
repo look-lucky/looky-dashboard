@@ -33,6 +33,7 @@ export class StoreService {
         categories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>,
         moods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>,
         universityId?: number,
+        hasPartnership?: boolean,
     ): CancelablePromise<CommonResponsePageResponseStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -42,6 +43,7 @@ export class StoreService {
                 'categories': categories,
                 'moods': moods,
                 'universityId': universityId,
+                'hasPartnership': hasPartnership,
                 ...pageable,
             },
         });

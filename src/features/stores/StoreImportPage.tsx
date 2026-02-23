@@ -4,7 +4,7 @@ import { Search as SearchIcon, Download, Loader2, MapPin, Store } from 'lucide-r
 import * as XLSX from 'xlsx';
 import axios from 'axios';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
-import { useNaverGeocoding } from '../../shared/hooks/useNaverGeocoding';
+import { AdminService } from '../../shared/api/services/AdminService';
 
 interface StoreItem {
     bizesId: string; // 상가업소번호
@@ -50,7 +50,6 @@ interface StoreItem {
 
 export function StoreImportPage() {
     const { universities, selectedUniversityId } = useUniversity();
-    const { geocodeAddress } = useNaverGeocoding();
 
     // Search State
     const [address, setAddress] = useState('');
@@ -70,12 +69,18 @@ export function StoreImportPage() {
         const roadAddr = data.roadAddress;
         setAddress(roadAddr);
 
-        // Auto-geocode
-        const coords = await geocodeAddress(roadAddr);
-        if (coords) {
-            setSearchCoords({ lat: coords.latitude, lng: coords.longitude });
-        } else {
-            alert('위치 좌표를 찾을 수 없습니다. 다시 시도해주세요.');
+        try {
+            // Auto-geocode via API
+            const response = await AdminService.getGeocode(roadAddr);
+            const coords = response.data || response; // Handle both direct object and CommonResponse
+            if (coords && coords.latitude && coords.longitude) {
+                setSearchCoords({ lat: coords.latitude, lng: coords.longitude });
+            } else {
+                alert('위치 좌표를 찾을 수 없습니다. 다시 시도해주세요.');
+            }
+        } catch (error) {
+            console.error('Geocoding failed:', error);
+            alert('위치 좌표를 찾을 수 없습니다. (API 에러)');
         }
     };
 

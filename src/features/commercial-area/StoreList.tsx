@@ -4,7 +4,7 @@ import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
-import { useNaverGeocoding } from '../../shared/hooks/useNaverGeocoding';
+import { AdminService } from '../../shared/api/services/AdminService';
 
 interface StoreListProps {
     universityId: number;
@@ -21,10 +21,15 @@ const CATEGORY_MAP: Record<string, string> = {
 
 const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as Array<keyof typeof CATEGORY_MAP>;
 
+type StoreStatusFilter = '' | 'UNCLAIMED' | 'ACTIVE' | 'BANNED';
+type PartnershipFilter = 'all' | 'yes' | 'no';
+
 export function StoreList({ universityId }: StoreListProps) {
     const [allStores, setAllStores] = useState<StoreResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('');
+    const [partnershipFilter, setPartnershipFilter] = useState<PartnershipFilter>('all');
     const [page, setPage] = useState(0);
     const pageSize = 10;
 
@@ -36,39 +41,52 @@ export function StoreList({ universityId }: StoreListProps) {
 
     // Address Search State
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-    const { geocodeAddress } = useNaverGeocoding();
 
     const handleAddressComplete = async (data: any) => {
         const roadAddr = data.roadAddress;
         const jibunAddr = data.jibunAddress;
 
         // Trigger Geocoding
-        const coords = await geocodeAddress(roadAddr);
-
-        setEditForm(prev => ({
-            ...prev,
-            roadAddress: roadAddr,
-            jibunAddress: jibunAddr || coords?.jibunAddress || prev.jibunAddress,
-            latitude: coords ? coords.latitude : prev.latitude,
-            longitude: coords ? coords.longitude : prev.longitude
-        }));
+        try {
+            const response = await AdminService.getGeocode(roadAddr);
+            const coords = response.data || response;
+            setEditForm(prev => ({
+                ...prev,
+                roadAddress: roadAddr,
+                jibunAddress: jibunAddr || coords?.jibunAddress || prev.jibunAddress,
+                latitude: coords?.latitude ?? prev.latitude,
+                longitude: coords?.longitude ?? prev.longitude
+            }));
+        } catch (error) {
+            console.error('Geocoding failed:', error);
+            setEditForm(prev => ({
+                ...prev,
+                roadAddress: roadAddr,
+                jibunAddress: jibunAddr || prev.jibunAddress
+            }));
+        }
     };
 
     useEffect(() => {
         if (universityId) {
             fetchAllStores();
         }
-    }, [universityId]);
+    }, [universityId, partnershipFilter]);
 
     const fetchAllStores = async () => {
         setLoading(true);
+        const hasPartnership =
+            partnershipFilter === 'yes' ? true :
+            partnershipFilter === 'no' ? false :
+            undefined;
         try {
             const response = await StoreService.getStores(
                 { page: 0, size: 2000, sort: ['id,asc'] },
                 undefined,
                 undefined,
                 undefined,
-                universityId
+                universityId,
+                hasPartnership
             );
             if (response.data) {
                 setAllStores(response.data.content || []);
@@ -88,17 +106,20 @@ export function StoreList({ universityId }: StoreListProps) {
             const roadAddrMatch = store.roadAddress?.toLowerCase().includes(searchLower);
             const jibunAddrMatch = store.jibunAddress?.toLowerCase().includes(searchLower);
             const branchMatch = store.branch?.toLowerCase().includes(searchLower);
+            const textMatch = nameMatch || roadAddrMatch || jibunAddrMatch || branchMatch;
 
-            return nameMatch || roadAddrMatch || jibunAddrMatch || branchMatch;
+            const statusMatch = statusFilter === '' || store.storeStatus === statusFilter;
+
+            return textMatch && statusMatch;
         });
-    }, [allStores, searchTerm]);
+    }, [allStores, searchTerm, statusFilter]);
 
     const totalElements = filteredStores.length;
     const totalPages = Math.ceil(totalElements / pageSize);
 
     useEffect(() => {
         setPage(0);
-    }, [searchTerm]);
+    }, [searchTerm, statusFilter, partnershipFilter]);
 
     const currentStores = useMemo(() => {
         const start = page * pageSize;
@@ -186,20 +207,59 @@ export function StoreList({ universityId }: StoreListProps) {
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mt-6 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <h3 className="text-lg font-semibold text-gray-900">등록된 상점 목록 ({totalElements})</h3>
+            <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">등록된 상점 목록 ({totalElements})</h3>
 
-                <div className="relative w-full sm:w-64">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+                    <div className="relative w-full sm:w-64">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="상점명, 지점명, 주소 검색"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                    <input
-                        type="text"
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        placeholder="상점명, 지점명, 주소 검색"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                </div>
+
+                <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-sm text-gray-500">필터:</span>
+
+                    {/* 입점 상태 필터 */}
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as StoreStatusFilter)}
+                        className="text-sm border border-gray-300 rounded-md py-1.5 pl-3 pr-8 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                        <option value="">입점 상태 전체</option>
+                        <option value="ACTIVE">입점 완료</option>
+                        <option value="UNCLAIMED">미입점</option>
+                        <option value="BANNED">정지</option>
+                    </select>
+
+                    {/* 제휴 여부 필터 */}
+                    <select
+                        value={partnershipFilter}
+                        onChange={(e) => setPartnershipFilter(e.target.value as PartnershipFilter)}
+                        className="text-sm border border-gray-300 rounded-md py-1.5 pl-3 pr-8 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                        <option value="all">제휴 여부 전체</option>
+                        <option value="yes">제휴 있음</option>
+                        <option value="no">제휴 없음</option>
+                    </select>
+
+                    {/* 활성 필터 표시 */}
+                    {(statusFilter !== '' || partnershipFilter !== 'all') && (
+                        <button
+                            onClick={() => { setStatusFilter(''); setPartnershipFilter('all'); }}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                        >
+                            필터 초기화
+                        </button>
+                    )}
                 </div>
             </div>
 

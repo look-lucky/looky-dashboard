@@ -4,7 +4,7 @@ import { StoreService } from '../../shared/api/services/StoreService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
-import { useNaverGeocoding } from '../../shared/hooks/useNaverGeocoding';
+import { AdminService } from '../../shared/api/services/AdminService';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -23,7 +23,6 @@ const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as Array<keyof typeof CATEGORY_M
 
 export function StoreManualRegistrationModal({ onClose }: StoreManualRegistrationModalProps) {
     const { universities, selectedUniversityId } = useUniversity();
-    const { geocodeAddress } = useNaverGeocoding();
 
     const [loading, setLoading] = useState(false);
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -64,14 +63,19 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         }));
 
         // Trigger Geocoding
-        const coords = await geocodeAddress(roadAddr);
-        if (coords) {
-            setFormData(prev => ({
-                ...prev,
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-                jibunAddress: prev.jibunAddress || coords.jibunAddress || ''
-            }));
+        try {
+            const response = await AdminService.getGeocode(roadAddr);
+            const coords = response.data || response;
+            if (coords && coords.latitude && coords.longitude) {
+                setFormData(prev => ({
+                    ...prev,
+                    latitude: coords.latitude,
+                    longitude: coords.longitude,
+                    jibunAddress: prev.jibunAddress || coords.jibunAddress || ''
+                }));
+            }
+        } catch (error) {
+            console.error('Geocoding failed:', error);
         }
     };
 

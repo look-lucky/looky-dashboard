@@ -84,4 +84,22 @@ export class AdminService {
             },
         });
     }
+    /**
+     * [관리자] 주소 지오코딩
+     * 주소를 위도, 경도 좌표와 지번 주소로 변환합니다.
+     * @param address 검색할 주소
+     * @returns any 지오코딩 결과
+     * @throws ApiError
+     */
+    public static getGeocode(
+        address: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/admin/stores/geocode',
+            query: {
+                'address': address,
+            },
+        });
+    }
 }
