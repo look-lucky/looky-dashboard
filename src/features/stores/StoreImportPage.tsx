@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
-import { Search as SearchIcon, Download, Loader2, MapPin, Store } from 'lucide-react';
+import { Search as SearchIcon, Download, Loader2, MapPin, Store, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import axios from 'axios';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
@@ -101,6 +101,8 @@ export function StoreImportPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [page, setPage] = useState(0);
+    const pageSize = 50;
 
     // Create a separate axios instance
     const externalApi = axios.create();
@@ -135,6 +137,7 @@ export function StoreImportPage() {
         setLoadingMessage('상권 데이터를 불러오는 중입니다...');
         setStores([]);
         setSelectedItems(new Set());
+        setPage(0);
 
         try {
             const centerLat = searchCoords.lat;
@@ -236,7 +239,7 @@ export function StoreImportPage() {
 
                 if (items && Array.isArray(items) && items.length > 0) {
                     fetchedCount += items.length;
-                    
+
                     const filteredItems = items.filter(item => ALLOWED_CATEGORY_NAMES.has(item.indsSclsNm?.trim()));
                     allStores = [...allStores, ...filteredItems];
 
@@ -299,12 +302,20 @@ export function StoreImportPage() {
         XLSX.writeFile(wb, fileName);
     };
 
-    const toggleSelectAll = () => {
-        if (selectedItems.size === stores.length) {
-            setSelectedItems(new Set());
+    const totalElements = stores.length;
+    const totalPages = Math.ceil(totalElements / pageSize);
+    const currentStores = stores.slice(page * pageSize, (page + 1) * pageSize);
+
+    const isAllCurrentSelected = currentStores.length > 0 && currentStores.every(s => selectedItems.has(s.bizesId));
+
+    const toggleSelectAllCurrent = () => {
+        const newSet = new Set(selectedItems);
+        if (isAllCurrentSelected) {
+            currentStores.forEach(s => newSet.delete(s.bizesId));
         } else {
-            setSelectedItems(new Set(stores.map(s => s.bizesId)));
+            currentStores.forEach(s => newSet.add(s.bizesId));
         }
+        setSelectedItems(newSet);
     };
 
     const toggleSelectItem = (id: string) => {
@@ -418,8 +429,8 @@ export function StoreImportPage() {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                                         <input
                                             type="checkbox"
-                                            checked={selectedItems.size === stores.length}
-                                            onChange={toggleSelectAll}
+                                            checked={isAllCurrentSelected}
+                                            onChange={toggleSelectAllCurrent}
                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                         />
                                     </th>
@@ -438,7 +449,7 @@ export function StoreImportPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {stores.map((store) => (
+                                {currentStores.map((store) => (
                                     <tr key={store.bizesId} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <input
@@ -474,6 +485,90 @@ export function StoreImportPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                            <div className="flex-1 flex justify-between sm:hidden">
+                                <button
+                                    onClick={() => setPage(Math.max(0, page - 1))}
+                                    disabled={page === 0}
+                                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    이전
+                                </button>
+                                <button
+                                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                                    disabled={page === totalPages - 1}
+                                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    다음
+                                </button>
+                            </div>
+                            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-700">
+                                        <span className="font-medium">{page * pageSize + 1}</span> - <span className="font-medium">{Math.min((page + 1) * pageSize, totalElements)}</span> / <span className="font-medium">{totalElements}</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                        <button
+                                            onClick={() => setPage(0)}
+                                            disabled={page === 0}
+                                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">First</span>
+                                            <ChevronsLeft className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                        <button
+                                            onClick={() => setPage(Math.max(0, page - 1))}
+                                            disabled={page === 0}
+                                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">Previous</span>
+                                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                        {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                            let p = page - 2 + i;
+                                            if (page < 2) p = i;
+                                            if (page > totalPages - 3) p = totalPages - 5 + i;
+                                            if (p < 0 || p >= totalPages) return null;
+
+                                            return (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setPage(p)}
+                                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
+                                                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    {p + 1}
+                                                </button>
+                                            );
+                                        })}
+                                        <button
+                                            onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                                            disabled={page === totalPages - 1}
+                                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">Next</span>
+                                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                        <button
+                                            onClick={() => setPage(totalPages - 1)}
+                                            disabled={page === totalPages - 1}
+                                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">Last</span>
+                                            <ChevronsRight className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
