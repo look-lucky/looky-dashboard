@@ -33,6 +33,8 @@ export class StoreService {
         categories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>,
         moods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>,
         universityId?: number,
+        hasPartnership?: boolean,
+        storeStatus?: 'UNCLAIMED' | 'ACTIVE' | 'BANNED',
     ): CancelablePromise<CommonResponsePageResponseStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
@@ -42,6 +44,8 @@ export class StoreService {
                 'categories': categories,
                 'moods': moods,
                 'universityId': universityId,
+                'hasPartnership': hasPartnership,
+                'storeStatus': storeStatus,
                 ...pageable,
             },
         });
@@ -66,7 +70,7 @@ export class StoreService {
             method: 'POST',
             url: '/api/stores',
             body: requestBody,
-            mediaType: 'application/json',
+            mediaType: 'multipart/form-data',
             errors: {
                 400: `잘못된 요청 데이터`,
                 403: `권한 없음`,
@@ -165,7 +169,7 @@ export class StoreService {
                 'storeId': storeId,
             },
             body: requestBody,
-            mediaType: 'application/json',
+            mediaType: 'multipart/form-data',
             errors: {
                 403: `권한 없음 (본인 소유 상점 아님)`,
                 404: `상점 없음`,
