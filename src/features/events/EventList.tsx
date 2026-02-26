@@ -34,10 +34,10 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         if (!selectedUniversityId) return;
         setLoading(true);
         try {
-            // Fetch both specific university events and "target all" events (universityId: 0)
+            // Fetch both specific university events and "target all" events (universityId: null)
             const [uniResponse, allResponse] = await Promise.all([
                 EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, selectedUniversityId),
-                EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, 0)
+                EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, null as unknown as number)
             ]);
 
             const uniEvents = uniResponse.data?.content || [];
@@ -134,7 +134,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
-                                        {(!event.universityId || event.universityId === 0) && (
+                                        {(event.universityId === null) && (
                                             <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
                                                 모든 학교
                                             </span>

@@ -31,7 +31,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [subtitle, setSubtitle] = useState('');
     const [description, setDescription] = useState('');
     const [place, setPlace] = useState('');
-    const [universityId, setUniversityId] = useState<number>(0);
+    const [universityId, setUniversityId] = useState<number | null>(null);
     const [universities, setUniversities] = useState<UniversityResponse[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
     const [latitude, setLatitude] = useState<number>(37.5665);
@@ -50,7 +50,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setSubtitle(initialData.subtitle || '');
             setDescription(initialData.description || '');
             setPlace(initialData.place || '');
-            setUniversityId(initialData.universityId || 0);
+            setUniversityId(initialData.universityId ?? null);
             setSelectedTypes(initialData.eventTypes as EventType[] || []);
             setLatitude(initialData.latitude || 37.5665);
             setLongitude(initialData.longitude || 126.9780);
@@ -279,12 +279,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">대상 대학교 *</label>
                             <select
-                                value={universityId}
-                                onChange={(e) => setUniversityId(parseInt(e.target.value) || 0)}
+                                value={universityId === null ? '' : universityId}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUniversityId(val === '' ? null : parseInt(val));
+                                }}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
                                 required
                             >
-                                <option value={0}>모든 학교</option>
+                                <option value="">모든 학교</option>
                                 {universities.map((uni) => (
                                     <option key={uni.id} value={uni.id}>
                                         {uni.name}

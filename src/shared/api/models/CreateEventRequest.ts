@@ -43,8 +43,8 @@ export type CreateEventRequest = {
      */
     place: string;
     /**
-     * 대학교 ID (0은 모든 학교 대상)
+     * 대학교 ID (null은 모든 학교 대상)
      */
-    universityId: number;
+    universityId: number | null;
 };
 
