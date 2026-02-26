@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
-import { Search as SearchIcon, Download, Loader2, MapPin, Store } from 'lucide-react';
+import { Search as SearchIcon, Download, Loader2, MapPin, Store, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import axios from 'axios';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
@@ -48,6 +48,46 @@ interface StoreItem {
     lat: number; // 위도
 }
 
+const ALLOWED_CATEGORY_NAMES = new Set([
+    '슈퍼마켓', '편의점', '그 외 기타 종합 소매업', '정육점', '수산물 소매업',
+    '채소/과일 소매업', '아이스크림 할인점', '반찬/식료품 소매업', '주류 소매업', '생수/음료 소매업',
+    '담배/전자담배 소매업', '컴퓨터/소프트웨어 소매업', '핸드폰 소매업', '가전제품 소매업', '남성 의류 소매업',
+    '여성 의류 소매업', '유아용 의류 소매업', '한복 소매업', '기타 의류 소매업', '침구류/커튼 소매업',
+    '액세서리/잡화 소매업', '신발 소매업', '가방 소매업', '가구 소매업', '전기용품/조명장치 소매업',
+    '주방/가정용품 소매업', '악기 소매업', '서점', '문구/회화용품 소매업', '음반/비디오물 소매업',
+    '운동용품 소매업', '자전거 소매업', '장난감 소매업', '약국', '의료기기 소매업',
+    '화장품 소매업', '안경렌즈 소매업', '사진기/기타 광학기기 소매업', '시계/귀금속 소매업', '기념품점',
+    '꽃집', '애완동물/애완용품 소매업', '그 외 기타 상품 전문 소매업', '중고 상품 소매업', '호텔/리조트',
+    '여관/모텔', '펜션', '캠핑/글램핑', '기숙사/고시원', '그 외 기타 숙박업',
+    '백반/한정식', '국/탕/찌개류', '족발/보쌈', '전/부침개', '국수/칼국수',
+    '냉면/밀면', '돼지고기 구이/찜', '소고기 구이/찜', '곱창 전골/구이', '닭/오리고기 구이/찜',
+    '횟집', '해산물 구이/찜', '복 요리 전문', '기타 한식 음식점', '중국집',
+    '마라탕/훠궈', '일식 회/초밥', '일식 카레/돈가스/덮밥', '일식 면 요리', '기타 일식 음식점',
+    '경양식', '파스타/스테이크', '패밀리레스토랑', '기타 서양식 음식점', '베트남식 전문',
+    '기타 동남아식 전문', '분류 안된 외국식 음식점', '구내식당', '뷔페', '빵/도넛',
+    '떡/한과', '피자', '버거', '토스트/샌드위치/샐러드', '치킨',
+    '김밥/만두/분식', '아이스크림/빙수', '그 외 기타 간이 음식점', '일반 유흥 주점', '무도 유흥 주점',
+    '생맥주 전문', '요리 주점', '카페', '부동산 중개/대리업', '변호사',
+    '변리사', '법무사', '행정사', '공인노무사', '기타 법무관련 서비스업',
+    '공인회계사', '세무사', '기타 회계 관련 서비스업', '동물병원', '사진촬영업',
+    '명함/간판/광고물 제작', '번역/통역 서비스업', '사업/무형 재산권 중개업', '소독, 구충 및 방제 서비스업', '여행사',
+    '기타 여행 보조/예약 서비스업', '복사업', '기타 사무 지원 서비스업', '전시/컨벤션/행사 대행 서비스업', '자동차 대여업',
+    '스포츠/레크리에이션 용품 대여업', '음반/비디오물 대여업', '만화방', '의류 대여업', '기타 개인/가정용품 대여업',
+    '태권도/무술학원', '요가/필라테스 학원', '음악학원', '미술학원', '기타 예술/스포츠 교육기관',
+    '외국어학원', '전문자격/고시학원', '직원 훈련기관', '운전학원', '기타 기술/직업 훈련학원',
+    '컴퓨터 학원', '그 외 기타 교육기관', '교육컨설팅업', '기타 교육지원 서비스업', '종합병원',
+    '일반병원', '치과병원', '한방병원', '요양병원', '내과/소아과 의원',
+    '외과 의원', '신경/정신과 의원', '피부/비뇨기과 의원', '안과 의원', '이비인후과 의원',
+    '산부인과 의원', '성형외과 의원', '기타 의원', '치과의원', '한의원',
+    '방사선 진단/병리 검사 의원', '유사 의료업', '독서실/스터디 카페', '종합 스포츠시설', '헬스장',
+    '수영장', '볼링장', '당구장', '골프 연습장', '테니스장', '탁구장', '기타 스포츠시설 운영업',
+    '스쿼시/라켓볼장', '비디오방', '전자 게임장', '기타 오락장', 'PC방', '노래방',
+    '수상/해양 레저업', '기타 오락관련 서비스업', '컴퓨터/노트북/프린터 수리업', '핸드폰/통신장비 수리업', '자동차 정비소',
+    '자동차 세차장', '모터사이클 수리업', '가전제품 수리업', '의류/이불 수선업', '가죽/가방/신발 수선업',
+    '시계/귀금속/악기 수리업', '그 외 기타 개인/가정용품 수리업', '미용실', '피부 관리실', '네일숍',
+    '목욕탕/사우나', '마사지/안마', '체형/비만 관리', '세탁소', '셀프 빨래방'
+]);
+
 export function StoreImportPage() {
     const { universities, selectedUniversityId } = useUniversity();
 
@@ -61,6 +101,8 @@ export function StoreImportPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [page, setPage] = useState(0);
+    const pageSize = 50;
 
     // Create a separate axios instance
     const externalApi = axios.create();
@@ -95,6 +137,7 @@ export function StoreImportPage() {
         setLoadingMessage('상권 데이터를 불러오는 중입니다...');
         setStores([]);
         setSelectedItems(new Set());
+        setPage(0);
 
         try {
             const centerLat = searchCoords.lat;
@@ -126,6 +169,7 @@ export function StoreImportPage() {
             const numOfRows = 1000;
             let allStores: StoreItem[] = [];
             let totalCount = 0;
+            let fetchedCount = 0;
             const maxPages = 50; // Safety break
 
             while (pageNo <= maxPages) {
@@ -194,10 +238,13 @@ export function StoreImportPage() {
                 }
 
                 if (items && Array.isArray(items) && items.length > 0) {
-                    allStores = [...allStores, ...items];
+                    fetchedCount += items.length;
+
+                    const filteredItems = items.filter(item => ALLOWED_CATEGORY_NAMES.has(item.indsSclsNm?.trim()));
+                    allStores = [...allStores, ...filteredItems];
 
                     // Check if we fetched all items
-                    if (allStores.length >= totalCount || items.length < numOfRows) {
+                    if (fetchedCount >= totalCount || items.length < numOfRows) {
                         break;
                     }
                     pageNo++;
@@ -255,12 +302,20 @@ export function StoreImportPage() {
         XLSX.writeFile(wb, fileName);
     };
 
-    const toggleSelectAll = () => {
-        if (selectedItems.size === stores.length) {
-            setSelectedItems(new Set());
+    const totalElements = stores.length;
+    const totalPages = Math.ceil(totalElements / pageSize);
+    const currentStores = stores.slice(page * pageSize, (page + 1) * pageSize);
+
+    const isAllCurrentSelected = currentStores.length > 0 && currentStores.every(s => selectedItems.has(s.bizesId));
+
+    const toggleSelectAllCurrent = () => {
+        const newSet = new Set(selectedItems);
+        if (isAllCurrentSelected) {
+            currentStores.forEach(s => newSet.delete(s.bizesId));
         } else {
-            setSelectedItems(new Set(stores.map(s => s.bizesId)));
+            currentStores.forEach(s => newSet.add(s.bizesId));
         }
+        setSelectedItems(newSet);
     };
 
     const toggleSelectItem = (id: string) => {
@@ -374,8 +429,8 @@ export function StoreImportPage() {
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
                                         <input
                                             type="checkbox"
-                                            checked={selectedItems.size === stores.length}
-                                            onChange={toggleSelectAll}
+                                            checked={isAllCurrentSelected}
+                                            onChange={toggleSelectAllCurrent}
                                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                         />
                                     </th>
@@ -394,7 +449,7 @@ export function StoreImportPage() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {stores.map((store) => (
+                                {currentStores.map((store) => (
                                     <tr key={store.bizesId} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <input
@@ -430,6 +485,90 @@ export function StoreImportPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                            <div className="flex-1 flex justify-between sm:hidden">
+                                <button
+                                    onClick={() => setPage(Math.max(0, page - 1))}
+                                    disabled={page === 0}
+                                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    이전
+                                </button>
+                                <button
+                                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                                    disabled={page === totalPages - 1}
+                                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    다음
+                                </button>
+                            </div>
+                            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-700">
+                                        <span className="font-medium">{page * pageSize + 1}</span> - <span className="font-medium">{Math.min((page + 1) * pageSize, totalElements)}</span> / <span className="font-medium">{totalElements}</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                        <button
+                                            onClick={() => setPage(0)}
+                                            disabled={page === 0}
+                                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">First</span>
+                                            <ChevronsLeft className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                        <button
+                                            onClick={() => setPage(Math.max(0, page - 1))}
+                                            disabled={page === 0}
+                                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">Previous</span>
+                                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                        {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                                            let p = page - 2 + i;
+                                            if (page < 2) p = i;
+                                            if (page > totalPages - 3) p = totalPages - 5 + i;
+                                            if (p < 0 || p >= totalPages) return null;
+
+                                            return (
+                                                <button
+                                                    key={p}
+                                                    onClick={() => setPage(p)}
+                                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
+                                                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    {p + 1}
+                                                </button>
+                                            );
+                                        })}
+                                        <button
+                                            onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                                            disabled={page === totalPages - 1}
+                                            className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">Next</span>
+                                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                        <button
+                                            onClick={() => setPage(totalPages - 1)}
+                                            disabled={page === totalPages - 1}
+                                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            <span className="sr-only">Last</span>
+                                            <ChevronsRight className="h-5 w-5" aria-hidden="true" />
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
