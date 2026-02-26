@@ -34,14 +34,32 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         if (!selectedUniversityId) return;
         setLoading(true);
         try {
-            const response = await EventService.getEvents({ page, size: 10 }, undefined, undefined, undefined, selectedUniversityId);
-            if (response.data) {
-                setEvents(response.data.content || []);
-                setTotalPages(response.data.totalPages || 0);
-            }
+            // Fetch both specific university events and "target all" events (universityId: 0)
+            const [uniResponse, allResponse] = await Promise.all([
+                EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, selectedUniversityId),
+                EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, 0)
+            ]);
+
+            const uniEvents = uniResponse.data?.content || [];
+            const allEvents = allResponse.data?.content || [];
+
+            // Merge and deduplicate just in case, though they should be distinct
+            const mergedMap = new Map();
+            [...uniEvents, ...allEvents].forEach(evt => mergedMap.set(evt.id, evt));
+
+            // Sort by most recent startDateTime (or ID fallback) descending
+            const mergedList = Array.from(mergedMap.values()).sort((a, b) => {
+                const idA = a.id || 0;
+                const idB = b.id || 0;
+                return idB - idA;
+            });
+
+            setEvents(mergedList);
+            // Pagination handling for merged lists is complex; taking max pages as a simple fallback
+            const maxPages = Math.max(uniResponse.data?.totalPages || 0, allResponse.data?.totalPages || 0);
+            setTotalPages(maxPages);
         } catch (error) {
             console.error('Failed to fetch events', error);
-            // Fallback for demo if API fails or structure is different
             setEvents([]);
         } finally {
             setLoading(false);
@@ -111,10 +129,16 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                     <div className="flex items-center text-xs text-gray-400 mt-1">
                                         <MapPin className="w-3 h-3 mr-1" />
                                         Lat: {event.latitude}, Lon: {event.longitude}
+                                        {event.place && ` (${event.place})`}
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
+                                        {(!event.universityId || event.universityId === 0) && (
+                                            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
+                                                모든 학교
+                                            </span>
+                                        )}
                                         {(event.eventTypes || []).map(type => (
                                             <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center">
                                                 <Tag className="w-3 h-3 mr-1" /> {type}
