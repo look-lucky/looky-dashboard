@@ -285,7 +285,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                     setUniversityId(val === '' ? null : parseInt(val));
                                 }}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
-                                required
                             >
                                 <option value="">모든 학교</option>
                                 {universities.map((uni) => (
