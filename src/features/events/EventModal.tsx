@@ -26,7 +26,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
     // Form States
     const [title, setTitle] = useState('');
+    const [subtitle, setSubtitle] = useState('');
     const [description, setDescription] = useState('');
+    const [place, setPlace] = useState('');
+    const [universityId, setUniversityId] = useState<number>(0);
     const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
     const [latitude, setLatitude] = useState<number>(37.5665);
     const [longitude, setLongitude] = useState<number>(126.9780);
@@ -41,7 +44,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     useEffect(() => {
         if (initialData) {
             setTitle(initialData.title || '');
+            setSubtitle(initialData.subtitle || '');
             setDescription(initialData.description || '');
+            setPlace(initialData.place || '');
+            setUniversityId(initialData.universityId || 0);
             setSelectedTypes(initialData.eventTypes as EventType[] || []);
             setLatitude(initialData.latitude || 37.5665);
             setLongitude(initialData.longitude || 126.9780);
@@ -77,7 +83,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!title || !description || selectedTypes.length === 0 || !startDateTime || !endDateTime) {
+        if (!title || !description || !place || selectedTypes.length === 0 || !startDateTime || !endDateTime) {
             alert('필수 정보를 모두 입력해주세요.');
             return;
         }
@@ -94,12 +100,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         try {
             const eventData: CreateEventRequest = { // CreateEventRequest fits UpdateEventRequest for shared fields
                 title,
+                subtitle: subtitle || undefined,
                 description,
+                place,
+                universityId,
                 eventTypes: selectedTypes,
                 latitude,
                 longitude,
-                startDateTime: new Date(startDateTime).toISOString(),
-                endDateTime: new Date(endDateTime).toISOString(),
+                startDateTime: new Date(startDateTime).toISOString().slice(0, 19),
+                endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
             };
 
             if (initialData && initialData.id) {
@@ -148,6 +157,16 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                             placeholder="이벤트 제목"
                             required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">부제목</label>
+                        <input
+                            type="text"
+                            value={subtitle}
+                            onChange={(e) => setSubtitle(e.target.value)}
+                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            placeholder="이벤트 부제목 (선택)"
                         />
                     </div>
                     <div>
@@ -226,6 +245,29 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                 step="any"
                                 value={longitude}
                                 onChange={(e) => setLongitude(parseFloat(e.target.value))}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                required
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">장소 *</label>
+                            <input
+                                type="text"
+                                value={place}
+                                onChange={(e) => setPlace(e.target.value)}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                placeholder="장소 입력 (예: 학생회관 1층)"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">대학교 ID (0: 전체 학교 대상) *</label>
+                            <input
+                                type="number"
+                                value={universityId}
+                                onChange={(e) => setUniversityId(parseInt(e.target.value) || 0)}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                                 required
                             />

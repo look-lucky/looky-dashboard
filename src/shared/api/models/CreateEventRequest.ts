@@ -34,5 +34,17 @@ export type CreateEventRequest = {
      * 이벤트 종료일시
      */
     endDateTime: string;
+    /**
+     * 이벤트 부제목
+     */
+    subtitle?: string;
+    /**
+     * 장소
+     */
+    place: string;
+    /**
+     * 대학교 ID (0은 모든 학교 대상)
+     */
+    universityId: number;
 };
 
