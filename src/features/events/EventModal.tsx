@@ -1,8 +1,10 @@
 import { X, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
+import { UniversityService } from '../../shared/api/services/UniversityService';
 import type { EventResponse } from '../../shared/api/models/EventResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
+import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 
 interface EventModalProps {
     onClose: () => void;
@@ -30,6 +32,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [description, setDescription] = useState('');
     const [place, setPlace] = useState('');
     const [universityId, setUniversityId] = useState<number>(0);
+    const [universities, setUniversities] = useState<UniversityResponse[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
     const [latitude, setLatitude] = useState<number>(37.5665);
     const [longitude, setLongitude] = useState<number>(126.9780);
@@ -55,6 +58,17 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
             setPreviewUrls(initialData.imageUrls || []);
         }
+
+        const fetchUniversities = async () => {
+            try {
+                const response = await UniversityService.getUniversities();
+                setUniversities(response.data || []);
+            } catch (error) {
+                console.error('Failed to fetch universities', error);
+            }
+        };
+
+        fetchUniversities();
     }, [initialData]);
 
     const formatDateForInput = (dateString: string) => {
@@ -263,14 +277,20 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">대학교 ID (0: 전체 학교 대상) *</label>
-                            <input
-                                type="number"
+                            <label className="block text-sm font-medium text-gray-700 mb-1">대상 대학교 *</label>
+                            <select
                                 value={universityId}
                                 onChange={(e) => setUniversityId(parseInt(e.target.value) || 0)}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
                                 required
-                            />
+                            >
+                                <option value={0}>모든 학교</option>
+                                {universities.map((uni) => (
+                                    <option key={uni.id} value={uni.id}>
+                                        {uni.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                     <div>
