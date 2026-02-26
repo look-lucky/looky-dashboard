@@ -11,7 +11,7 @@ export type EventResponse = {
     longitude?: number;
     place?: string;
     subtitle?: string;
-    universityId?: number;
+    universityId?: number | null;
     startDateTime?: string;
     endDateTime?: string;
     status?: EventResponse.status;

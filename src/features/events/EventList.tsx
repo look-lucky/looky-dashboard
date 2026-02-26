@@ -34,28 +34,27 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         if (!selectedUniversityId) return;
         setLoading(true);
         try {
-            // Fetch both specific university events and "target all" events (universityId: null)
+            // Fetch specific university events.
+            // Fetch "all" events by NOT passing universityId, then filtering locally to avoid redundancy and ensure we only get null-targeted ones.
             const [uniResponse, allResponse] = await Promise.all([
                 EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, selectedUniversityId),
-                EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, null as unknown as number)
+                EventService.getEvents({ page, size: 50 }, undefined, undefined, undefined, undefined) // universityId undefined = all
             ]);
 
             const uniEvents = uniResponse.data?.content || [];
-            const allEvents = allResponse.data?.content || [];
+            // Only keep events that don't have a universityId from the "all" fetch
+            const allEvents = (allResponse.data?.content || []).filter(e => !e.universityId);
 
-            // Merge and deduplicate just in case, though they should be distinct
+            // Merge and deduplicate by ID
             const mergedMap = new Map();
             [...uniEvents, ...allEvents].forEach(evt => mergedMap.set(evt.id, evt));
 
-            // Sort by most recent startDateTime (or ID fallback) descending
+            // Sort by ID descending (usually reflects most recent)
             const mergedList = Array.from(mergedMap.values()).sort((a, b) => {
-                const idA = a.id || 0;
-                const idB = b.id || 0;
-                return idB - idA;
+                return (b.id || 0) - (a.id || 0);
             });
 
             setEvents(mergedList);
-            // Pagination handling for merged lists is complex; taking max pages as a simple fallback
             const maxPages = Math.max(uniResponse.data?.totalPages || 0, allResponse.data?.totalPages || 0);
             setTotalPages(maxPages);
         } catch (error) {
@@ -124,7 +123,10 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                     )}
                                 </td>
                                 <td className="px-6 py-4">
-                                    <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                                        <span className="text-[10px] text-gray-400 bg-gray-100 px-1 rounded">ID: {event.id} | Uni: {event.universityId ?? 'null'}</span>
+                                    </div>
                                     <div className="text-sm text-gray-500 truncate max-w-xs">{event.description}</div>
                                     <div className="flex items-center text-xs text-gray-400 mt-1">
                                         <MapPin className="w-3 h-3 mr-1" />
@@ -134,7 +136,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
-                                        {(event.universityId === null) && (
+                                        {(!event.universityId) && (
                                             <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
                                                 모든 학교
                                             </span>
