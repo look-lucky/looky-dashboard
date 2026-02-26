@@ -34,29 +34,11 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         if (!selectedUniversityId) return;
         setLoading(true);
         try {
-            // Fetch specific university events.
-            // Fetch "all" events by NOT passing universityId, then filtering locally to avoid redundancy and ensure we only get null-targeted ones.
-            const [uniResponse, allResponse] = await Promise.all([
-                EventService.getEvents({ page, size: 20 }, undefined, undefined, undefined, selectedUniversityId),
-                EventService.getEvents({ page, size: 50 }, undefined, undefined, undefined, undefined) // universityId undefined = all
-            ]);
-
-            const uniEvents = uniResponse.data?.content || [];
-            // Only keep events that don't have a universityId from the "all" fetch
-            const allEvents = (allResponse.data?.content || []).filter(e => !e.universityId);
-
-            // Merge and deduplicate by ID
-            const mergedMap = new Map();
-            [...uniEvents, ...allEvents].forEach(evt => mergedMap.set(evt.id, evt));
-
-            // Sort by ID descending (usually reflects most recent)
-            const mergedList = Array.from(mergedMap.values()).sort((a, b) => {
-                return (b.id || 0) - (a.id || 0);
-            });
-
-            setEvents(mergedList);
-            const maxPages = Math.max(uniResponse.data?.totalPages || 0, allResponse.data?.totalPages || 0);
-            setTotalPages(maxPages);
+            const response = await EventService.getEvents({ page, size: 10 }, undefined, undefined, undefined, selectedUniversityId);
+            if (response.data) {
+                setEvents(response.data.content || []);
+                setTotalPages(response.data.totalPages || 0);
+            }
         } catch (error) {
             console.error('Failed to fetch events', error);
             setEvents([]);
@@ -123,10 +105,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                     )}
                                 </td>
                                 <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                                        <span className="text-[10px] text-gray-400 bg-gray-100 px-1 rounded">ID: {event.id} | Uni: {event.universityId ?? 'null'}</span>
-                                    </div>
+                                    <div className="text-sm font-medium text-gray-900">{event.title}</div>
                                     <div className="text-sm text-gray-500 truncate max-w-xs">{event.description}</div>
                                     <div className="flex items-center text-xs text-gray-400 mt-1">
                                         <MapPin className="w-3 h-3 mr-1" />

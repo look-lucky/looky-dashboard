@@ -34,7 +34,9 @@ export class EventService {
                 'eventTypes': eventTypes,
                 'status': status,
                 'universityId': universityId,
-                'pageable': pageable,
+                'page': pageable.page,
+                'size': pageable.size,
+                'sort': pageable.sort,
             },
         });
     }
