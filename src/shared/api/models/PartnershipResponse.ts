@@ -14,9 +14,10 @@ export type PartnershipResponse = {
 };
 export namespace PartnershipResponse {
     export enum category {
+        UNIVERSITY_COUNCIL = 'UNIVERSITY_COUNCIL',
         COLLEGE = 'COLLEGE',
         DEPARTMENT = 'DEPARTMENT',
-        STUDENT_COUNCIL = 'STUDENT_COUNCIL',
+        CLUB_ASSOCIATION = 'CLUB_ASSOCIATION',
     }
 }
 

@@ -169,9 +169,10 @@ export function OrganizationModal({
                             className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm disabled:bg-gray-100 disabled:text-gray-500"
                         >
                             <option value="">유형을 선택하세요</option>
+                            <option value={CreateOrganizationRequest.category.UNIVERSITY_COUNCIL}>총학생회</option>
                             <option value={CreateOrganizationRequest.category.COLLEGE}>단과대학</option>
                             <option value={CreateOrganizationRequest.category.DEPARTMENT}>학과</option>
-                            <option value={CreateOrganizationRequest.category.STUDENT_COUNCIL}>학생회(총학생회/총동아리연합회 등)</option>
+                            <option value={CreateOrganizationRequest.category.CLUB_ASSOCIATION}>총동아리연합회</option>
                         </select>
                     </div>
 
@@ -231,7 +232,7 @@ export function OrganizationModal({
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                placeholder={category === CreateOrganizationRequest.category.DEPARTMENT ? "예: 컴퓨터공학과" : "예: 공과대학 or 총학생회"}
+                                placeholder="예: 공과대학, 컴퓨터공학과, 총학생회"
                                 required
                             />
                         )}

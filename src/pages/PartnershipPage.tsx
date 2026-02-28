@@ -91,7 +91,8 @@ export function PartnershipPage() {
                                 className="block w-full sm:w-48 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
                             >
                                 <option value="">카테고리 전체</option>
-                                <option value="STUDENT_COUNCIL">학생회</option>
+                                <option value="UNIVERSITY_COUNCIL">총학생회</option>
+                                <option value="CLUB_ASSOCIATION">총동아리연합회</option>
                                 <option value="COLLEGE">단과대학</option>
                                 <option value="DEPARTMENT">학과</option>
                             </select>

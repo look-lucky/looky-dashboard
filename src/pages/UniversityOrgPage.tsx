@@ -11,7 +11,7 @@ import type { UniversityResponse } from '../shared/api/models/UniversityResponse
 import type { OrganizationResponse } from '../shared/api/models/OrganizationResponse';
 
 type ActiveTab = 'university' | 'organization';
-type CategoryFilter = 'ALL' | 'COLLEGE' | 'DEPARTMENT' | 'STUDENT_COUNCIL';
+type CategoryFilter = 'ALL' | 'COLLEGE' | 'DEPARTMENT' | 'UNIVERSITY_COUNCIL' | 'CLUB_ASSOCIATION';
 
 export function UniversityOrgPage() {
     // Tab State
@@ -79,7 +79,8 @@ export function UniversityOrgPage() {
         { key: 'ALL', label: '전체' },
         { key: 'COLLEGE', label: '단과대학' },
         { key: 'DEPARTMENT', label: '학과' },
-        { key: 'STUDENT_COUNCIL', label: '학생회' },
+        { key: 'UNIVERSITY_COUNCIL', label: '총학생회' },
+        { key: 'CLUB_ASSOCIATION', label: '총동아리연합회' },
     ];
 
     return (
@@ -251,8 +252,9 @@ export function UniversityOrgPage() {
                                 >
                                     <Plus className="w-4 h-4" />
                                     {categoryFilter === 'COLLEGE' ? '단과대학 등록' :
-                                        categoryFilter === 'STUDENT_COUNCIL' ? '학생회 등록' :
-                                            '소속 등록'}
+                                        categoryFilter === 'UNIVERSITY_COUNCIL' ? '총학생회 등록' :
+                                            categoryFilter === 'CLUB_ASSOCIATION' ? '총동아리연합회 등록' :
+                                                '소속 등록'}
                                 </button>
                             </div>
                             <div className="flex-1 overflow-y-auto p-4">
@@ -287,8 +289,9 @@ export function UniversityOrgPage() {
                     defaultCategory={
                         categoryFilter === 'COLLEGE' ? CreateOrganizationRequest.category.COLLEGE :
                             categoryFilter === 'DEPARTMENT' ? CreateOrganizationRequest.category.DEPARTMENT :
-                                categoryFilter === 'STUDENT_COUNCIL' ? CreateOrganizationRequest.category.STUDENT_COUNCIL :
-                                    undefined
+                                categoryFilter === 'UNIVERSITY_COUNCIL' ? CreateOrganizationRequest.category.UNIVERSITY_COUNCIL :
+                                    categoryFilter === 'CLUB_ASSOCIATION' ? CreateOrganizationRequest.category.CLUB_ASSOCIATION :
+                                        undefined
                     }
                     defaultParentId={categoryFilter === 'DEPARTMENT' && !editingOrg && selectedCollege?.id ? selectedCollege.id : undefined}
                     fixedCategory={categoryFilter !== 'ALL' && !editingOrg}

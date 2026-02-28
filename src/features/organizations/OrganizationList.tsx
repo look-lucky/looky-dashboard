@@ -120,7 +120,8 @@ export function OrganizationList({
         switch (category) {
             case 'COLLEGE': return '단과대학';
             case 'DEPARTMENT': return '학과';
-            case 'STUDENT_COUNCIL': return '학생회';
+            case 'UNIVERSITY_COUNCIL': return '총학생회';
+            case 'CLUB_ASSOCIATION': return '총동아리연합회';
             default: return category;
         }
     };

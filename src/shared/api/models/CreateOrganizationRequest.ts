@@ -10,9 +10,10 @@ export type CreateOrganizationRequest = {
 };
 export namespace CreateOrganizationRequest {
     export enum category {
+        UNIVERSITY_COUNCIL = 'UNIVERSITY_COUNCIL',
         COLLEGE = 'COLLEGE',
         DEPARTMENT = 'DEPARTMENT',
-        STUDENT_COUNCIL = 'STUDENT_COUNCIL',
+        CLUB_ASSOCIATION = 'CLUB_ASSOCIATION',
     }
 }
 
