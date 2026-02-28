@@ -25,13 +25,22 @@ type StoreStatusFilter = '' | 'UNCLAIMED' | 'ACTIVE' | 'BANNED';
 type PartnershipFilter = 'all' | 'yes' | 'no';
 
 export function StoreList({ universityId }: StoreListProps) {
-    const [allStores, setAllStores] = useState<StoreResponse[]>([]);
+    const [stores, setStores] = useState<StoreResponse[]>([]);
+    const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('');
     const [partnershipFilter, setPartnershipFilter] = useState<PartnershipFilter>('all');
     const [page, setPage] = useState(0);
     const pageSize = 10;
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     // 체크박스 선택 state
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -73,20 +82,20 @@ export function StoreList({ universityId }: StoreListProps) {
 
     useEffect(() => {
         if (universityId) {
-            fetchAllStores();
+            fetchStores();
         }
-    }, [universityId, partnershipFilter, statusFilter]);
+    }, [universityId, partnershipFilter, statusFilter, debouncedSearchTerm, page]);
 
-    const fetchAllStores = async () => {
+    const fetchStores = async () => {
         setLoading(true);
         const hasPartnership =
             partnershipFilter === 'yes' ? true :
-            partnershipFilter === 'no' ? false :
-            undefined;
+                partnershipFilter === 'no' ? false :
+                    undefined;
         try {
             const response = await StoreService.getStores(
-                { page: 0, size: 2000, sort: ['id,asc'] },
-                undefined,
+                { page, size: pageSize, sort: ['id,asc'] },
+                debouncedSearchTerm || undefined,
                 undefined,
                 undefined,
                 universityId,
@@ -94,7 +103,8 @@ export function StoreList({ universityId }: StoreListProps) {
                 statusFilter || undefined,
             );
             if (response.data) {
-                setAllStores(response.data.content || []);
+                setStores(response.data.content || []);
+                setTotalElements(response.data.totalElements || 0);
             }
         } catch (error) {
             console.error('Failed to fetch stores', error);
@@ -103,39 +113,18 @@ export function StoreList({ universityId }: StoreListProps) {
         }
     };
 
-    // Filter and Sort
-    const filteredStores = useMemo(() => {
-        return allStores.filter(store => {
-            const searchLower = searchTerm.toLowerCase();
-            const nameMatch = store.name?.toLowerCase().includes(searchLower);
-            const roadAddrMatch = store.roadAddress?.toLowerCase().includes(searchLower);
-            const jibunAddrMatch = store.jibunAddress?.toLowerCase().includes(searchLower);
-            const branchMatch = store.branch?.toLowerCase().includes(searchLower);
-            const textMatch = nameMatch || roadAddrMatch || jibunAddrMatch || branchMatch;
-
-            const effectiveStatus = store.storeStatus ?? 'UNCLAIMED';
-            const statusMatch = statusFilter === '' || effectiveStatus === statusFilter;
-
-            return textMatch && statusMatch;
-        });
-    }, [allStores, searchTerm, statusFilter]);
-
-    const totalElements = filteredStores.length;
     const totalPages = Math.ceil(totalElements / pageSize);
 
     useEffect(() => {
         setPage(0);
-    }, [searchTerm, statusFilter, partnershipFilter]);
+    }, [debouncedSearchTerm, statusFilter, partnershipFilter, universityId]);
 
     // 필터/페이지 변경 시 선택 초기화
     useEffect(() => {
         setSelectedIds(new Set());
-    }, [searchTerm, statusFilter, partnershipFilter, page]);
+    }, [debouncedSearchTerm, statusFilter, partnershipFilter, page, universityId]);
 
-    const currentStores = useMemo(() => {
-        const start = page * pageSize;
-        return filteredStores.slice(start, start + pageSize);
-    }, [filteredStores, page, pageSize]);
+    const currentStores = stores;
 
     // 현재 페이지에서 선택 가능한 가게 (입점 완료 제외)
     const selectableCurrentStores = useMemo(
@@ -196,7 +185,7 @@ export function StoreList({ universityId }: StoreListProps) {
         } else {
             alert(`${count}개 삭제 완료`);
         }
-        fetchAllStores();
+        fetchStores();
     };
 
     // Modal Handlers
@@ -239,7 +228,7 @@ export function StoreList({ universityId }: StoreListProps) {
             await StoreService.updateStore(selectedStore.id, { request: editForm, images: [] });
             alert('상점 정보가 수정되었습니다.');
             closeModal();
-            fetchAllStores();
+            fetchStores();
         } catch (e) {
             console.error(e);
             alert('수정에 실패했습니다.');
@@ -252,7 +241,7 @@ export function StoreList({ universityId }: StoreListProps) {
             await StoreService.deleteStore(selectedStore.id);
             alert('상점이 삭제되었습니다.');
             closeModal();
-            fetchAllStores();
+            fetchStores();
         } catch (e) {
             console.error(e);
             alert('삭제에 실패했습니다. (본인 소유 상점이 아닐 수 있습니다)');
