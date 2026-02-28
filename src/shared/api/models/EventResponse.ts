@@ -9,6 +9,9 @@ export type EventResponse = {
     eventTypes?: Array<'FOOD_EVENT' | 'POPUP_STORE' | 'SCHOOL_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'COMMUNITY'>;
     latitude?: number;
     longitude?: number;
+    place?: string;
+    subtitle?: string;
+    universityId?: number | null;
     startDateTime?: string;
     endDateTime?: string;
     status?: EventResponse.status;

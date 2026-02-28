@@ -1,8 +1,10 @@
 import { X, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
+import { UniversityService } from '../../shared/api/services/UniversityService';
 import type { EventResponse } from '../../shared/api/models/EventResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
+import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 
 interface EventModalProps {
     onClose: () => void;
@@ -26,7 +28,11 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
     // Form States
     const [title, setTitle] = useState('');
+    const [subtitle, setSubtitle] = useState('');
     const [description, setDescription] = useState('');
+    const [place, setPlace] = useState('');
+    const [universityId, setUniversityId] = useState<number | null>(null);
+    const [universities, setUniversities] = useState<UniversityResponse[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
     const [latitude, setLatitude] = useState<number>(37.5665);
     const [longitude, setLongitude] = useState<number>(126.9780);
@@ -41,7 +47,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     useEffect(() => {
         if (initialData) {
             setTitle(initialData.title || '');
+            setSubtitle(initialData.subtitle || '');
             setDescription(initialData.description || '');
+            setPlace(initialData.place || '');
+            setUniversityId(initialData.universityId ?? null);
             setSelectedTypes(initialData.eventTypes as EventType[] || []);
             setLatitude(initialData.latitude || 37.5665);
             setLongitude(initialData.longitude || 126.9780);
@@ -49,6 +58,17 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
             setPreviewUrls(initialData.imageUrls || []);
         }
+
+        const fetchUniversities = async () => {
+            try {
+                const response = await UniversityService.getUniversities();
+                setUniversities(response.data || []);
+            } catch (error) {
+                console.error('Failed to fetch universities', error);
+            }
+        };
+
+        fetchUniversities();
     }, [initialData]);
 
     const formatDateForInput = (dateString: string) => {
@@ -77,7 +97,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!title || !description || selectedTypes.length === 0 || !startDateTime || !endDateTime) {
+        if (!title || !description || !place || selectedTypes.length === 0 || !startDateTime || !endDateTime) {
             alert('필수 정보를 모두 입력해주세요.');
             return;
         }
@@ -94,12 +114,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         try {
             const eventData: CreateEventRequest = { // CreateEventRequest fits UpdateEventRequest for shared fields
                 title,
+                subtitle: subtitle || undefined,
                 description,
+                place,
+                universityId,
                 eventTypes: selectedTypes,
                 latitude,
                 longitude,
-                startDateTime: new Date(startDateTime).toISOString(),
-                endDateTime: new Date(endDateTime).toISOString(),
+                startDateTime: new Date(startDateTime).toISOString().slice(0, 19),
+                endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
             };
 
             if (initialData && initialData.id) {
@@ -148,6 +171,16 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                             placeholder="이벤트 제목"
                             required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">부제목</label>
+                        <input
+                            type="text"
+                            value={subtitle}
+                            onChange={(e) => setSubtitle(e.target.value)}
+                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            placeholder="이벤트 부제목 (선택)"
                         />
                     </div>
                     <div>
@@ -229,6 +262,37 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                                 required
                             />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">장소 *</label>
+                            <input
+                                type="text"
+                                value={place}
+                                onChange={(e) => setPlace(e.target.value)}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                placeholder="장소 입력 (예: 학생회관 1층)"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">대상 대학교 *</label>
+                            <select
+                                value={universityId === null ? '' : universityId}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setUniversityId(val === '' ? null : parseInt(val));
+                                }}
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
+                            >
+                                <option value="">모든 학교</option>
+                                {universities.map((uni) => (
+                                    <option key={uni.id} value={uni.id}>
+                                        {uni.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                     <div>

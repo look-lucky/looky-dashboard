@@ -35,6 +35,14 @@ export type UpdateEventRequest = {
      */
     endDateTime?: string;
     /**
+     * 이벤트 부제목
+     */
+    subtitle?: string;
+    /**
+     * 장소
+     */
+    place?: string;
+    /**
      * 이벤트 상태
      */
     status?: UpdateEventRequest.status;

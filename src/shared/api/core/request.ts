@@ -116,7 +116,7 @@ export const getFormData = (options: ApiRequestOptions): FormData | undefined =>
             if (isString(value) || isBlob(value)) {
                 formData.append(key, value);
             } else {
-                formData.append(key, JSON.stringify(value));
+                formData.append(key, new Blob([JSON.stringify(value)], { type: 'application/json' }));
             }
         };
 

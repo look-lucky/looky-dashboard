@@ -41,7 +41,6 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
             }
         } catch (error) {
             console.error('Failed to fetch events', error);
-            // Fallback for demo if API fails or structure is different
             setEvents([]);
         } finally {
             setLoading(false);
@@ -111,10 +110,16 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                     <div className="flex items-center text-xs text-gray-400 mt-1">
                                         <MapPin className="w-3 h-3 mr-1" />
                                         Lat: {event.latitude}, Lon: {event.longitude}
+                                        {event.place && ` (${event.place})`}
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
+                                        {(!event.universityId) && (
+                                            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
+                                                모든 학교
+                                            </span>
+                                        )}
                                         {(event.eventTypes || []).map(type => (
                                             <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center">
                                                 <Tag className="w-3 h-3 mr-1" /> {type}
