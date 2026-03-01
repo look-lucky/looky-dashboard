@@ -359,7 +359,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                 />
                             </th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점명 (지점)</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상호명 (지점명)</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">주소</th>
@@ -393,11 +393,9 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
                                                     <StoreIcon className="w-4 h-4" />
                                                 </div>
-                                                <div className="ml-3">
-                                                    <div className="text-sm font-medium text-gray-900">
-                                                        {store.name}
-                                                        {store.branch && <span className="text-gray-500 font-normal ml-1">({store.branch})</span>}
-                                                    </div>
+                                                <div className="ml-3 text-left">
+                                                    <div className="text-sm font-medium text-gray-900">{store.name}</div>
+                                                    {store.branch && <div className="text-sm text-gray-500">{store.branch}</div>}
                                                 </div>
                                             </div>
                                         </td>
@@ -637,8 +635,8 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <dt className="text-sm font-medium text-gray-500">상점명</dt>
                                                     <dd className="text-sm text-gray-900 col-span-2">
-                                                        {selectedStore.name}
-                                                        {selectedStore.branch && <span className="text-gray-500 ml-1">({selectedStore.branch})</span>}
+                                                        <div>{selectedStore.name}</div>
+                                                        {selectedStore.branch && <div className="text-gray-500 text-xs mt-0.5">{selectedStore.branch}</div>}
                                                     </dd>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
