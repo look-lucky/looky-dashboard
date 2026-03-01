@@ -27,7 +27,8 @@ export function UniversityProvider({ children }: { children: ReactNode }) {
                 if (response.data) {
                     setUniversities(response.data);
                     // If no selection or invalid selection, select first one
-                    if (!selectedUniversityId && response.data.length > 0) {
+                    const isValidSelection = response.data.some(u => u.id === selectedUniversityId);
+                    if ((!selectedUniversityId || !isValidSelection) && response.data.length > 0) {
                         const firstId = response.data[0].id;
                         if (firstId !== undefined) {
                             setSelectedUniversityId(firstId);
@@ -41,6 +42,7 @@ export function UniversityProvider({ children }: { children: ReactNode }) {
             }
         }
         fetchUniversities();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
