@@ -1,7 +1,8 @@
-import { Trash2, Search } from 'lucide-react';
+import { Trash2, Search, Pencil } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { PartnershipResponse } from '../../shared/api/models/PartnershipResponse';
+import { PartnershipEditModal } from './PartnershipEditModal';
 
 interface PartnershipListProps {
     universityId: number;
@@ -13,6 +14,7 @@ export function PartnershipList({ universityId, organizationId, refreshTrigger }
     const [partnerships, setPartnerships] = useState<PartnershipResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [editingPartnership, setEditingPartnership] = useState<PartnershipResponse | null>(null);
 
     const filteredPartnerships = partnerships.filter(p =>
         p.organizationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -64,6 +66,17 @@ export function PartnershipList({ universityId, organizationId, refreshTrigger }
     }
 
     return (
+        <>
+        {editingPartnership && (
+            <PartnershipEditModal
+                partnership={editingPartnership}
+                onClose={() => setEditingPartnership(null)}
+                onSuccess={() => {
+                    setEditingPartnership(null);
+                    fetchPartnerships();
+                }}
+            />
+        )}
         <div className="space-y-4">
             <div className="relative">
                 <input
@@ -112,12 +125,20 @@ export function PartnershipList({ universityId, organizationId, refreshTrigger }
                                         {partnership.benefit}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button
-                                            onClick={() => partnership.id && handleDelete(partnership.id)}
-                                            className="text-red-600 hover:text-red-900 transition-colors p-2 hover:bg-red-50 rounded-full"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex justify-end gap-1">
+                                            <button
+                                                onClick={() => setEditingPartnership(partnership)}
+                                                className="text-blue-600 hover:text-blue-900 transition-colors p-2 hover:bg-blue-50 rounded-full"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => partnership.id && handleDelete(partnership.id)}
+                                                className="text-red-600 hover:text-red-900 transition-colors p-2 hover:bg-red-50 rounded-full"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -126,5 +147,6 @@ export function PartnershipList({ universityId, organizationId, refreshTrigger }
                 </table>
             </div>
         </div>
+        </>
     );
 }
