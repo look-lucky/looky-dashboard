@@ -20,6 +20,7 @@ export class AdminEventService {
     public static createEvent(
         requestBody?: {
             request: CreateEventRequest;
+            bannerImage?: Blob;
             /**
              * 이벤트 이미지
              */
@@ -71,6 +72,7 @@ export class AdminEventService {
         eventId: number,
         requestBody?: {
             request: UpdateEventRequest;
+            bannerImage?: Blob;
             /**
              * 이벤트 이미지
              */

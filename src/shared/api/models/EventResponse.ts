@@ -15,6 +15,7 @@ export type EventResponse = {
     startDateTime?: string;
     endDateTime?: string;
     status?: EventResponse.status;
+    bannerImageUrl?: string;
     imageUrls?: Array<string>;
     createdAt?: string;
 };

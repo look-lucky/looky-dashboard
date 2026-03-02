@@ -5,6 +5,7 @@ import { UniversityService } from '../../shared/api/services/UniversityService';
 import type { EventResponse } from '../../shared/api/models/EventResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
+import { ImageCropper } from '../../shared/components/ImageCropper';
 
 interface EventModalProps {
     onClose: () => void;
@@ -40,6 +41,12 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [endDateTime, setEndDateTime] = useState('');
 
     // Image Handling
+    const [bannerImage, setBannerImage] = useState<File | null>(null);
+    const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+    const [originalBannerSrc, setOriginalBannerSrc] = useState<string | null>(null);
+    const [showCropper, setShowCropper] = useState(false);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+
     const [images, setImages] = useState<File[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +63,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setLongitude(initialData.longitude || 126.9780);
             setStartDateTime(formatDateForInput(initialData.startDateTime || ''));
             setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
+            setBannerPreviewUrl(initialData.bannerImageUrl || null);
             setPreviewUrls(initialData.imageUrls || []);
         }
 
@@ -75,6 +83,33 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         if (!dateString) return '';
         const date = new Date(dateString);
         return date.toISOString().slice(0, 16);
+    };
+
+    const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const objectUrl = URL.createObjectURL(file);
+            setOriginalBannerSrc(objectUrl);
+            setShowCropper(true);
+        }
+        // clear input value so same file can trigger change again
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const handleCropComplete = (croppedImageUrl: string, blob: Blob) => {
+        // Convert Blob to File
+        const croppedFile = new File([blob], 'banner-cropped.jpg', { type: blob.type });
+        setBannerImage(croppedFile);
+        setBannerPreviewUrl(croppedImageUrl);
+        setShowCropper(false);
+        setOriginalBannerSrc(null);
+    };
+
+    const handleCropCancel = () => {
+        setShowCropper(false);
+        setOriginalBannerSrc(null);
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +164,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                 // Update Event
                 await AdminEventService.updateEvent(initialData.id, {
                     request: eventData, // UpdateEventRequest structure matches CreateEventRequest for these fields
+                    bannerImage: bannerImage || undefined,
                     images: images.length > 0 ? images : undefined // Send images only if new ones are added
                 });
                 alert('이벤트가 수정되었습니다.');
@@ -136,6 +172,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                 // Create Event
                 await AdminEventService.createEvent({
                     request: eventData,
+                    bannerImage: bannerImage || undefined,
                     images: images
                 });
                 alert('이벤트가 등록되었습니다.');
@@ -295,31 +332,87 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             </select>
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">이미지</label>
-                        <div className="flex flex-wrap gap-4 mb-3">
-                            {previewUrls.map((url, index) => (
-                                <div key={index} className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border">
-                                    <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
-                                </div>
-                            ))}
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
-                            >
-                                <Upload className="w-6 h-6 mb-1" />
-                                <span className="text-xs">추가</span>
-                            </button>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">배너 이미지 (최대 1장)</label>
+                            <div className="flex gap-4">
+                                {bannerPreviewUrl && (
+                                    <div className="relative w-40 h-20 bg-gray-100 rounded-lg overflow-hidden border">
+                                        <img src={bannerPreviewUrl} alt="Banner Preview" className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setBannerImage(null);
+                                                setBannerPreviewUrl(null);
+                                                if (bannerInputRef.current) bannerInputRef.current.value = '';
+                                            }}
+                                            className="absolute top-1 right-1 bg-white/80 rounded-full p-1 hover:bg-white text-gray-600"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
+                                {!bannerPreviewUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => bannerInputRef.current?.click()}
+                                        className="w-40 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
+                                    >
+                                        <Upload className="w-6 h-6 mb-1" />
+                                        <span className="text-xs">배너 추가</span>
+                                    </button>
+                                )}
+                            </div>
+                            <input
+                                type="file"
+                                ref={bannerInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleBannerChange}
+                            />
                         </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            multiple
-                            accept="image/*"
-                            onChange={handleImageChange}
-                        />
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">일반 이미지</label>
+                            <div className="flex flex-wrap gap-4 mb-3">
+                                {previewUrls.map((url, index) => (
+                                    <div key={index} className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden border">
+                                        <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newImages = [...images];
+                                                newImages.splice(index, 1);
+                                                setImages(newImages);
+
+                                                const newPreviews = [...previewUrls];
+                                                newPreviews.splice(index, 1);
+                                                setPreviewUrls(newPreviews);
+                                            }}
+                                            className="absolute top-1 right-1 bg-white/80 rounded-full p-1 hover:bg-white text-gray-600"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
+                                >
+                                    <Upload className="w-6 h-6 mb-1" />
+                                    <span className="text-xs">이미지 추가</span>
+                                </button>
+                            </div>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                multiple
+                                accept="image/*"
+                                onChange={handleImageChange}
+                            />
+                        </div>
                     </div>
                     <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
                         <button
@@ -339,6 +432,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     </div>
                 </form>
             </div>
+
+            {showCropper && originalBannerSrc && (
+                <ImageCropper
+                    imageSrc={originalBannerSrc}
+                    aspectRatio={2.2933} // 2.2933:1 ratio
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                />
+            )}
         </div>
     );
 }
