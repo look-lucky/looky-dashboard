@@ -21,6 +21,22 @@ const DEFAULT_BREAK_END = '17:00';
 
 const generateDefaultDay = (): DailySchedule => [[DEFAULT_TIME, DEFAULT_END_TIME], null];
 
+interface TimeInputProps {
+    val: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    disabled?: boolean;
+}
+
+const TimeInput = ({ val, onChange, disabled }: TimeInputProps) => (
+    <input
+        type="time"
+        value={val || ''}
+        onChange={onChange}
+        disabled={disabled}
+        className={`p-1.5 border border-gray-300 rounded-md text-sm outline-none w-[110px] sm:w-[130px] transition-colors ${disabled ? 'bg-gray-200/60 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white focus:ring-1 focus:ring-blue-500 hover:border-blue-400'}`}
+    />
+);
+
 export const OperatingHoursEditor: React.FC<OperatingHoursEditorProps> = ({ value, onChange }) => {
     // Determine global break time based on initial value or default false
     const [globalHasBreak, setGlobalHasBreak] = useState(() => {
@@ -130,24 +146,6 @@ export const OperatingHoursEditor: React.FC<OperatingHoursEditorProps> = ({ valu
 
         updateDay(dayIndex, [newOperating, newBreak]);
     };
-
-    const TimeInput = ({
-        val,
-        onChange,
-        disabled
-    }: {
-        val: string,
-        onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
-        disabled?: boolean
-    }) => (
-        <input
-            type="time"
-            value={val || ''}
-            onChange={onChange}
-            disabled={disabled}
-            className={`p-1.5 border border-gray-300 rounded-md text-sm outline-none w-[110px] sm:w-[130px] transition-colors ${disabled ? 'bg-gray-200/60 text-gray-400 cursor-not-allowed border-gray-200' : 'bg-white focus:ring-1 focus:ring-blue-500 hover:border-blue-400'}`}
-        />
-    );
 
     return (
         <div className="w-full bg-white border-2 border-blue-500 shadow-sm rounded-lg p-5 font-sans">

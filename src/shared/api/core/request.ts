@@ -109,7 +109,8 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 };
 
 export const getFormData = (options: ApiRequestOptions): FormData | undefined => {
-    if (options.formData) {
+    const data = options.formData || (options.mediaType === 'multipart/form-data' ? options.body : undefined);
+    if (data) {
         const formData = new FormData();
 
         const process = (key: string, value: any) => {
@@ -120,7 +121,7 @@ export const getFormData = (options: ApiRequestOptions): FormData | undefined =>
             }
         };
 
-        Object.entries(options.formData)
+        Object.entries(data)
             .filter(([_, value]) => isDefined(value))
             .forEach(([key, value]) => {
                 if (Array.isArray(value)) {
@@ -175,14 +176,17 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
         headers['Authorization'] = `Basic ${credentials}`;
     }
 
-    if (options.body !== undefined) {
+    const hasBodyOrFormData = options.body !== undefined || options.formData !== undefined;
+    if (hasBodyOrFormData) {
         if (options.mediaType) {
-            headers['Content-Type'] = options.mediaType;
+            if (options.mediaType !== 'multipart/form-data') {
+                headers['Content-Type'] = options.mediaType;
+            }
         } else if (isBlob(options.body)) {
             headers['Content-Type'] = options.body.type || 'application/octet-stream';
         } else if (isString(options.body)) {
             headers['Content-Type'] = 'text/plain';
-        } else if (!isFormData(options.body)) {
+        } else if (!isFormData(options.body) && !options.formData) {
             headers['Content-Type'] = 'application/json';
         }
     }
@@ -191,6 +195,9 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
 };
 
 export const getRequestBody = (options: ApiRequestOptions): any => {
+    if (options.mediaType === 'multipart/form-data') {
+        return undefined;
+    }
     if (options.body) {
         return options.body;
     }
