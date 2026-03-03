@@ -58,7 +58,7 @@ export class ItemService {
                 'storeId': storeId,
             },
             body: requestBody,
-            mediaType: 'application/json',
+            mediaType: 'multipart/form-data',
             errors: {
                 400: `잘못된 요청 데이터`,
                 403: `권한 없음 (본인 소유 상점 아님)`,
@@ -134,7 +134,7 @@ export class ItemService {
                 'itemId': itemId,
             },
             body: requestBody,
-            mediaType: 'application/json',
+            mediaType: 'multipart/form-data',
             errors: {
                 403: `권한 없음 (본인 소유 상점 아님)`,
                 404: `상품 없음`,
