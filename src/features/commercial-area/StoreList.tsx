@@ -18,8 +18,8 @@ interface StoreListProps {
 const CATEGORY_MAP: Record<string, string> = {
     'BAR': '주점',
     'CAFE': '카페',
-    'RESTAURANT': '맛집',
-    'ENTERTAINMENT': '문화/여가',
+    'RESTAURANT': '식당',
+    'ENTERTAINMENT': '놀거리',
     'BEAUTY_HEALTH': '뷰티/건강',
     'ETC': '기타'
 };
