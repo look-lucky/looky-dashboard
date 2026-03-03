@@ -158,8 +158,8 @@
                     "required": true
                 },
                 "responses": {
-                    "400": {
-                        "description": "잘못된 조직 카테고리 요청",
+                    "403": {
+                        "description": "학생 회원이 아님",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -168,8 +168,8 @@
                             }
                         }
                     },
-                    "403": {
-                        "description": "학생 회원이 아님",
+                    "400": {
+                        "description": "잘못된 조직 카테고리 요청",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -462,6 +462,16 @@
                     }
                 },
                 "responses": {
+                    "400": {
+                        "description": "잘못된 요청 데이터",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "권한 없음",
                         "content": {
@@ -484,16 +494,6 @@
                     },
                     "409": {
                         "description": "이미 존재하는 상점 이름",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "잘못된 요청 데이터",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -535,22 +535,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponsePageResponseReviewResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -612,8 +612,8 @@
                             }
                         }
                     },
-                    "403": {
-                        "description": "권한 없음 (점주의 일반 리뷰 작성 등)",
+                    "400": {
+                        "description": "잘못된 요청 데이터",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -632,8 +632,8 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "상점 또는 원본 리뷰 없음",
+                    "403": {
+                        "description": "권한 없음 (점주의 일반 리뷰 작성 등)",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -642,8 +642,8 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "잘못된 요청 데이터",
+                    "404": {
+                        "description": "상점 또는 원본 리뷰 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -686,8 +686,8 @@
                     "required": true
                 },
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
+                    "409": {
+                        "description": "이미 신고한 상점",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -706,8 +706,8 @@
                             }
                         }
                     },
-                    "409": {
-                        "description": "이미 신고한 상점",
+                    "404": {
+                        "description": "상점 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -860,22 +860,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseListItemResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -921,8 +921,8 @@
                     }
                 },
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
+                    "400": {
+                        "description": "잘못된 요청 데이터",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -951,8 +951,8 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "잘못된 요청 데이터",
+                    "404": {
+                        "description": "상점 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1082,8 +1082,8 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
+                    "409": {
+                        "description": "이미 추가된 상점",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1112,8 +1112,8 @@
                             }
                         }
                     },
-                    "409": {
-                        "description": "이미 추가된 상점",
+                    "404": {
+                        "description": "상점 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1144,22 +1144,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "204": {
                         "description": "즐겨찾기 취소 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVoid"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -1188,22 +1188,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseListCouponResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -1240,28 +1240,8 @@
                     "required": true
                 },
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "403": {
                         "description": "권한 없음 (본인 소유 상점 아님)",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "잘못된 요청 데이터 (타 상점 물품 등)",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1276,6 +1256,26 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseLong"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 요청 데이터 (타 상점 물품 등)",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -1314,6 +1314,16 @@
                     }
                 ],
                 "responses": {
+                    "404": {
+                        "description": "쿠폰 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "권한 없음",
                         "content": {
@@ -1330,16 +1340,6 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVoid"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "쿠폰 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -1398,22 +1398,22 @@
                             }
                         }
                     },
-                    "422": {
-                        "description": "만료된 쿠폰",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "쿠폰 조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVerifyCouponResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "만료된 쿠폰",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -1660,8 +1660,8 @@
                     }
                 ],
                 "responses": {
-                    "400": {
-                        "description": "자신의 리뷰에 좋아요 시도",
+                    "409": {
+                        "description": "이미 좋아요 누름",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1670,8 +1670,8 @@
                             }
                         }
                     },
-                    "409": {
-                        "description": "이미 좋아요 누름",
+                    "400": {
+                        "description": "자신의 리뷰에 좋아요 시도",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1722,22 +1722,22 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "리뷰 좋아요 취소 성공",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CommonResponseVoid"
-                                }
-                            }
-                        }
-                    },
                     "404": {
                         "description": "좋아요를 누르지 않은 리뷰",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "리뷰 좋아요 취소 성공",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommonResponseVoid"
                                 }
                             }
                         }
@@ -1859,16 +1859,6 @@
                     "required": true
                 },
                 "responses": {
-                    "200": {
-                        "description": "대학 변경 성공",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CommonResponseVoid"
-                                }
-                            }
-                        }
-                    },
                     "403": {
                         "description": "학생 회원이 아님",
                         "content": {
@@ -1885,6 +1875,16 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "대학 변경 성공",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommonResponseVoid"
                                 }
                             }
                         }
@@ -1911,6 +1911,16 @@
                     "required": true
                 },
                 "responses": {
+                    "400": {
+                        "description": "잘못된 요청 데이터",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "아이디 변경 성공",
                         "content": {
@@ -1923,16 +1933,6 @@
                     },
                     "409": {
                         "description": "이미 존재하는 아이디",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "잘못된 요청 데이터",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -1963,22 +1963,22 @@
                     "required": true
                 },
                 "responses": {
-                    "400": {
-                        "description": "현재 비밀번호 불일치",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "비밀번호 변경 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVoid"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "현재 비밀번호 불일치",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -2007,26 +2007,6 @@
                     }
                 ],
                 "responses": {
-                    "422": {
-                        "description": "유효기간 만료",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "발급된 쿠폰 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "409": {
                         "description": "이미 사용된 쿠폰",
                         "content": {
@@ -2043,6 +2023,26 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseString"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "유효기간 만료",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "발급된 쿠폰 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -2158,6 +2158,16 @@
                     }
                 ],
                 "responses": {
+                    "404": {
+                        "description": "쿠폰 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "권한 없음 (본인 소유 상점 아님)",
                         "content": {
@@ -2174,16 +2184,6 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVoid"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "쿠폰 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -2222,8 +2222,8 @@
                             }
                         }
                     },
-                    "422": {
-                        "description": "재고 소진 / 발급 기간 아님 / 한도 초과",
+                    "404": {
+                        "description": "쿠폰 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -2232,8 +2232,8 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "쿠폰 없음",
+                    "422": {
+                        "description": "재고 소진 / 발급 기간 아님 / 한도 초과",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -2392,16 +2392,6 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "사용자 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "401": {
                         "description": "유효하지 않은 RefreshToken",
                         "content": {
@@ -2418,6 +2408,16 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseLoginResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "사용자 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -2476,6 +2476,68 @@
                     "required": true
                 },
                 "responses": {
+                    "400": {
+                        "description": "로그인 실패 (아이디/비밀번호 불일치)",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "로그인 성공",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommonResponseLoginResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증 실패",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/kakao/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "[공통] 카카오 로그인 (네이티브)",
+                "description": "카카오 인증 후 발급받은 access_token을 통해 로그인/회원가입을 진행합니다.",
+                "operationId": "kakaoLogin",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/KakaoLoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "401": {
+                        "description": "카카오 인증 실패",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "200": {
                         "description": "로그인 성공",
                         "content": {
@@ -2487,7 +2549,49 @@
                         }
                     },
                     "400": {
-                        "description": "로그인 실패 (아이디/비밀번호 불일치)",
+                        "description": "잘못된 토큰 또는 파라미터",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/google/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "[공통] 구글 로그인 (네이티브)",
+                "description": "구글 인증 후 발급받은 id_token을 통해 로그인/회원가입을 진행합니다.",
+                "operationId": "googleLogin",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GoogleLoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "로그인 성공",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommonResponseLoginResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "구글 인증 실패",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -2496,8 +2600,8 @@
                             }
                         }
                     },
-                    "401": {
-                        "description": "인증 실패",
+                    "400": {
+                        "description": "잘못된 토큰 또는 파라미터",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -2763,8 +2867,8 @@
                     "required": true
                 },
                 "responses": {
-                    "404": {
-                        "description": "사용자 없음",
+                    "400": {
+                        "description": "잘못된 요청",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -2783,8 +2887,8 @@
                             }
                         }
                     },
-                    "400": {
-                        "description": "잘못된 요청",
+                    "404": {
+                        "description": "사용자 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -2795,6 +2899,58 @@
                     },
                     "409": {
                         "description": "이미 존재하는 소셜 정보",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/apple/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "[공통] 애플 로그인 (네이티브)",
+                "description": "애플 인증 후 발급받은 id_token을 통해 로그인/회원가입을 진행합니다.",
+                "operationId": "appleLogin",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AppleLoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "로그인 성공",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommonResponseLoginResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "잘못된 토큰 또는 파라미터",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "인증/디코딩 실패",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -2899,12 +3055,12 @@
                             }
                         }
                     },
-                    "201": {
-                        "description": "제휴 등록 성공",
+                    "400": {
+                        "description": "잘못된 요청 데이터",
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/CommonResponseLong"
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -2919,18 +3075,18 @@
                             }
                         }
                     },
-                    "409": {
-                        "description": "이미 등록된 제휴",
+                    "201": {
+                        "description": "제휴 등록 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                    "$ref": "#/components/schemas/CommonResponseLong"
                                 }
                             }
                         }
                     },
-                    "400": {
-                        "description": "잘못된 요청 데이터",
+                    "409": {
+                        "description": "이미 등록된 제휴",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -3119,8 +3275,8 @@
                     }
                 },
                 "responses": {
-                    "400": {
-                        "description": "데이터 검증 실패 (에러 메시지 포함)",
+                    "403": {
+                        "description": "권한 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -3129,8 +3285,8 @@
                             }
                         }
                     },
-                    "403": {
-                        "description": "권한 없음",
+                    "400": {
+                        "description": "데이터 검증 실패 (에러 메시지 포함)",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -3191,6 +3347,16 @@
                     }
                 },
                 "responses": {
+                    "400": {
+                        "description": "잘못된 요청 데이터",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "권한 없음",
                         "content": {
@@ -3207,16 +3373,6 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseLong"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "잘못된 요청 데이터",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -3319,22 +3475,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "상점 조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseStoreResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -3371,8 +3527,8 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "상점 없음",
+                    "403": {
+                        "description": "권한 없음 (본인 소유 상점 아님)",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -3381,8 +3537,8 @@
                             }
                         }
                     },
-                    "403": {
-                        "description": "권한 없음 (본인 소유 상점 아님)",
+                    "404": {
+                        "description": "상점 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -3437,16 +3593,6 @@
                     }
                 },
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "403": {
                         "description": "권한 없음 (본인 소유 상점 아님)",
                         "content": {
@@ -3469,6 +3615,16 @@
                     },
                     "409": {
                         "description": "이미 존재하는 상점 이름",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -3816,22 +3972,22 @@
                             }
                         }
                     },
-                    "200": {
-                        "description": "리뷰 수정 성공",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CommonResponseVoid"
-                                }
-                            }
-                        }
-                    },
                     "404": {
                         "description": "리뷰 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "리뷰 수정 성공",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommonResponseVoid"
                                 }
                             }
                         }
@@ -4101,6 +4257,16 @@
                     }
                 ],
                 "responses": {
+                    "404": {
+                        "description": "쿠폰 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "권한 없음 (본인 소유 상점 아님)",
                         "content": {
@@ -4117,16 +4283,6 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVoid"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "쿠폰 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -4163,6 +4319,16 @@
                     "required": true
                 },
                 "responses": {
+                    "404": {
+                        "description": "쿠폰 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "권한 없음 (본인 소유 상점 아님)",
                         "content": {
@@ -4179,16 +4345,6 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVoid"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "쿠폰 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -4226,6 +4382,16 @@
                     "required": true
                 },
                 "responses": {
+                    "200": {
+                        "description": "수정 성공",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CommonResponseVoid"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "권한 없음",
                         "content": {
@@ -4242,16 +4408,6 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "200": {
-                        "description": "수정 성공",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CommonResponseVoid"
                                 }
                             }
                         }
@@ -4531,22 +4687,22 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "이벤트 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "이벤트 수정 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseVoid"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "이벤트 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -4642,22 +4798,22 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseStoreStatsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -4686,22 +4842,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "통계 조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseReviewStatsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -4730,22 +4886,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseStoreRegistrationStatusResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -4774,22 +4930,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseListStorePartnershipResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -4818,22 +4974,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "상점 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseLong"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "상점 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -5157,16 +5313,6 @@
                 "description": "점주의 이름, 이메일, 아이디, 성별, 생년월일을 조회합니다.",
                 "operationId": "getOwnerInfo",
                 "responses": {
-                    "403": {
-                        "description": "점주 회원이 아님",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "404": {
                         "description": "점주 프로필 없음",
                         "content": {
@@ -5183,6 +5329,16 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseOwnerInfoResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "점주 회원이 아님",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -5242,8 +5398,8 @@
                             }
                         }
                     },
-                    "403": {
-                        "description": "본인 문의 아님",
+                    "404": {
+                        "description": "문의 없음",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -5252,8 +5408,8 @@
                             }
                         }
                     },
-                    "404": {
-                        "description": "문의 없음",
+                    "403": {
+                        "description": "본인 문의 아님",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -5405,22 +5561,22 @@
                     }
                 ],
                 "responses": {
-                    "404": {
-                        "description": "이벤트 없음",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
                     "200": {
                         "description": "조회 성공",
                         "content": {
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CommonResponseEventResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "이벤트 없음",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
                                 }
                             }
                         }
@@ -5557,8 +5713,8 @@
                     }
                 ],
                 "responses": {
-                    "400": {
-                        "description": "잘못된 주소/API 호출 에러",
+                    "500": {
+                        "description": "서버 에러",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -5567,8 +5723,8 @@
                             }
                         }
                     },
-                    "500": {
-                        "description": "서버 에러",
+                    "400": {
+                        "description": "잘못된 주소/API 호출 에러",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -5830,6 +5986,16 @@
                     "required": true
                 },
                 "responses": {
+                    "400": {
+                        "description": "잘못된 요청 (기타 사유 미입력 등)",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "204": {
                         "description": "회원 탈퇴 성공",
                         "content": {
@@ -5842,16 +6008,6 @@
                     },
                     "401": {
                         "description": "인증 실패",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SwaggerErrorResponse"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "잘못된 요청 (기타 사유 미입력 등)",
                         "content": {
                             "*/*": {
                                 "schema": {
@@ -6528,6 +6684,39 @@
                     }
                 }
             },
+            "KakaoLoginRequest": {
+                "required": [
+                    "accessToken"
+                ],
+                "type": "object",
+                "properties": {
+                    "accessToken": {
+                        "type": "string",
+                        "description": "Kakao SDK를 통해 발급받은 Access Token",
+                        "example": "abc123def456..."
+                    },
+                    "idToken": {
+                        "type": "string",
+                        "description": "Kakao SDK를 통해 발급받은 ID Token (선택)",
+                        "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    }
+                },
+                "description": "카카오 소셜 로그인 요청 (앱 네이티브)"
+            },
+            "GoogleLoginRequest": {
+                "required": [
+                    "idToken"
+                ],
+                "type": "object",
+                "properties": {
+                    "idToken": {
+                        "type": "string",
+                        "description": "Google 인증 후 발급받은 JWT 형식의 id_token",
+                        "example": "eyJhbGciOiJSUzI1NiIs..."
+                    }
+                },
+                "description": "구글 소셜 로그인 요청 (앱 네이티브)"
+            },
             "VerifyEmailCodeRequest": {
                 "required": [
                     "code",
@@ -6638,6 +6827,25 @@
                         "type": "string"
                     }
                 }
+            },
+            "AppleLoginRequest": {
+                "required": [
+                    "idToken"
+                ],
+                "type": "object",
+                "properties": {
+                    "idToken": {
+                        "type": "string",
+                        "description": "Apple 인증 후 발급받은 JWT 형식의 id_token",
+                        "example": "eyJraWQiOiI... (긴 문자열)"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "유저의 이름 (Apple 로그인 최초 1회에만 제공됨. 없을 경우 null)",
+                        "example": "홍길동"
+                    }
+                },
+                "description": "애플 소셜 로그인 요청 (앱 네이티브)"
             },
             "CreatePartnershipRequest": {
                 "required": [
@@ -7085,6 +7293,10 @@
             "PartnershipInfo": {
                 "type": "object",
                 "properties": {
+                    "organizationId": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
                     "category": {
                         "type": "string",
                         "enum": [
