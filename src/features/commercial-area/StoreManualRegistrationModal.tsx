@@ -5,6 +5,7 @@ import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequ
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
+import { OperatingHoursEditor } from './OperatingHoursEditor';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -360,13 +361,9 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">영업 시간</label>
-                                    <input
-                                        type="text"
-                                        name="operatingHours"
+                                    <OperatingHoursEditor
                                         value={formData.operatingHours}
-                                        onChange={handleChange}
-                                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                        placeholder="예: 평일 09:00 - 22:00"
+                                        onChange={(val) => setFormData(prev => ({ ...prev, operatingHours: val }))}
                                     />
                                 </div>
 

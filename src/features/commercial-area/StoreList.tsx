@@ -5,6 +5,7 @@ import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequ
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
+import { OperatingHoursEditor } from './OperatingHoursEditor';
 
 interface StoreListProps {
     universityId: number;
@@ -712,8 +713,11 @@ export function StoreList({ universityId }: StoreListProps) {
                                                     </div>
 
                                                     <div>
-                                                        <label className="block text-sm font-medium text-gray-700">영업 시간</label>
-                                                        <input type="text" value={editForm.operatingHours || ''} onChange={e => handleInputChange('operatingHours', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="예: 평일 09:00 - 22:00" />
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">영업 시간</label>
+                                                        <OperatingHoursEditor
+                                                            value={editForm.operatingHours || ''}
+                                                            onChange={val => handleInputChange('operatingHours', val)}
+                                                        />
                                                     </div>
 
                                                     <div>
