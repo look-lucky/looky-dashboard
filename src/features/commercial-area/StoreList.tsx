@@ -6,6 +6,10 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store a
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
+import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
+import { ItemService } from '../../shared/api/services/ItemService';
+import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
+import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
 
 interface StoreListProps {
     universityId: number;
@@ -53,6 +57,9 @@ export function StoreList({ universityId }: StoreListProps) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [editForm, setEditForm] = useState<UpdateStoreRequest>({});
     const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+    // Menu Items State
+    const [menuItems, setMenuItems] = useState<MenuItemState[]>([]);
 
     // Images State
     const [images, setImages] = useState<File[]>([]);
@@ -204,6 +211,27 @@ export function StoreList({ universityId }: StoreListProps) {
             setDeleteConfirm(false);
             setImages([]);
             setImagePreviews([]);
+            setMenuItems([]);
+
+            // Try to fetch menu items
+            try {
+                const itemsResponse = await ItemService.getItems(store.id!);
+                if (itemsResponse.data) {
+                    const loadedItems = itemsResponse.data.map(item => ({
+                        id: item.id,
+                        name: item.name || '',
+                        price: item.price,
+                        description: item.description,
+                        badge: item.badge as MenuItemState['badge'],
+                        itemOrder: item.itemOrder,
+                        imageUrl: item.imageUrl,
+                    }));
+                    setMenuItems(loadedItems);
+                }
+            } catch (err) {
+                console.error("Failed to load menus", err);
+            }
+
         } catch (e) {
             console.error(e);
             setSelectedStore(store);
@@ -216,6 +244,7 @@ export function StoreList({ universityId }: StoreListProps) {
         setDeleteConfirm(false);
         setImages([]);
         setImagePreviews([]);
+        setMenuItems([]);
     };
 
     const handleEditClick = () => {
@@ -248,6 +277,45 @@ export function StoreList({ universityId }: StoreListProps) {
             if (typeof requestData.longitude !== 'number' || isNaN(requestData.longitude)) requestData.longitude = 0;
 
             await StoreService.updateStore(selectedStore.id, { request: requestData, images: images });
+
+            // Process Menu Item changes
+            const promises = menuItems.map(async (item) => {
+                if (item.isDeleted && item.id) {
+                    // Deleted existing item
+                    return ItemService.deleteItem(item.id);
+                } else if (!item.isDeleted && item.id) {
+                    // Update existing item
+                    // Even if unchanged, sending an update is harmless. 
+                    // Better approach is tracking dirty state, but this works.
+                    const updateReq: UpdateItemRequest = {
+                        name: item.name,
+                        price: item.price,
+                        description: item.description,
+                        badge: item.badge as UpdateItemRequest.badge,
+                        itemOrder: item.itemOrder
+                    };
+                    return ItemService.updateItem(item.id, {
+                        request: updateReq,
+                        image: item.imageFile || new Blob()
+                    });
+                } else if (!item.isDeleted && !item.id && item.name.trim() !== '') {
+                    // Create new item
+                    const createReq: CreateItemRequest = {
+                        name: item.name,
+                        price: item.price,
+                        description: item.description,
+                        badge: item.badge as CreateItemRequest.badge,
+                        itemOrder: item.itemOrder
+                    };
+                    return ItemService.createItem(selectedStore.id!, {
+                        request: createReq,
+                        image: item.imageFile || new Blob()
+                    });
+                }
+            });
+
+            await Promise.allSettled(promises);
+
             alert('상점 정보가 수정되었습니다.');
             closeModal();
             fetchStores();
@@ -618,160 +686,176 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 </div>
                                             </div>
                                         ) : isEditMode ? (
-                                            <div className="flex flex-col md:flex-row gap-6 text-left">
-                                                {/* Section 1: Basic Info */}
-                                                <div className="flex-1 space-y-4">
-                                                    <h4 className="text-sm font-semibold text-gray-900 border-b pb-2">섹션 1: 기본 정보</h4>
+                                            <>
+                                                <div className="flex flex-col md:flex-row gap-6 text-left">
+                                                    {/* Section 1: Basic Info */}
+                                                    <div className="flex-1 space-y-4">
+                                                        <h4 className="text-sm font-semibold text-gray-900 border-b pb-2">섹션 1: 기본 정보</h4>
 
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">상점명</label>
-                                                        <input type="text" value={editForm.name || ''} onChange={e => handleInputChange('name', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">지점명</label>
-                                                        <input type="text" value={editForm.branch || ''} onChange={e => handleInputChange('branch', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="예: 본점, 강남점" />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">도로명 주소</label>
-                                                        <div className="flex gap-2">
-                                                            <input
-                                                                type="text"
-                                                                readOnly
-                                                                value={editForm.roadAddress || ''}
-                                                                onClick={() => setIsAddressModalOpen(true)}
-                                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-50 cursor-pointer"
-                                                                placeholder="주소를 검색하세요"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setIsAddressModalOpen(true)}
-                                                                className="mt-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap"
-                                                            >
-                                                                <Search className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">지번 주소</label>
-                                                        <input type="text" value={editForm.jibunAddress || ''} onChange={e => handleInputChange('jibunAddress', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-4">
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700">위도</label>
-                                                            <input
-                                                                type="text"
-                                                                value={editForm.latitude ?? ''}
-                                                                onChange={e => handleInputChange('latitude', e.target.value)}
-                                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                            />
+                                                            <label className="block text-sm font-medium text-gray-700">상점명</label>
+                                                            <input type="text" value={editForm.name || ''} onChange={e => handleInputChange('name', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                                                         </div>
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700">경도</label>
-                                                            <input
-                                                                type="text"
-                                                                value={editForm.longitude ?? ''}
-                                                                onChange={e => handleInputChange('longitude', e.target.value)}
-                                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Divider */}
-                                                <div className="hidden md:block w-px bg-gray-200" />
-
-                                                {/* Section 2: Additional Info */}
-                                                <div className="flex-1 space-y-4">
-                                                    <h4 className="text-sm font-semibold text-gray-900 border-b pb-2">섹션 2: 추가 정보</h4>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">카테고리 (중복 선택 가능)</label>
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            {CATEGORY_KEYS.map((key) => (
-                                                                <div key={key} className="flex items-center">
-                                                                    <input
-                                                                        id={`category-${key}`}
-                                                                        name="storeCategories"
-                                                                        type="checkbox"
-                                                                        checked={editForm.storeCategories?.includes(key as any)}
-                                                                        onChange={() => handleCategoryToggle(key as any)}
-                                                                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                                                    />
-                                                                    <label htmlFor={`category-${key}`} className="ml-2 block text-sm text-gray-900">
-                                                                        {CATEGORY_MAP[key]}
-                                                                    </label>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">전화번호</label>
-                                                        <input type="text" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">영업 시간</label>
-                                                        <OperatingHoursEditor
-                                                            value={editForm.operatingHours || ''}
-                                                            onChange={val => handleInputChange('operatingHours', val)}
-                                                        />
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700">소개</label>
-                                                        <textarea value={editForm.introduction || ''} onChange={e => handleInputChange('introduction', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-none" rows={2} />
-                                                    </div>
-
-                                                    {/* Images Upload */}
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
-                                                            <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 됩니다.</span>
+                                                            <label className="block text-sm font-medium text-gray-700">지점명</label>
+                                                            <input type="text" value={editForm.branch || ''} onChange={e => handleInputChange('branch', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="예: 본점, 강남점" />
                                                         </div>
 
-                                                        <div
-                                                            onClick={handleImageClick}
-                                                            className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-                                                        >
-                                                            <Upload className="mx-auto h-5 w-5 text-gray-400 mb-1" />
-                                                            <p className="text-xs text-gray-600">클릭하여 이미지를 업로드하세요</p>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">도로명 주소</label>
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    readOnly
+                                                                    value={editForm.roadAddress || ''}
+                                                                    onClick={() => setIsAddressModalOpen(true)}
+                                                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-50 cursor-pointer"
+                                                                    placeholder="주소를 검색하세요"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setIsAddressModalOpen(true)}
+                                                                    className="mt-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap"
+                                                                >
+                                                                    <Search className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <input
-                                                            type="file"
-                                                            multiple
-                                                            accept="image/*"
-                                                            className="hidden"
-                                                            ref={fileInputRef}
-                                                            onChange={handleImageChange}
-                                                        />
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">지번 주소</label>
+                                                            <input type="text" value={editForm.jibunAddress || ''} onChange={e => handleInputChange('jibunAddress', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                        </div>
 
-                                                        {imagePreviews.length > 0 && (
-                                                            <div className="mt-3 grid grid-cols-4 gap-2">
-                                                                {imagePreviews.map((preview, idx) => (
-                                                                    <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
-                                                                        <img src={preview} alt="preview" className="w-full h-full object-cover" />
-                                                                        <div className="absolute top-1 left-1">
-                                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-600/80'}`}>
-                                                                                {idx === 0 ? '배너' : '일반'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
-                                                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                        >
-                                                                            <X className="w-3 h-3" />
-                                                                        </button>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700">위도</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={editForm.latitude ?? ''}
+                                                                    onChange={e => handleInputChange('latitude', e.target.value)}
+                                                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-medium text-gray-700">경도</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={editForm.longitude ?? ''}
+                                                                    onChange={e => handleInputChange('longitude', e.target.value)}
+                                                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Divider */}
+                                                    <div className="hidden md:block w-px bg-gray-200" />
+
+                                                    {/* Section 2: Additional Info */}
+                                                    <div className="flex-1 space-y-4">
+                                                        <h4 className="text-sm font-semibold text-gray-900 border-b pb-2">섹션 2: 추가 정보</h4>
+
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-2">카테고리 (중복 선택 가능)</label>
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                {CATEGORY_KEYS.map((key) => (
+                                                                    <div key={key} className="flex items-center">
+                                                                        <input
+                                                                            id={`category-${key}`}
+                                                                            name="storeCategories"
+                                                                            type="checkbox"
+                                                                            checked={editForm.storeCategories?.includes(key as any)}
+                                                                            onChange={() => handleCategoryToggle(key as any)}
+                                                                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                                        />
+                                                                        <label htmlFor={`category-${key}`} className="ml-2 block text-sm text-gray-900">
+                                                                            {CATEGORY_MAP[key]}
+                                                                        </label>
                                                                     </div>
                                                                 ))}
                                                             </div>
-                                                        )}
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">전화번호</label>
+                                                            <input type="text" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">영업 시간</label>
+                                                            <OperatingHoursEditor
+                                                                value={editForm.operatingHours || ''}
+                                                                onChange={val => handleInputChange('operatingHours', val)}
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">소개</label>
+                                                            <textarea value={editForm.introduction || ''} onChange={e => handleInputChange('introduction', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-none" rows={2} />
+                                                        </div>
+
+                                                        {/* Images Upload */}
+                                                        <div>
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
+                                                                <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 됩니다.</span>
+                                                            </div>
+
+                                                            <div
+                                                                onClick={handleImageClick}
+                                                                className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                                                            >
+                                                                <Upload className="mx-auto h-5 w-5 text-gray-400 mb-1" />
+                                                                <p className="text-xs text-gray-600">클릭하여 이미지를 업로드하세요</p>
+                                                            </div>
+                                                            <input
+                                                                type="file"
+                                                                multiple
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                ref={fileInputRef}
+                                                                onChange={handleImageChange}
+                                                            />
+
+                                                            {imagePreviews.length > 0 && (
+                                                                <div className="mt-3 grid grid-cols-4 gap-2">
+                                                                    {imagePreviews.map((preview, idx) => (
+                                                                        <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                                            <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                                                                            <div className="absolute top-1 left-1">
+                                                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-600/80'}`}>
+                                                                                    {idx === 0 ? '배너' : '일반'}
+                                                                                </span>
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
+                                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            >
+                                                                                <X className="w-3 h-3" />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+
+                                                {/* Section 3: Menu Info Component Wrapper */}
+                                                <div className="flex-col w-full text-left border-t border-gray-200 mt-6 pt-6 gap-6 text-left">
+                                                    <div className="flex-1 space-y-4">
+                                                        <div className="flex justify-between items-center border-b pb-2">
+                                                            <h4 className="text-sm font-semibold text-gray-900">섹션 3: 메뉴 정보</h4>
+                                                            <span className="text-xs text-gray-500">선택 사항</span>
+                                                        </div>
+                                                        <StoreMenuEditor
+                                                            items={menuItems}
+                                                            onChange={setMenuItems}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
                                         ) : (
                                             <dl className="space-y-4">
                                                 <div className="grid grid-cols-3 gap-4">

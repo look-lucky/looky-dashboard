@@ -6,6 +6,9 @@ import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
+import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
+import { ItemService } from '../../shared/api/services/ItemService';
+import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -31,6 +34,8 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [menuItems, setMenuItems] = useState<MenuItemState[]>([]);
 
     const [formData, setFormData] = useState<{
         name: string;
@@ -136,10 +141,36 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 universityIds: formData.universityIds
             };
 
-            await StoreService.createStore({
+            const storeId = await StoreService.createStore({
                 request: requestPayload,
                 images: images
             });
+
+            // If menu items exist, save them sequentially
+            const validMenuItems = menuItems.filter(item => !item.isDeleted && item.name.trim() !== '');
+            if (validMenuItems.length > 0 && typeof storeId?.data === 'number') {
+                for (const item of validMenuItems) {
+                    const itemRequest: CreateItemRequest = {
+                        name: item.name,
+                        price: item.price,
+                        description: item.description,
+                        badge: item.badge as CreateItemRequest.badge,
+                        itemOrder: item.itemOrder
+                    };
+
+                    try {
+                        const imageBlob = item.imageFile || new Blob(); // Fallback to empty blob if no image
+                        await ItemService.createItem(storeId.data, {
+                            request: itemRequest,
+                            image: imageBlob
+                        });
+                    } catch (itemErr) {
+                        console.error('Failed to create item:', item.name, itemErr);
+                        // We continue saving other items even if one fails in this context, 
+                        // or we could halt. Usually better to continue and let them fix later.
+                    }
+                }
+            }
 
             alert('상점이 성공적으로 등록되었습니다.');
             onClose();
@@ -426,6 +457,18 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Section 3: Menu Info */}
+                    <div className="border-t border-gray-100 pt-6 mt-6">
+                        <div className="flex justify-between items-center border-b pb-2 mb-4">
+                            <h3 className="text-sm font-semibold text-gray-900">섹션 3: 메뉴 정보</h3>
+                            <span className="text-xs text-gray-500">선택 사항</span>
+                        </div>
+                        <StoreMenuEditor
+                            items={menuItems}
+                            onChange={setMenuItems}
+                        />
                     </div>
                 </form>
 

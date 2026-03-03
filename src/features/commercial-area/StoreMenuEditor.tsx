@@ -1,0 +1,209 @@
+import React from 'react';
+import { Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
+import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
+
+// Type definitions for our local menu state editor
+export interface MenuItemState {
+    id?: number; // Only exists if fetched from server
+    name: string;
+    price?: number;
+    description?: string;
+    badge?: CreateItemRequest.badge | UpdateItemRequest.badge;
+    itemOrder?: number;
+    imageUrl?: string; // Existing image from backend
+    imageFile?: File;  // Newly uploaded file
+    isDeleted?: boolean; // Flag to mark for deletion upon save
+}
+
+interface StoreMenuEditorProps {
+    items: MenuItemState[];
+    onChange: (items: MenuItemState[]) => void;
+}
+
+export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChange }) => {
+
+    // Add an empty menu item
+    const handleAdd = () => {
+        onChange([
+            ...items,
+            { name: '', itemOrder: items.length + 1 }
+        ]);
+    };
+
+    // Update specific field of a specific item
+    const handleChange = (index: number, field: keyof MenuItemState, value: any) => {
+        const newItems = [...items];
+        newItems[index] = { ...newItems[index], [field]: value };
+        onChange(newItems);
+    };
+
+    // Marks for deletion if it exists on server, strictly removes if it's new
+    const handleRemove = (index: number) => {
+        const item = items[index];
+        const newItems = [...items];
+
+        if (item.id) {
+            newItems[index] = { ...item, isDeleted: true };
+        } else {
+            newItems.splice(index, 1);
+        }
+
+        // Re-calculate ordering
+        let order = 1;
+        const OrderedItems = newItems.map(it => {
+            if (!it.isDeleted) {
+                return { ...it, itemOrder: order++ };
+            }
+            return it;
+        });
+
+        onChange(OrderedItems);
+    };
+
+    // Handle image selection
+    const handleImageDrop = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const newItems = [...items];
+
+            // Generate a local preview for immediate feedback 
+            // In a real robust app, you manage memory strictly, but this is fine for modals
+            const previewUrl = URL.createObjectURL(file);
+            newItems[index] = { ...newItems[index], imageFile: file, imageUrl: previewUrl };
+
+            onChange(newItems);
+        }
+    };
+
+    const handleClearImage = (index: number) => {
+        const newItems = [...items];
+        newItems[index] = { ...newItems[index], imageFile: undefined, imageUrl: undefined };
+        onChange(newItems);
+    };
+
+    const visibleItems = items.filter(i => !i.isDeleted);
+
+    return (
+        <div className="flex flex-col gap-4">
+            {visibleItems.map((item) => {
+                // We need to find its absolute index in the state array, 
+                // in case some items before it were merely mocked deleted.
+                const stateIdx = items.findIndex(it => it === item);
+
+                return (
+                    <div key={stateIdx} className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative flex flex-col md:flex-row gap-4">
+
+                        {/* Image Uploader */}
+                        <div className="w-full md:w-32 h-32 shrink-0 relative bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden group">
+                            {item.imageUrl ? (
+                                <>
+                                    <img src={item.imageUrl} alt="menu" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleClearImage(stateIdx)}
+                                            className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-sm"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <label className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-gray-50">
+                                    <ImageIcon className="w-6 h-6 text-gray-400 mb-1" />
+                                    <span className="text-[10px] text-gray-500">이미지 첨부</span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => handleImageDrop(e, stateIdx)}
+                                    />
+                                </label>
+                            )}
+                        </div>
+
+                        {/* Fields */}
+                        <div className="flex-1 flex flex-col gap-3">
+                            <div className="flex justify-between items-start">
+                                <div className="flex-1 mr-4">
+                                    <input
+                                        type="text"
+                                        placeholder="메뉴명 (필수)"
+                                        value={item.name}
+                                        onChange={(e) => handleChange(stateIdx, 'name', e.target.value)}
+                                        className="w-full font-bold text-gray-900 border-b border-gray-300 py-1 bg-transparent focus:outline-none focus:border-indigo-500 placeholder-gray-400"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemove(stateIdx)}
+                                    className="p-1.5 text-gray-400 hover:text-red-500 transition-colors bg-white rounded-md shadow-sm border border-gray-200"
+                                    title="메뉴 삭제"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold tracking-wider text-gray-500">가격</label>
+                                    <div className="flex items-center">
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={item.price || ''}
+                                            onChange={(e) => handleChange(stateIdx, 'price', e.target.value ? Number(e.target.value) : undefined)}
+                                            className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
+                                        />
+                                        <span className="ml-2 text-sm text-gray-600">원</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold tracking-wider text-gray-500">뱃지</label>
+                                    <select
+                                        value={item.badge || ''}
+                                        onChange={(e) => handleChange(stateIdx, 'badge', e.target.value || undefined)}
+                                        className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
+                                    >
+                                        <option value="">없음</option>
+                                        <option value="BEST">BEST</option>
+                                        <option value="NEW">NEW</option>
+                                        <option value="HOT">HOT</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] uppercase font-bold tracking-wider text-gray-500">소개</label>
+                                <textarea
+                                    placeholder="메뉴에 대한 설명을 적어주세요."
+                                    value={item.description || ''}
+                                    onChange={(e) => handleChange(stateIdx, 'description', e.target.value)}
+                                    rows={2}
+                                    className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+
+            {visibleItems.length === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                    <p className="text-gray-500 text-sm mb-2">등록된 메뉴가 없습니다.</p>
+                </div>
+            )}
+
+            <button
+                type="button"
+                onClick={handleAdd}
+                className="mt-2 w-full py-2.5 border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium text-sm rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
+            >
+                <Plus className="w-4 h-4" />
+                메뉴 추가하기
+            </button>
+        </div>
+    );
+};
