@@ -17,7 +17,7 @@ export type CreateEventRequest = {
     /**
      * 이벤트 타입 목록
      */
-    eventTypes: Array<'FOOD_EVENT' | 'POPUP_STORE' | 'SCHOOL_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'COMMUNITY'>;
+    eventTypes: Array<'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP'>;
     /**
      * 위도
      */

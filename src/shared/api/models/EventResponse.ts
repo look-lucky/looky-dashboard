@@ -6,7 +6,7 @@ export type EventResponse = {
     id?: number;
     title?: string;
     description?: string;
-    eventTypes?: Array<'FOOD_EVENT' | 'POPUP_STORE' | 'SCHOOL_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'COMMUNITY'>;
+    eventTypes?: Array<'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP'>;
     latitude?: number;
     longitude?: number;
     place?: string;

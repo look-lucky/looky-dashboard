@@ -13,15 +13,15 @@ interface EventModalProps {
     initialData?: EventResponse | null;
 }
 
-type EventType = 'FOOD_EVENT' | 'POPUP_STORE' | 'SCHOOL_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'COMMUNITY';
+type EventType = 'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP';
 
 const EVENT_TYPES: { value: EventType; label: string }[] = [
+    { value: 'SCHOOL_EVENT', label: '학교 주관 이벤트' },
+    { value: 'STUDENT_EVENT', label: '학생 주관 이벤트' },
     { value: 'FOOD_EVENT', label: '푸드 이벤트' },
-    { value: 'POPUP_STORE', label: '팝업 스토어' },
-    { value: 'SCHOOL_EVENT', label: '학교 행사' },
     { value: 'FLEA_MARKET', label: '플리마켓' },
-    { value: 'PERFORMANCE', label: '공연' },
-    { value: 'COMMUNITY', label: '커뮤니티' }
+    { value: 'PERFORMANCE', label: '공연/전시/버스킹' },
+    { value: 'BRAND_POPUP', label: '브랜드 팝업' }
 ];
 
 export function EventModal({ onClose, onSuccess, initialData }: EventModalProps) {
