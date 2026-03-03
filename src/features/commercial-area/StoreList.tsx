@@ -20,7 +20,7 @@ const CATEGORY_MAP: Record<string, string> = {
     'CAFE': '카페',
     'RESTAURANT': '식당',
     'ENTERTAINMENT': '놀거리',
-    'BEAUTY_HEALTH': '뷰티/건강',
+    'BEAUTY_HEALTH': '뷰티•헬스',
     'ETC': '기타'
 };
 
