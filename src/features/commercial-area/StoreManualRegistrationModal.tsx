@@ -159,7 +159,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     };
 
                     try {
-                        const imageBlob = item.imageFile || new Blob(); // Fallback to empty blob if no image
+                        const imageBlob = item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' }); // Fallback to empty file if no image
                         await ItemService.createItem(storeId.data, {
                             request: itemRequest,
                             image: imageBlob

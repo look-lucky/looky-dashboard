@@ -296,7 +296,7 @@ export function StoreList({ universityId }: StoreListProps) {
                     };
                     return ItemService.updateItem(item.id, {
                         request: updateReq,
-                        image: item.imageFile || new Blob()
+                        image: item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' })
                     });
                 } else if (!item.isDeleted && !item.id && item.name.trim() !== '') {
                     // Create new item
@@ -309,14 +309,21 @@ export function StoreList({ universityId }: StoreListProps) {
                     };
                     return ItemService.createItem(selectedStore.id!, {
                         request: createReq,
-                        image: item.imageFile || new Blob()
+                        image: item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' })
                     });
                 }
             });
 
-            await Promise.allSettled(promises);
+            const results = await Promise.allSettled(promises);
+            const failedCount = results.filter(r => r.status === 'rejected').length;
 
-            alert('상점 정보가 수정되었습니다.');
+            if (failedCount > 0) {
+                console.error('Some menu items failed to save:', results);
+                alert(`상점 정보는 수정되었으나, ${failedCount}개의 메뉴 정보 처리에 실패했습니다.`);
+            } else {
+                alert('상점 정보가 수정되었습니다.');
+            }
+
             closeModal();
             fetchStores();
         } catch (e) {
