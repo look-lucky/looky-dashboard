@@ -19,6 +19,7 @@ export namespace UpdateItemRequest {
         BEST = 'BEST',
         NEW = 'NEW',
         HOT = 'HOT',
+        VEGAN = 'VEGAN',
     }
 }
 

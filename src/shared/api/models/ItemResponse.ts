@@ -20,6 +20,7 @@ export namespace ItemResponse {
         BEST = 'BEST',
         NEW = 'NEW',
         HOT = 'HOT',
+        VEGAN = 'VEGAN',
     }
 }
 

@@ -18,6 +18,7 @@ export namespace CreateItemRequest {
         BEST = 'BEST',
         NEW = 'NEW',
         HOT = 'HOT',
+        VEGAN = 'VEGAN',
     }
 }
 

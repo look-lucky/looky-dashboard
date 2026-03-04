@@ -223,6 +223,7 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                                         <option value="BEST">BEST</option>
                                         <option value="NEW">NEW</option>
                                         <option value="HOT">HOT</option>
+                                        <option value="VEGAN">VEGAN</option>
                                     </select>
                                 </div>
                             </div>
