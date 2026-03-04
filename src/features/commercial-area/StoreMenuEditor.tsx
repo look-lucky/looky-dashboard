@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
+import { ImageCropper } from '../../shared/components/ImageCropper';
 
 // Type definitions for our local menu state editor
 export interface MenuItemState {
@@ -22,6 +23,7 @@ interface StoreMenuEditorProps {
 }
 
 export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChange }) => {
+    const [cropState, setCropState] = useState<{ index: number; src: string } | null>(null);
 
     // Add an empty menu item
     const handleAdd = () => {
@@ -65,15 +67,10 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
     const handleImageDrop = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
-            const newItems = [...items];
-
-            // Generate a local preview for immediate feedback 
-            // In a real robust app, you manage memory strictly, but this is fine for modals
-            const previewUrl = URL.createObjectURL(file);
-            newItems[index] = { ...newItems[index], imageFile: file, imageUrl: previewUrl };
-
-            onChange(newItems);
+            const objectUrl = URL.createObjectURL(file);
+            setCropState({ index, src: objectUrl });
         }
+        if (e.target) e.target.value = '';
     };
 
     const handleClearImage = (index: number) => {
@@ -89,10 +86,8 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
             e.preventDefault();
             e.stopPropagation(); // Stop paste bubble to main modal
             const file = pastedFiles[0]; // Take only the first image
-            const newItems = [...items];
-            const previewUrl = URL.createObjectURL(file);
-            newItems[index] = { ...newItems[index], imageFile: file, imageUrl: previewUrl };
-            onChange(newItems);
+            const objectUrl = URL.createObjectURL(file);
+            setCropState({ index, src: objectUrl });
         }
     };
 
@@ -103,10 +98,8 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
             const pastedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (pastedFiles.length > 0) {
                 const file = pastedFiles[0]; // Take only the first image
-                const newItems = [...items];
-                const previewUrl = URL.createObjectURL(file);
-                newItems[index] = { ...newItems[index], imageFile: file, imageUrl: previewUrl };
-                onChange(newItems);
+                const objectUrl = URL.createObjectURL(file);
+                setCropState({ index, src: objectUrl });
             }
         }
     };
@@ -114,6 +107,23 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+    };
+
+    const handleCropComplete = (croppedImageUrl: string, blob: Blob) => {
+        if (!cropState) return;
+        const croppedFile = new File([blob], 'menu-cropped.jpg', { type: blob.type });
+        const newItems = [...items];
+        newItems[cropState.index] = {
+            ...newItems[cropState.index],
+            imageFile: croppedFile,
+            imageUrl: croppedImageUrl
+        };
+        onChange(newItems);
+        setCropState(null);
+    };
+
+    const handleCropCancel = () => {
+        setCropState(null);
     };
 
     const visibleItems = items.filter(i => !i.isDeleted);
@@ -246,6 +256,15 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                 <Plus className="w-4 h-4" />
                 메뉴 추가하기
             </button>
+
+            {cropState && (
+                <ImageCropper
+                    imageSrc={cropState.src}
+                    aspectRatio={1} // 1:1 ratio
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                />
+            )}
         </div>
     );
 };
