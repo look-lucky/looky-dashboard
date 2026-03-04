@@ -115,11 +115,58 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
-            setImages([...images, ...newFiles]);
+            setImages(prev => [...prev, ...newFiles]);
 
             const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-            setPreviewUrls([...previewUrls, ...newPreviews]);
+            setPreviewUrls(prev => [...prev, ...newPreviews]);
         }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        if (!e.clipboardData?.files.length) return;
+        const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
+        if (pastedFiles.length === 0) return;
+
+        if (!bannerPreviewUrl && pastedFiles.length === 1) {
+            const objectUrl = URL.createObjectURL(pastedFiles[0]);
+            setOriginalBannerSrc(objectUrl);
+            setShowCropper(true);
+        } else {
+            setImages(prev => [...prev, ...pastedFiles]);
+            const newPreviews = pastedFiles.map(file => URL.createObjectURL(file));
+            setPreviewUrls(prev => [...prev, ...newPreviews]);
+        }
+    };
+
+    const handleBannerDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+                const objectUrl = URL.createObjectURL(file);
+                setOriginalBannerSrc(objectUrl);
+                setShowCropper(true);
+            }
+        }
+    };
+
+    const handleImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) {
+                setImages(prev => [...prev, ...newFiles]);
+                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+                setPreviewUrls(prev => [...prev, ...newPreviews]);
+            }
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
     };
 
     const toggleType = (type: EventType) => {
@@ -187,7 +234,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+            onPaste={handlePaste}
+        >
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="flex justify-between items-center p-6 border-b border-gray-100">
                     <h2 className="text-xl font-bold text-gray-900">
@@ -353,14 +403,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                     </div>
                                 )}
                                 {!bannerPreviewUrl && (
-                                    <button
-                                        type="button"
+                                    <div
                                         onClick={() => bannerInputRef.current?.click()}
-                                        className="w-40 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
+                                        onDrop={handleBannerDrop}
+                                        onDragOver={handleDragOver}
+                                        className="cursor-pointer w-40 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
                                     >
                                         <Upload className="w-6 h-6 mb-1" />
                                         <span className="text-xs">배너 추가</span>
-                                    </button>
+                                    </div>
                                 )}
                             </div>
                             <input
@@ -395,14 +446,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                         </button>
                                     </div>
                                 ))}
-                                <button
-                                    type="button"
+                                <div
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
+                                    onDrop={handleImagesDrop}
+                                    onDragOver={handleDragOver}
+                                    className="cursor-pointer w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
                                 >
                                     <Upload className="w-6 h-6 mb-1" />
                                     <span className="text-xs">이미지 추가</span>
-                                </button>
+                                </div>
                             </div>
                             <input
                                 type="file"

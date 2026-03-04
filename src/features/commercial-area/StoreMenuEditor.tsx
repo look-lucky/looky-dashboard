@@ -82,6 +82,40 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
         onChange(newItems);
     };
 
+    const handlePaste = (e: React.ClipboardEvent, index: number) => {
+        if (!e.clipboardData?.files.length) return;
+        const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
+        if (pastedFiles.length > 0) {
+            e.preventDefault();
+            e.stopPropagation(); // Stop paste bubble to main modal
+            const file = pastedFiles[0]; // Take only the first image
+            const newItems = [...items];
+            const previewUrl = URL.createObjectURL(file);
+            newItems[index] = { ...newItems[index], imageFile: file, imageUrl: previewUrl };
+            onChange(newItems);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const pastedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (pastedFiles.length > 0) {
+                const file = pastedFiles[0]; // Take only the first image
+                const newItems = [...items];
+                const previewUrl = URL.createObjectURL(file);
+                newItems[index] = { ...newItems[index], imageFile: file, imageUrl: previewUrl };
+                onChange(newItems);
+            }
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
     const visibleItems = items.filter(i => !i.isDeleted);
 
     return (
@@ -92,10 +126,18 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                 const stateIdx = items.findIndex(it => it === item);
 
                 return (
-                    <div key={stateIdx} className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative flex flex-col md:flex-row gap-4">
+                    <div
+                        key={stateIdx}
+                        className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative flex flex-col md:flex-row gap-4 focus-within:ring-2 focus-within:ring-indigo-100"
+                        onPaste={(e) => handlePaste(e, stateIdx)}
+                    >
 
                         {/* Image Uploader */}
-                        <div className="w-full md:w-32 h-32 shrink-0 relative bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden group">
+                        <div
+                            className="w-full md:w-32 h-32 shrink-0 relative bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden group"
+                            onDrop={(e) => handleDrop(e, stateIdx)}
+                            onDragOver={handleDragOver}
+                        >
                             {item.imageUrl ? (
                                 <>
                                     <img src={item.imageUrl} alt="menu" className="w-full h-full object-cover" />

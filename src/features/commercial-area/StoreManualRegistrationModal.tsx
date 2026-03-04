@@ -115,6 +115,33 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         fileInputRef.current?.click();
     };
 
+    const handlePaste = (e: React.ClipboardEvent) => {
+        if (!e.clipboardData?.files.length) return;
+        const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
+        if (pastedFiles.length > 0) {
+            setImages(prev => [...prev, ...pastedFiles]);
+            const newPreviews = pastedFiles.map(file => URL.createObjectURL(file));
+            setImagePreviews(prev => [...prev, ...newPreviews]);
+        }
+    };
+
+    const handleImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) {
+                setImages(prev => [...prev, ...newFiles]);
+                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+                setImagePreviews(prev => [...prev, ...newPreviews]);
+            }
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -224,7 +251,10 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+            onPaste={handlePaste}
+        >
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="flex justify-between items-center p-6 border-b border-gray-100">
                     <h2 className="text-xl font-bold text-gray-900">가게 개별 등록</h2>
@@ -419,10 +449,12 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
                                     <div
                                         onClick={handleImageClick}
+                                        onDrop={handleImagesDrop}
+                                        onDragOver={handleDragOver}
                                         className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                                     >
                                         <Upload className="mx-auto h-6 w-6 text-gray-400 mb-2" />
-                                        <p className="text-sm text-gray-600">클릭하여 이미지를 업로드하세요</p>
+                                        <p className="text-sm text-gray-600">클릭하거나 이미지를 드래그 앤 드롭해서 업로드하세요</p>
                                     </div>
                                     <input
                                         type="file"

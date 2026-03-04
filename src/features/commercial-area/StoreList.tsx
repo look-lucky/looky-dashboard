@@ -391,6 +391,36 @@ export function StoreList({ universityId }: StoreListProps) {
         fileInputRef.current?.click();
     };
 
+    const handlePaste = (e: React.ClipboardEvent) => {
+        if (!isEditMode) return;
+        if (!e.clipboardData?.files.length) return;
+        const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
+        if (pastedFiles.length > 0) {
+            setImages(prev => [...prev, ...pastedFiles]);
+            const newPreviews = pastedFiles.map(file => URL.createObjectURL(file));
+            setImagePreviews(prev => [...prev, ...newPreviews]);
+        }
+    };
+
+    const handleImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isEditMode) return;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) {
+                setImages(prev => [...prev, ...newFiles]);
+                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
+                setImagePreviews(prev => [...prev, ...newPreviews]);
+            }
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
     const handleCategoryToggle = (category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC') => {
         setEditForm(prev => {
             const currentCategories = prev.storeCategories || [];
@@ -659,7 +689,13 @@ export function StoreList({ universityId }: StoreListProps) {
 
             {/* Detail Modal */}
             {selectedStore && (
-                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div
+                    className="fixed inset-0 z-50 overflow-y-auto"
+                    aria-labelledby="modal-title"
+                    role="dialog"
+                    aria-modal="true"
+                    onPaste={handlePaste}
+                >
                     <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
@@ -810,10 +846,12 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                             <div
                                                                 onClick={handleImageClick}
+                                                                onDrop={handleImagesDrop}
+                                                                onDragOver={handleDragOver}
                                                                 className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                                                             >
                                                                 <Upload className="mx-auto h-5 w-5 text-gray-400 mb-1" />
-                                                                <p className="text-xs text-gray-600">클릭하여 이미지를 업로드하세요</p>
+                                                                <p className="text-xs text-gray-600">클릭하거나 이미지를 드래그 앤 드롭해서 업로드하세요</p>
                                                             </div>
                                                             <input
                                                                 type="file"
