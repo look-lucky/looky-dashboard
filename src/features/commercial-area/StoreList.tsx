@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
@@ -10,6 +10,7 @@ import { ItemService, type UpdateItemRequest } from '../../shared/api/services/I
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
+import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 
 interface StoreListProps {
     universityId: number;
@@ -93,18 +94,13 @@ export function StoreList({ universityId }: StoreListProps) {
         }
     };
 
-    useEffect(() => {
-        if (universityId) {
-            fetchStores();
-        }
-    }, [universityId, partnershipFilter, statusFilter, debouncedSearchTerm, page]);
-
-    const fetchStores = async () => {
+    const fetchStores = useCallback(async () => {
         setLoading(true);
         const hasPartnership =
             partnershipFilter === 'yes' ? true :
                 partnershipFilter === 'no' ? false :
                     undefined;
+
         try {
             const response = await StoreService.getStores(
                 { page, size: pageSize, sort: ['id,asc'] },
@@ -115,6 +111,7 @@ export function StoreList({ universityId }: StoreListProps) {
                 hasPartnership,
                 statusFilter || undefined,
             );
+
             if (response.data) {
                 setStores(response.data.content || []);
                 setTotalElements(response.data.totalElements || 0);
@@ -124,7 +121,13 @@ export function StoreList({ universityId }: StoreListProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [debouncedSearchTerm, page, pageSize, partnershipFilter, statusFilter, universityId]);
+
+    useEffect(() => {
+        if (universityId) {
+            void fetchStores();
+        }
+    }, [universityId, fetchStores]);
 
     const totalPages = Math.ceil(totalElements / pageSize);
 
@@ -198,7 +201,7 @@ export function StoreList({ universityId }: StoreListProps) {
         } else {
             alert(`${count}개 삭제 완료`);
         }
-        fetchStores();
+        void fetchStores();
     };
 
     // Modal Handlers
@@ -334,7 +337,7 @@ export function StoreList({ universityId }: StoreListProps) {
             }
 
             closeModal();
-            fetchStores();
+            void fetchStores();
         } catch (e) {
             console.error(e);
             alert('수정에 실패했습니다.');
@@ -347,7 +350,7 @@ export function StoreList({ universityId }: StoreListProps) {
             await StoreService.deleteStore(selectedStore.id);
             alert('상점이 삭제되었습니다.');
             closeModal();
-            fetchStores();
+            void fetchStores();
         } catch (e) {
             console.error(e);
             alert('삭제에 실패했습니다. (본인 소유 상점이 아닐 수 있습니다)');
@@ -655,25 +658,18 @@ export function StoreList({ universityId }: StoreListProps) {
                                     <span className="sr-only">Previous</span>
                                     <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                                 </button>
-                                {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                                    let p = page - 2 + i;
-                                    if (page < 2) p = i;
-                                    if (page > totalPages - 3) p = totalPages - 5 + i;
-                                    if (p < 0 || p >= totalPages) return null;
-
-                                    return (
-                                        <button
-                                            key={p}
-                                            onClick={() => setPage(p)}
-                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
-                                                ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {p + 1}
-                                        </button>
-                                    );
-                                })}
+                                {getVisiblePageNumbers(page, totalPages).map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPage(p)}
+                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
+                                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {p + 1}
+                                    </button>
+                                ))}
                                 <button
                                     onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                                     disabled={page === totalPages - 1}

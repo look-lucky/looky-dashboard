@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StoreClaimService } from '../../shared/api/services/StoreClaimService';
 import type { StoreClaimResponse } from '../../shared/api/models/StoreClaimResponse';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check, X } from 'lucide-react';
+import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 
 export function StoreClaimList() {
     const [currentTab, setCurrentTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
@@ -18,24 +19,15 @@ export function StoreClaimList() {
     const [rejectReason, setRejectReason] = useState('');
     const [isRejecting, setIsRejecting] = useState(false);
 
-    useEffect(() => {
-        fetchClaims();
-    }, [currentTab, completedFilter, page]);
-
-    const fetchClaims = async () => {
+    const fetchClaims = useCallback(async () => {
         setLoading(true);
         try {
-            let status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | undefined;
-
-            if (currentTab === 'PENDING') {
-                status = 'PENDING';
-            } else {
-                if (completedFilter === 'ALL') {
-                    status = undefined; // Fetch all statuses
-                } else {
-                    status = completedFilter;
-                }
-            }
+            const status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | undefined =
+                currentTab === 'PENDING'
+                    ? 'PENDING'
+                    : completedFilter === 'ALL'
+                        ? undefined
+                        : completedFilter;
 
             const response = await StoreClaimService.getStoreClaims(
                 { page, size: pageSize, sort: ['createdAt,desc'] },
@@ -52,7 +44,11 @@ export function StoreClaimList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentTab, completedFilter, page, pageSize]);
+
+    useEffect(() => {
+        void fetchClaims();
+    }, [fetchClaims]);
 
     const handleApprove = async () => {
         if (!selectedClaim?.id) return;
@@ -62,7 +58,7 @@ export function StoreClaimList() {
             await StoreClaimService.approve(selectedClaim.id);
             alert('승인되었습니다.');
             closeModal();
-            fetchClaims();
+            void fetchClaims();
         } catch (e) {
             console.error(e);
             alert('승인에 실패했습니다.');
@@ -80,7 +76,7 @@ export function StoreClaimList() {
             await StoreClaimService.reject(selectedClaim.id, { reason: rejectReason });
             alert('반려되었습니다.');
             closeModal();
-            fetchClaims();
+            void fetchClaims();
         } catch (e) {
             console.error(e);
             alert('반려에 실패했습니다.');
@@ -234,25 +230,18 @@ export function StoreClaimList() {
                                     <span className="sr-only">Previous</span>
                                     <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                                 </button>
-                                {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                                    let p = page - 2 + i;
-                                    if (page < 2) p = i;
-                                    if (page > totalPages - 3) p = totalPages - 5 + i;
-                                    if (p < 0 || p >= totalPages) return null;
-
-                                    return (
-                                        <button
-                                            key={p}
-                                            onClick={() => setPage(p)}
-                                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
-                                                ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {p + 1}
-                                        </button>
-                                    );
-                                })}
+                                {getVisiblePageNumbers(page, totalPages).map((p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPage(p)}
+                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
+                                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {p + 1}
+                                    </button>
+                                ))}
                                 <button
                                     onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                                     disabled={page === totalPages - 1}

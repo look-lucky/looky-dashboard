@@ -50,7 +50,7 @@ export const OperatingHoursEditor: React.FC<OperatingHoursEditorProps> = ({ valu
                     return true;
                 }
             }
-        } catch (e) {
+        } catch {
             // Ignore parse errors here
         }
         return false;
@@ -62,7 +62,7 @@ export const OperatingHoursEditor: React.FC<OperatingHoursEditorProps> = ({ valu
             const parsed = JSON.parse(value);
             if (typeof parsed !== 'object' || parsed === null || Object.keys(parsed).length === 0) throw new Error("Empty object");
             return parsed;
-        } catch (e) {
+        } catch {
             // Default: Every day is open, no break time
             return {
                 '0': generateDefaultDay(),

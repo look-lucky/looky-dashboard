@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import axios from 'axios';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
+import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 
 interface StoreItem {
     bizesId: string; // 상가업소번호
@@ -529,25 +530,18 @@ export function StoreImportPage() {
                                             <span className="sr-only">Previous</span>
                                             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                                         </button>
-                                        {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                                            let p = page - 2 + i;
-                                            if (page < 2) p = i;
-                                            if (page > totalPages - 3) p = totalPages - 5 + i;
-                                            if (p < 0 || p >= totalPages) return null;
-
-                                            return (
-                                                <button
-                                                    key={p}
-                                                    onClick={() => setPage(p)}
-                                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
-                                                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                        }`}
-                                                >
-                                                    {p + 1}
-                                                </button>
-                                            );
-                                        })}
+                                        {getVisiblePageNumbers(page, totalPages).map((p) => (
+                                            <button
+                                                key={p}
+                                                onClick={() => setPage(p)}
+                                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
+                                                    ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
+                                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {p + 1}
+                                            </button>
+                                        ))}
                                         <button
                                             onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                                             disabled={page === totalPages - 1}

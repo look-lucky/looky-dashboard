@@ -15,20 +15,6 @@ export function PartnershipPage() {
     const [selectedCategory, setSelectedCategory] = useState<string>('');
     const [selectedOrganizationId, setSelectedOrganizationId] = useState<number | null>(null);
 
-    useEffect(() => {
-        if (selectedUniversityId) {
-            fetchOrganizations(selectedUniversityId);
-        } else {
-            setOrganizations([]);
-        }
-        setSelectedCategory('');
-        setSelectedOrganizationId(null);
-    }, [selectedUniversityId]);
-
-    const filteredOrganizations = organizations.filter(org =>
-        !selectedCategory || org.category === selectedCategory
-    );
-
     const fetchOrganizations = async (universityId: number) => {
         try {
             const response = await OrganizationService.getOrganizations(universityId);
@@ -39,6 +25,21 @@ export function PartnershipPage() {
             console.error('Failed to fetch organizations:', error);
         }
     };
+
+    useEffect(() => {
+        if (selectedUniversityId) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            void fetchOrganizations(selectedUniversityId);
+        } else {
+            setOrganizations([]);
+        }
+        setSelectedCategory('');
+        setSelectedOrganizationId(null);
+    }, [selectedUniversityId]);
+
+    const filteredOrganizations = organizations.filter(org =>
+        !selectedCategory || org.category === selectedCategory
+    );
 
     const handleCreateSuccess = () => {
         setRefreshTrigger(prev => prev + 1);
