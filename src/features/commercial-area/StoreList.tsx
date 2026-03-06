@@ -259,7 +259,8 @@ export function StoreList({ universityId }: StoreListProps) {
             storeCategories: selectedStore.storeCategories || [],
             latitude: selectedStore.latitude,
             longitude: selectedStore.longitude,
-            operatingHours: selectedStore.operatingHours || ''
+            operatingHours: selectedStore.operatingHours || '',
+            profileImageUrl: selectedStore.profileImageUrl
         });
 
         const existingImages = selectedStore.imageUrls || [];
@@ -279,6 +280,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
             const requestData: UpdateStoreRequest = {
                 ...editForm,
+                profileImageUrl: allImageUrls[0],
                 imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
             };
             if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = undefined;

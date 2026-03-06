@@ -167,6 +167,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 operatingHours: formData.operatingHours,
                 storeMoods: [],
                 universityIds: formData.universityIds,
+                profileImageUrl: uploadedImageUrls[0],
                 imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
             };
 

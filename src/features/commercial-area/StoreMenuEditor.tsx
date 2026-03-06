@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
-type BadgeType = 'BEST' | 'NEW' | 'HOT' | 'VEGAN' | string;
+type BadgeType = 'BEST' | 'NEW' | 'HOT' | 'VEGAN';
 export interface MenuItemState {
     id?: number; // Only exists if fetched from server
     name: string;
