@@ -40,7 +40,6 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     const [formData, setFormData] = useState<{
         name: string;
         branch: string;
-        bizRegNo: string;
         address: string;
         jibunAddress: string;
         storeCategories: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
@@ -53,7 +52,6 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     }>({
         name: '',
         branch: '',
-        bizRegNo: '',
         address: '',
         jibunAddress: '',
         storeCategories: [],
@@ -157,7 +155,6 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             const requestPayload: CreateStoreRequest = {
                 name: formData.name,
                 branch: formData.branch || undefined,
-                bizRegNo: formData.bizRegNo || undefined,
                 roadAddress: formData.address,
                 jibunAddress: formData.jibunAddress,
                 storeCategories: formData.storeCategories,
@@ -352,17 +349,6 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         placeholder="자동 입력됩니다"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-medium text-gray-700">사업자등록번호</label>
-                                    <input
-                                        type="text"
-                                        placeholder="000-00-00000"
-                                        value={formData.bizRegNo}
-                                        onChange={(e) => setFormData(prev => ({ ...prev, bizRegNo: e.target.value }))}
-                                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
-
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">위도</label>

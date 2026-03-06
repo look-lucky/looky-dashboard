@@ -1,7 +1,6 @@
 export interface UpdateStoreRequest {
     name?: string;
     branch?: string;
-    bizRegNo?: string;
     roadAddress?: string;
     jibunAddress?: string;
     storeCategories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
