@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import axios from 'axios';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
+import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 
 interface StoreItem {
@@ -108,14 +109,14 @@ export function StoreImportPage() {
     // Create a separate axios instance
     const externalApi = axios.create();
 
-    const handleAddressComplete = async (data: any) => {
+    const handleAddressComplete = async (data: AddressSearchResultData) => {
         const roadAddr = data.roadAddress;
         setAddress(roadAddr);
 
         try {
             // Auto-geocode via API
             const response = await AdminService.getGeocode(roadAddr);
-            const coords: any = response.data || response; // Handle both direct object and CommonResponse
+            const coords = (response.data ?? (response as unknown as GeocodeResult)) as GeocodeResult; // Handle both direct object and CommonResponse
             if (coords && coords.latitude && coords.longitude) {
                 setSearchCoords({ lat: coords.latitude, lng: coords.longitude });
             } else {

@@ -32,7 +32,7 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
     };
 
     // Update specific field of a specific item
-    const handleChange = (index: number, field: keyof MenuItemState, value: any) => {
+    const handleChange = <K extends keyof MenuItemState>(index: number, field: K, value: MenuItemState[K]) => {
         const newItems = [...items];
         newItems[index] = { ...newItems[index], [field]: value };
         onChange(newItems);
@@ -214,7 +214,10 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                                     <label className="text-[10px] uppercase font-bold tracking-wider text-gray-500">뱃지</label>
                                     <select
                                         value={item.badge || ''}
-                                        onChange={(e) => handleChange(stateIdx, 'badge', e.target.value || undefined)}
+                                        onChange={(e) => {
+                                        const badge = e.target.value as BadgeType | '';
+                                        handleChange(stateIdx, 'badge', badge === '' ? undefined : badge);
+                                    }}
                                         className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                                     >
                                         <option value="">없음</option>

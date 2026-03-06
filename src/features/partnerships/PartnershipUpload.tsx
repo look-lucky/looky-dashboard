@@ -90,7 +90,8 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
         setLoadingTemplate(true);
         try {
             const blob = await AdminPartnershipService.exportPartnershipTemplate(universityId);
-            const url = window.URL.createObjectURL(new Blob([blob as any]));
+            const blobData = new Blob([blob]);
+            const url = window.URL.createObjectURL(blobData);
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', `partnerships_template_${universityId}.xlsx`);

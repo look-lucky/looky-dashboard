@@ -34,7 +34,7 @@ export function OrganizationModal({
     const [isBulk, setIsBulk] = useState(false);
     const [parentId, setParentId] = useState<string>(
         defaultParentId ? String(defaultParentId) :
-            (initialData && (initialData as any).parentId) ? String((initialData as any).parentId) : ''
+            initialData?.parentId ? String(initialData.parentId) : ''
     );
     const [loading, setLoading] = useState(false);
     const [colleges, setColleges] = useState<OrganizationResponse[]>([]);
@@ -45,8 +45,8 @@ export function OrganizationModal({
             if (initialData.category) {
                 setCategory(initialData.category as unknown as CreateOrganizationRequest.category);
             }
-            if ((initialData as any).parentId) {
-                setParentId(String((initialData as any).parentId));
+            if (initialData.parentId) {
+                setParentId(String(initialData.parentId));
             }
         }
     }, [initialData]);

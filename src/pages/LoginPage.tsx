@@ -25,7 +25,7 @@ export function LoginPage() {
             } else {
                 throw new Error('No access token received');
             }
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Login failed', err);
             // Handle generic or specific errors (optional: verify error shape)
             setError('로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.');

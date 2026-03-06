@@ -1,16 +1,17 @@
 import DaumPostcode from 'react-daum-postcode';
 import { X } from 'lucide-react';
+import type { AddressSearchBaseData, AddressSearchResultData } from '../types/address';
 
 interface AddressSearchModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onComplete: (data: any) => void;
+    onComplete: (data: AddressSearchResultData) => void;
 }
 
 export function AddressSearchModal({ isOpen, onClose, onComplete }: AddressSearchModalProps) {
     if (!isOpen) return null;
 
-    const handleComplete = (data: any) => {
+    const handleComplete = (data: AddressSearchBaseData) => {
         let fullAddress = data.address;
         let extraAddress = '';
 
@@ -29,8 +30,8 @@ export function AddressSearchModal({ isOpen, onClose, onComplete }: AddressSearc
 
         onComplete({
             ...data,
-            jibunAddress: effectiveJibunAddress, // Override/Ensure this is set
-            fullAddress
+            jibunAddress: effectiveJibunAddress,
+            fullAddress,
         });
         onClose();
     };

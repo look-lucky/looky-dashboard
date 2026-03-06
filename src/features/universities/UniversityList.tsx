@@ -97,7 +97,7 @@ export function UniversityList({ refreshTrigger, onEdit, onSelect, selectedId }:
                                     <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); uni.id && handleDelete(uni.id); }}
+                                    onClick={(e) => { e.stopPropagation(); if (uni.id) { void handleDelete(uni.id); } }}
                                     className="text-red-600 hover:text-red-900"
                                 >
                                     <Trash2 className="w-4 h-4" />

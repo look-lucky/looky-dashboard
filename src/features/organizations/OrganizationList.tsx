@@ -1,5 +1,5 @@
 import { Edit2, Trash2, Users, Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { OrganizationService } from '../../shared/api/services/OrganizationService';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 
@@ -59,7 +59,7 @@ export function OrganizationList({
             await Promise.all(Array.from(selectedIds).map(id => OrganizationService.deleteOrganization(id)));
             // Refresh logic
             if (universityId) {
-                fetchOrganizations();
+            void fetchOrganizations();
             }
             setSelectedIds(new Set());
         } catch (error) {
@@ -72,8 +72,7 @@ export function OrganizationList({
         // Category filter
         if (categoryFilter && org.category !== categoryFilter) return false;
         // Parent ID filter (for departments under a specific college)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (parentIdFilter !== undefined && (org as any).parentId !== parentIdFilter) return false;
+        if (parentIdFilter !== undefined && org.parentId !== parentIdFilter) return false;
         // Search filter
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
@@ -83,13 +82,7 @@ export function OrganizationList({
         return true;
     });
 
-    useEffect(() => {
-        if (universityId) {
-            fetchOrganizations();
-        }
-    }, [universityId, refreshTrigger]);
-
-    const fetchOrganizations = async () => {
+    const fetchOrganizations = useCallback(async () => {
         setLoading(true);
         try {
             const response = await OrganizationService.getOrganizations(universityId);
@@ -102,14 +95,20 @@ export function OrganizationList({
         } finally {
             setLoading(false);
         }
-    };
+    }, [universityId]);
+
+    useEffect(() => {
+        if (universityId) {
+            void fetchOrganizations();
+        }
+    }, [universityId, refreshTrigger, fetchOrganizations]);
 
     const handleDelete = async (id: number) => {
         if (!confirm('정말 삭제하시겠습니까? 관련 데이터가 모두 삭제될 수 있습니다.')) return;
 
         try {
             await OrganizationService.deleteOrganization(id);
-            fetchOrganizations();
+            void fetchOrganizations();
         } catch (error) {
             console.error(error);
             alert('소속 삭제에 실패했습니다.');
@@ -247,8 +246,7 @@ export function OrganizationList({
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        {(org as any).parentId ? `#${(org as any).parentId}` : '-'}
+                                        {org.parentId ? `#${org.parentId}` : '-'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button

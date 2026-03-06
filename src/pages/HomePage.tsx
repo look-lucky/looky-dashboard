@@ -1,4 +1,4 @@
-import { ArrowUpRight, TrendingUp, Users, Store, Loader2, Clock } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, Users, Store, Loader2, Clock, type LucideIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { StoreClaimService } from '../shared/api/services/StoreClaimService';
@@ -158,7 +158,17 @@ export function HomePage() {
     );
 }
 
-function DashboardCard({ title, value, label, icon: Icon, color, bg, footer }: any) {
+interface DashboardCardProps {
+    title: string;
+    value: string;
+    label: string;
+    icon: LucideIcon;
+    color: string;
+    bg: string;
+    footer: string;
+}
+
+function DashboardCard({ title, value, label, icon: Icon, color, bg, footer }: DashboardCardProps) {
     return (
         <div className="h-full bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group">
             <div className="flex items-start justify-between mb-4">
@@ -177,5 +187,5 @@ function DashboardCard({ title, value, label, icon: Icon, color, bg, footer }: a
                 <p className="text-xs font-medium text-gray-400">{footer}</p>
             </div>
         </div>
-    )
+    );
 }

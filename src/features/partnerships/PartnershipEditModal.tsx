@@ -2,6 +2,7 @@ import { X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { PartnershipResponse } from '../../shared/api/models/PartnershipResponse';
+import type { UpdatePartnershipRequest } from '../../shared/api/models/UpdatePartnershipRequest';
 
 interface PartnershipEditModalProps {
     partnership: PartnershipResponse;
@@ -23,14 +24,13 @@ export function PartnershipEditModal({ partnership, onClose, onSuccess }: Partne
 
         setLoading(true);
         try {
-            await AdminPartnershipService.updatePartnershipBenefit(
-                partnership.id!,
-                {
-                    benefit,
-                    startsAt: startsAt || undefined,
-                    endsAt: endsAt || undefined,
-                } as any
-            );
+            const payload = {
+                benefit,
+                startsAt: startsAt || undefined,
+                endsAt: endsAt || undefined,
+            } as unknown as UpdatePartnershipRequest;
+
+            await AdminPartnershipService.updatePartnershipBenefit(partnership.id!, payload);
             alert('제휴 혜택이 수정되었습니다.');
             onSuccess();
         } catch (error) {

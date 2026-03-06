@@ -8,6 +8,7 @@ import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
+import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 
@@ -15,7 +16,9 @@ interface StoreManualRegistrationModalProps {
     onClose: () => void;
 }
 
-const CATEGORY_MAP: Record<string, string> = {
+type StoreCategory = NonNullable<CreateStoreRequest['storeCategories']>[number];
+
+const CATEGORY_MAP: Record<StoreCategory, string> = {
     'RESTAURANT': '식당',
     'BAR': '주점',
     'CAFE': '카페',
@@ -24,7 +27,7 @@ const CATEGORY_MAP: Record<string, string> = {
     'ETC': '기타'
 };
 
-const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as Array<keyof typeof CATEGORY_MAP>;
+const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as StoreCategory[];
 
 export function StoreManualRegistrationModal({ onClose }: StoreManualRegistrationModalProps) {
     const { universities, selectedUniversityId } = useUniversity();
@@ -43,7 +46,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         branch: string;
         address: string;
         jibunAddress: string;
-        storeCategories: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
+        storeCategories: StoreCategory[];
         description: string;
         phone: string;
         latitude: number | '';
@@ -64,27 +67,27 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         universityIds: selectedUniversityId ? [selectedUniversityId] : [],
     });
 
-    const handleAddressComplete = async (data: any) => {
+    const handleAddressComplete = async (data: AddressSearchResultData) => {
         const roadAddr = data.roadAddress;
         const jibunAddr = data.jibunAddress || data.autoJibunAddress || '';
 
         // Update form with address first
-        setFormData(prev => ({
+        setFormData((prev) => ({
             ...prev,
             address: roadAddr,
-            jibunAddress: jibunAddr
+            jibunAddress: jibunAddr,
         }));
 
         // Trigger Geocoding
         try {
             const response = await AdminService.getGeocode(roadAddr);
-            const coords: any = response.data || response;
-            if (coords && coords.latitude && coords.longitude) {
-                setFormData((prev: any) => ({
+            const coords = (response.data ?? (response as unknown as GeocodeResult)) as GeocodeResult;
+            if (coords.latitude && coords.longitude) {
+                setFormData((prev) => ({
                     ...prev,
-                    latitude: coords.latitude,
-                    longitude: coords.longitude,
-                    jibunAddress: prev.jibunAddress || coords.jibunAddress || ''
+                    latitude: coords.latitude ?? prev.latitude,
+                    longitude: coords.longitude ?? prev.longitude,
+                    jibunAddress: prev.jibunAddress || coords.jibunAddress || '',
                 }));
             }
         } catch (error) {
@@ -232,7 +235,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         }));
     };
 
-    const handleCategoryToggle = (category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC') => {
+    const handleCategoryToggle = (category: StoreCategory) => {
         setFormData(prev => {
             const currentCategories = prev.storeCategories;
             if (currentCategories.includes(category)) {
@@ -399,8 +402,8 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                                 <input
                                                     id={`reg-category-${key}`}
                                                     type="checkbox"
-                                                    checked={formData.storeCategories.includes(key as any)}
-                                                    onChange={() => handleCategoryToggle(key as any)}
+                                                    checked={formData.storeCategories.includes(key)}
+                                                    onChange={() => handleCategoryToggle(key)}
                                                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                                 />
                                                 <label htmlFor={`reg-category-${key}`} className="ml-2 block text-sm text-gray-900">

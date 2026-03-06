@@ -9,6 +9,7 @@ import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
 import { ItemService, type UpdateItemRequest } from '../../shared/api/services/ItemService';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
+import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 
@@ -16,7 +17,7 @@ interface StoreListProps {
     universityId: number;
 }
 
-const CATEGORY_MAP: Record<string, string> = {
+const CATEGORY_MAP: Record<StoreCategory, string> = {
     'BAR': '주점',
     'CAFE': '카페',
     'RESTAURANT': '식당',
@@ -25,8 +26,9 @@ const CATEGORY_MAP: Record<string, string> = {
     'ETC': '기타'
 };
 
-const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as Array<keyof typeof CATEGORY_MAP>;
+const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as StoreCategory[];
 
+type StoreCategory = NonNullable<UpdateStoreRequest['storeCategories']>[number];
 type StoreStatusFilter = '' | 'UNCLAIMED' | 'ACTIVE' | 'BANNED';
 type PartnershipFilter = 'all' | 'yes' | 'no';
 
@@ -70,26 +72,26 @@ export function StoreList({ universityId }: StoreListProps) {
     // Address Search State
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
-    const handleAddressComplete = async (data: any) => {
+    const handleAddressComplete = async (data: AddressSearchResultData) => {
         const roadAddr = data.roadAddress;
         const jibunAddr = data.jibunAddress;
 
         try {
             const response = await AdminService.getGeocode(roadAddr);
-            const coords: any = response.data || response;
-            setEditForm((prev: any) => ({
+            const coords = (response.data ?? (response as unknown as GeocodeResult)) as GeocodeResult;
+            setEditForm((prev) => ({
                 ...prev,
                 roadAddress: roadAddr,
-                jibunAddress: jibunAddr || coords?.jibunAddress || prev.jibunAddress,
-                latitude: coords?.latitude ?? prev.latitude,
-                longitude: coords?.longitude ?? prev.longitude
+                jibunAddress: jibunAddr || coords.jibunAddress || prev.jibunAddress,
+                latitude: coords.latitude ?? prev.latitude,
+                longitude: coords.longitude ?? prev.longitude,
             }));
         } catch (error) {
             console.error('Geocoding failed:', error);
-            setEditForm(prev => ({
+            setEditForm((prev) => ({
                 ...prev,
                 roadAddress: roadAddr,
-                jibunAddress: jibunAddr || prev.jibunAddress
+                jibunAddress: jibunAddr || prev.jibunAddress,
             }));
         }
     };
@@ -357,14 +359,18 @@ export function StoreList({ universityId }: StoreListProps) {
         }
     };
 
-    const handleInputChange = (field: keyof UpdateStoreRequest, value: any) => {
-        setEditForm(prev => {
+    const handleInputChange = (
+        field: keyof UpdateStoreRequest,
+        value: string | number | undefined | StoreCategory[]
+    ) => {
+        setEditForm((prev) => {
             if (field === 'latitude' || field === 'longitude') {
-                if (value === '') return { ...prev, [field]: undefined };
-                const num = Number(value);
-                return { ...prev, [field]: isNaN(num) ? undefined : num };
+                const numericValue = String(value ?? '');
+                if (numericValue === '') return { ...prev, [field]: undefined };
+                const num = Number(numericValue);
+                return { ...prev, [field]: Number.isNaN(num) ? undefined : num };
             }
-            return { ...prev, [field]: value };
+            return { ...prev, [field]: value } as UpdateStoreRequest;
         });
     };
 
@@ -433,14 +439,13 @@ export function StoreList({ universityId }: StoreListProps) {
         e.stopPropagation();
     };
 
-    const handleCategoryToggle = (category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC') => {
-        setEditForm((prev: any) => {
+    const handleCategoryToggle = (category: StoreCategory) => {
+        setEditForm((prev) => {
             const currentCategories = prev.storeCategories || [];
             if (currentCategories.includes(category)) {
-                return { ...prev, storeCategories: currentCategories.filter((c: any) => c !== category) };
-            } else {
-                return { ...prev, storeCategories: [...currentCategories, category] };
+                return { ...prev, storeCategories: currentCategories.filter((c) => c !== category) };
             }
+            return { ...prev, storeCategories: [...currentCategories, category] };
         });
     };
 
@@ -812,8 +817,8 @@ export function StoreList({ universityId }: StoreListProps) {
                                                                             id={`category-${key}`}
                                                                             name="storeCategories"
                                                                             type="checkbox"
-                                                                            checked={editForm.storeCategories?.includes(key as any)}
-                                                                            onChange={() => handleCategoryToggle(key as any)}
+                                                                            checked={editForm.storeCategories?.includes(key)}
+                                                                            onChange={() => handleCategoryToggle(key)}
                                                                             className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                                                                         />
                                                                         <label htmlFor={`category-${key}`} className="ml-2 block text-sm text-gray-900">

@@ -1,5 +1,5 @@
 import { Edit2, Trash2, Calendar, MapPin, Tag, Search } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { EventService } from '../../shared/api/services/EventService';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import type { EventResponse } from '../../shared/api/models/EventResponse';
@@ -24,13 +24,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         event.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    useEffect(() => {
-        if (selectedUniversityId) {
-            fetchEvents();
-        }
-    }, [refreshTrigger, page, selectedUniversityId]);
-
-    const fetchEvents = async () => {
+    const fetchEvents = useCallback(async () => {
         if (!selectedUniversityId) return;
         setLoading(true);
         try {
@@ -45,7 +39,13 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, selectedUniversityId]);
+
+    useEffect(() => {
+        if (selectedUniversityId) {
+            void fetchEvents();
+        }
+    }, [refreshTrigger, selectedUniversityId, fetchEvents]);
 
     const handleDelete = async (id: number) => {
         if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -53,7 +53,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         try {
             await AdminEventService.deleteEvent(id);
             // Refresh list
-            fetchEvents();
+            void fetchEvents();
         } catch (error) {
             console.error(error);
             alert('이벤트 삭제에 실패했습니다.');

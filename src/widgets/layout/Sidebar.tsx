@@ -1,4 +1,4 @@
-import { Home, ClipboardList, MapPin, Handshake, GraduationCap, Calendar, Store, ChevronDown, ChevronRight, School, Download } from 'lucide-react';
+import { Home, ClipboardList, MapPin, Handshake, GraduationCap, Calendar, Store, ChevronDown, ChevronRight, School, Download, type LucideIcon } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 type MenuItem = {
     name: string;
     path?: string;
-    icon: any;
+    icon: LucideIcon;
     children?: MenuItem[];
     end?: boolean;
 };
@@ -51,10 +51,22 @@ export function Sidebar() {
     };
 
     useEffect(() => {
-        MENU_ITEMS.forEach(item => {
-            if (isGroupActive(item) && !expandedGroups.includes(item.name)) {
-                setExpandedGroups(prev => [...prev, item.name]);
-            }
+        const activeGroupNames = MENU_ITEMS
+            .filter((item) => item.children?.some((child) => child.path === location.pathname))
+            .map((item) => item.name);
+
+        if (activeGroupNames.length === 0) {
+            return;
+        }
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setExpandedGroups((prev) => {
+            const next = [...prev];
+            activeGroupNames.forEach((name) => {
+                if (!next.includes(name)) {
+                    next.push(name);
+                }
+            });
+            return next;
         });
     }, [location.pathname]);
 

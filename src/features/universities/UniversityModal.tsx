@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { UniversityService } from '../../shared/api/services/UniversityService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
+import type { UpdateUniversityRequest } from '../../shared/api/models/UpdateUniversityRequest';
 
 interface UniversityModalProps {
     onClose: () => void;
@@ -35,10 +36,11 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
             const domains = emailDomain.split(',').map(d => d.trim()).filter(d => d.length > 0);
 
             if (initialData && initialData.id) {
-                await UniversityService.updateUniversity1(initialData.id, {
+                const payload = {
                     name,
-                    emailDomains: domains
-                } as any);
+                    emailDomains: domains,
+                } as unknown as UpdateUniversityRequest;
+                await UniversityService.updateUniversity1(initialData.id, payload);
                 alert('수정되었습니다.');
             } else {
                 await UniversityService.createUniversity({

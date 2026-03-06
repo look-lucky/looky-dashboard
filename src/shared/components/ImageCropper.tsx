@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import Cropper from 'react-easy-crop';
+import Cropper, { type Area } from 'react-easy-crop';
 import { X, Check } from 'lucide-react';
 import { getCroppedImg } from '../utils/cropImage';
 
@@ -13,11 +13,11 @@ interface ImageCropperProps {
 export function ImageCropper({ imageSrc, aspectRatio = 2.2933, onCropComplete, onCancel }: ImageCropperProps) {
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const onCropCompleteHandler = useCallback((_croppedArea: any, croppedAreaPixels: any) => {
-        setCroppedAreaPixels(croppedAreaPixels);
+    const onCropCompleteHandler = useCallback((_croppedArea: Area, nextCroppedAreaPixels: Area) => {
+        setCroppedAreaPixels(nextCroppedAreaPixels);
     }, []);
 
     const handleConfirm = async () => {

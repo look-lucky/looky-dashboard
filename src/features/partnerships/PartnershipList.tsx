@@ -1,5 +1,5 @@
 import { Trash2, Search, Pencil } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { PartnershipResponse } from '../../shared/api/models/PartnershipResponse';
 import { PartnershipEditModal } from './PartnershipEditModal';
@@ -23,13 +23,7 @@ export function PartnershipList({ universityId, organizationId, refreshTrigger }
         p.category?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    useEffect(() => {
-        if (universityId) {
-            fetchPartnerships();
-        }
-    }, [universityId, organizationId, refreshTrigger]);
-
-    const fetchPartnerships = async () => {
+    const fetchPartnerships = useCallback(async () => {
         setIsLoading(true);
         try {
             let response;
@@ -47,13 +41,19 @@ export function PartnershipList({ universityId, organizationId, refreshTrigger }
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [organizationId, universityId]);
+
+    useEffect(() => {
+        if (universityId) {
+            void fetchPartnerships();
+        }
+    }, [universityId, organizationId, refreshTrigger, fetchPartnerships]);
 
     const handleDelete = async (id: number) => {
         if (confirm('정말 삭제하시겠습니까?')) {
             try {
                 await AdminPartnershipService.deletePartnership(id);
-                fetchPartnerships();
+                void fetchPartnerships();
             } catch (error) {
                 console.error('Failed to delete partnership:', error);
                 alert('삭제에 실패했습니다.');
@@ -73,7 +73,7 @@ export function PartnershipList({ universityId, organizationId, refreshTrigger }
                 onClose={() => setEditingPartnership(null)}
                 onSuccess={() => {
                     setEditingPartnership(null);
-                    fetchPartnerships();
+                void fetchPartnerships();
                 }}
             />
         )}
