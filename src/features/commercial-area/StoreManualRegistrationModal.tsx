@@ -1,8 +1,9 @@
-import { X, Save, Search, Upload } from 'lucide-react';
+import { X, Save, Upload } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
+import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
@@ -324,37 +325,14 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         placeholder="예: 강남점"
                                     />
                                 </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">도로명 주소 *</label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            name="address"
-                                            required
-                                            readOnly
-                                            value={formData.address}
-                                            onClick={() => setIsAddressModalOpen(true)}
-                                            className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm cursor-pointer bg-gray-50"
-                                            placeholder="주소를 검색하세요"
-                                        />
-                                        <button type="button" onClick={() => setIsAddressModalOpen(true)} className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap">
-                                            <Search className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">지번 주소</label>
-                                    <input
-                                        type="text"
-                                        name="jibunAddress"
-                                        value={formData.jibunAddress}
-                                        onChange={handleChange}
-                                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                        placeholder="자동 입력됩니다"
-                                    />
-                                </div>
+                                <AddressSearchFields
+                                    label="매장 주소"
+                                    placeholder="클릭해서 매장 주소를 검색하세요"
+                                    roadAddress={formData.address}
+                                    jibunAddress={formData.jibunAddress}
+                                    onOpen={() => setIsAddressModalOpen(true)}
+                                    required
+                                />
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">위도</label>
@@ -545,3 +523,8 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         </div>
     );
 }
+
+
+
+
+

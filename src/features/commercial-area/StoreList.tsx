@@ -3,6 +3,7 @@ import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
+import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
@@ -753,31 +754,13 @@ export function StoreList({ universityId }: StoreListProps) {
                                                             <label className="block text-sm font-medium text-gray-700">지점명</label>
                                                             <input type="text" value={editForm.branch || ''} onChange={e => handleInputChange('branch', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="예: 본점, 강남점" />
                                                         </div>
-
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700">도로명 주소</label>
-                                                            <div className="flex gap-2">
-                                                                <input
-                                                                    type="text"
-                                                                    readOnly
-                                                                    value={editForm.roadAddress || ''}
-                                                                    onClick={() => setIsAddressModalOpen(true)}
-                                                                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-gray-50 cursor-pointer"
-                                                                    placeholder="주소를 검색하세요"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setIsAddressModalOpen(true)}
-                                                                    className="mt-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200 text-sm font-medium whitespace-nowrap"
-                                                                >
-                                                                    <Search className="w-4 h-4" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700">지번 주소</label>
-                                                            <input type="text" value={editForm.jibunAddress || ''} onChange={e => handleInputChange('jibunAddress', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
-                                                        </div>
+                                                        <AddressSearchFields
+                                                            label="매장 주소"
+                                                            placeholder="클릭해서 매장 주소를 검색하세요"
+                                                            roadAddress={editForm.roadAddress}
+                                                            jibunAddress={editForm.jibunAddress}
+                                                            onOpen={() => setIsAddressModalOpen(true)}
+                                                        />
 
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div>
@@ -1014,3 +997,8 @@ export function StoreList({ universityId }: StoreListProps) {
         </div>
     );
 }
+
+
+
+
+
