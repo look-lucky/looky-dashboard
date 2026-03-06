@@ -9,6 +9,7 @@ import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
+import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -152,9 +153,10 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
         setLoading(true);
         try {
+            const uploadedImageUrls = images.length > 0 ? await uploadImages(images) : [];
+
             const requestPayload: CreateStoreRequest = {
                 name: formData.name,
-                branch: formData.branch || undefined,
                 roadAddress: formData.address,
                 jibunAddress: formData.jibunAddress,
                 storeCategories: formData.storeCategories,
@@ -164,38 +166,38 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 longitude: formData.longitude === '' ? 0 : Number(formData.longitude),
                 operatingHours: formData.operatingHours,
                 storeMoods: [],
-                universityIds: formData.universityIds
+                universityIds: formData.universityIds,
+                imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
             };
 
-            const storeId = await StoreService.createStore({
-                // @ts-ignore
-                request: requestPayload,
-                images: images
-            });
+            const storeId = await StoreService.createStore(requestPayload);
 
             // If menu items exist, save them sequentially
             const validMenuItems = menuItems.filter(item => !item.isDeleted && item.name.trim() !== '');
             if (validMenuItems.length > 0 && typeof storeId?.data === 'number') {
                 for (const item of validMenuItems) {
+                    let imageUrl: string | undefined;
+                    if (item.imageFile) {
+                        try {
+                            imageUrl = await uploadImage(item.imageFile);
+                        } catch (uploadErr) {
+                            console.error('Failed to upload item image:', item.name, uploadErr);
+                        }
+                    }
+
                     const itemRequest: CreateItemRequest = {
                         name: item.name,
                         price: item.price,
                         description: item.description,
                         badge: item.badge,
-                        itemOrder: item.itemOrder
+                        itemOrder: item.itemOrder,
+                        imageUrl,
                     };
 
                     try {
-                        const imageBlob = item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' }); // Fallback to empty file if no image
-                        await ItemService.createItem(storeId.data, {
-                            // @ts-ignore
-                            request: itemRequest,
-                            image: imageBlob
-                        });
+                        await ItemService.createItem(storeId.data, itemRequest);
                     } catch (itemErr) {
                         console.error('Failed to create item:', item.name, itemErr);
-                        // We continue saving other items even if one fails in this context, 
-                        // or we could halt. Usually better to continue and let them fix later.
                     }
                 }
             }

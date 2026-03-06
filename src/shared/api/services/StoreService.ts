@@ -11,6 +11,8 @@ import type { CommonResponseStoreRegistrationStatusResponse } from '../models/Co
 import type { CommonResponseStoreResponse } from '../models/CommonResponseStoreResponse';
 import type { CommonResponseStoreStatsResponse } from '../models/CommonResponseStoreStatsResponse';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
+import type { CreateStoreRequest } from '../models/CreateStoreRequest';
+import type { UpdateStoreRequest } from '../models/UpdateStoreRequest';
 import type { Pageable } from '../models/Pageable';
 import type { StoreReportRequest } from '../models/StoreReportRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -56,28 +58,18 @@ export class StoreService {
     /**
      * [점주] 상점 등록
      * 새로운 상점을 등록합니다.
-     * @param formData
+     * @param requestBody
      * @returns CommonResponseLong 상점 등록 성공
      * @throws ApiError
      */
     public static createStore(
-        formData?: {
-            /**
-             * 프로필 이미지
-             */
-            profileImage?: Blob;
-            /**
-             * 갤러리 이미지 목록
-             */
-            images?: Array<Blob>;
-            request: string;
-        },
+        requestBody: CreateStoreRequest,
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/stores',
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `잘못된 요청 데이터`,
                 403: `권한 없음`,
@@ -158,23 +150,13 @@ export class StoreService {
      * [점주] 상점 정보 수정
      * 상점 정보를 수정합니다. (본인 상점만 가능)
      * @param storeId 상점 ID
-     * @param formData
+     * @param requestBody
      * @returns CommonResponseVoid 상점 수정 성공
      * @throws ApiError
      */
     public static updateStore(
         storeId: number,
-        formData?: {
-            request: string;
-            /**
-             * 프로필 이미지
-             */
-            profileImage?: Blob;
-            /**
-             * 갤러리 이미지 목록
-             */
-            images?: Array<Blob>;
-        },
+        requestBody: UpdateStoreRequest,
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
@@ -182,8 +164,8 @@ export class StoreService {
             path: {
                 'storeId': storeId,
             },
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 403: `권한 없음 (본인 소유 상점 아님)`,
                 404: `상점 없음`,

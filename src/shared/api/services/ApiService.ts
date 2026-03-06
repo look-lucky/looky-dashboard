@@ -9,6 +9,16 @@ import type { Pageable } from '../models/Pageable';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
+
+export type InquiryType = 'COUPON_BENEFIT' | 'MAP_LOCATION' | 'STORE_INFO_ERROR' | 'EVENT_PARTICIPATION' | 'ALERT_ACCOUNT' | 'PROPOSAL_OTHER';
+
+export interface CreateInquiryRequest {
+    type: InquiryType;
+    title: string;
+    content: string;
+    imageUrls?: string[];
+}
+
 export class ApiService {
     /**
      * 내 문의 목록 조회
@@ -31,21 +41,18 @@ export class ApiService {
     /**
      * 문의하기
      * 고객센터에 문의를 등록합니다.
-     * @param formData
+     * @param requestBody
      * @returns CommonResponseLong 성공
      * @throws ApiError
      */
     public static createInquiry(
-        formData?: {
-            request: string;
-            images?: Array<Blob>;
-        },
+        requestBody: CreateInquiryRequest,
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/inquiries',
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `입력값 검증 실패 (제목 길이, 이미지 개수 초과 등)`,
             },

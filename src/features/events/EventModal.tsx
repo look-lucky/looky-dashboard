@@ -4,8 +4,9 @@ import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import { UniversityService } from '../../shared/api/services/UniversityService';
 import type { EventResponse } from '../../shared/api/models/EventResponse';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
-
-type CreateEventRequest = Record<string, any>;
+import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
+import type { UpdateEventRequest } from '../../shared/api/models/UpdateEventRequest';
+import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
 interface EventModalProps {
@@ -42,13 +43,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [endDateTime, setEndDateTime] = useState('');
 
     // Image Handling
-    const [bannerImage, setBannerImage] = useState<File | null>(null);
+    const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [bannerPreviewUrl, setBannerPreviewUrl] = useState<string | null>(null);
+    const [existingBannerUrl, setExistingBannerUrl] = useState<string | null>(null);
     const [originalBannerSrc, setOriginalBannerSrc] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
     const bannerInputRef = useRef<HTMLInputElement>(null);
 
-    const [images, setImages] = useState<File[]>([]);
+    const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+    const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,8 +67,12 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setLongitude(initialData.longitude || 126.9780);
             setStartDateTime(formatDateForInput(initialData.startDateTime || ''));
             setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
-            setBannerPreviewUrl(initialData.bannerImageUrl || null);
-            setPreviewUrls(initialData.imageUrls || []);
+            const existingBanner = initialData.bannerImageUrl || null;
+            setExistingBannerUrl(existingBanner);
+            setBannerPreviewUrl(existingBanner);
+            const existingImgs = initialData.imageUrls || [];
+            setExistingImageUrls(existingImgs);
+            setPreviewUrls(existingImgs);
         }
 
         const fetchUniversities = async () => {
@@ -100,9 +107,9 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     };
 
     const handleCropComplete = (croppedImageUrl: string, blob: Blob) => {
-        // Convert Blob to File
         const croppedFile = new File([blob], 'banner-cropped.jpg', { type: blob.type });
-        setBannerImage(croppedFile);
+        setBannerFile(croppedFile);
+        setExistingBannerUrl(null);
         setBannerPreviewUrl(croppedImageUrl);
         setShowCropper(false);
         setOriginalBannerSrc(null);
@@ -116,7 +123,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
-            setImages(prev => [...prev, ...newFiles]);
+            setNewImageFiles(prev => [...prev, ...newFiles]);
 
             const newPreviews = newFiles.map(file => URL.createObjectURL(file));
             setPreviewUrls(prev => [...prev, ...newPreviews]);
@@ -133,7 +140,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setOriginalBannerSrc(objectUrl);
             setShowCropper(true);
         } else {
-            setImages(prev => [...prev, ...pastedFiles]);
+            setNewImageFiles(prev => [...prev, ...pastedFiles]);
             const newPreviews = pastedFiles.map(file => URL.createObjectURL(file));
             setPreviewUrls(prev => [...prev, ...newPreviews]);
         }
@@ -158,7 +165,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (newFiles.length > 0) {
-                setImages(prev => [...prev, ...newFiles]);
+                setNewImageFiles(prev => [...prev, ...newFiles]);
                 const newPreviews = newFiles.map(file => URL.createObjectURL(file));
                 setPreviewUrls(prev => [...prev, ...newPreviews]);
             }
@@ -195,48 +202,49 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
         setLoading(true);
         try {
-            const eventData: CreateEventRequest = { // CreateEventRequest fits UpdateEventRequest for shared fields
-                title,
-                subtitle: subtitle || undefined,
-                description,
-                place,
-                universityId,
-                eventTypes: selectedTypes,
-                latitude,
-                longitude,
-                startDateTime: new Date(startDateTime).toISOString().slice(0, 19),
-                endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
-            };
+            // Upload banner if new file selected
+            let bannerImageUrl: string | undefined = existingBannerUrl || undefined;
+            if (bannerFile) {
+                bannerImageUrl = await uploadImage(bannerFile);
+            }
+
+            // Upload new general images, preserve existing URLs
+            const newUploadedUrls = newImageFiles.length > 0 ? await uploadImages(newImageFiles) : [];
+            const allImageUrls = [...existingImageUrls, ...newUploadedUrls];
 
             if (initialData && initialData.id) {
-                // Update Event
-                const preserveImageIds = previewUrls
-                    .filter(url => !url.startsWith('blob:'))
-                    // Extract ID if backend needs explicit IDs from URLs (optional, assuming URL string is accepted)
-                    // If the backend expects IDs, they might just match URLs on their end or parse the URL string.
-                    // For now, passing the urls themselves as preserveImageIds.
-                    ;
-
-                const updateEventRequestData = {
-                    ...eventData,
-                    preserveImageIds
+                const requestData: UpdateEventRequest = {
+                    title,
+                    subtitle: subtitle || undefined,
+                    description,
+                    place,
+                    universityId,
+                    eventTypes: selectedTypes,
+                    latitude,
+                    longitude,
+                    startDateTime: new Date(startDateTime).toISOString().slice(0, 19),
+                    endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
+                    bannerImageUrl,
+                    imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
                 };
-
-                await AdminEventService.updateEvent(initialData.id, {
-                    // @ts-ignore
-                    request: updateEventRequestData, // UpdateEventRequest supports preserveImageIds
-                    bannerImage: bannerImage || undefined,
-                    images: images.length > 0 ? images : undefined // Send images only if new ones are added
-                });
+                await AdminEventService.updateEvent(initialData.id, requestData);
                 alert('이벤트가 수정되었습니다.');
             } else {
-                // Create Event
-                await AdminEventService.createEvent({
-                    // @ts-ignore
-                    request: eventData,
-                    bannerImage: bannerImage || undefined,
-                    images: images
-                });
+                const requestData: CreateEventRequest = {
+                    title,
+                    subtitle: subtitle || undefined,
+                    description,
+                    place,
+                    universityId,
+                    eventTypes: selectedTypes,
+                    latitude,
+                    longitude,
+                    startDateTime: new Date(startDateTime).toISOString().slice(0, 19),
+                    endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
+                    bannerImageUrl,
+                    imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+                };
+                await AdminEventService.createEvent(requestData);
                 alert('이벤트가 등록되었습니다.');
             }
             onSuccess();
@@ -407,7 +415,8 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                setBannerImage(null);
+                                                setBannerFile(null);
+                                                setExistingBannerUrl(null);
                                                 setBannerPreviewUrl(null);
                                                 if (bannerInputRef.current) bannerInputRef.current.value = '';
                                             }}
@@ -447,13 +456,17 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                const newImages = [...images];
-                                                newImages.splice(index, 1);
-                                                setImages(newImages);
-
                                                 const newPreviews = [...previewUrls];
                                                 newPreviews.splice(index, 1);
                                                 setPreviewUrls(newPreviews);
+
+                                                // Check if it's an existing URL or a new file preview
+                                                if (index < existingImageUrls.length) {
+                                                    setExistingImageUrls(prev => prev.filter((_, i) => i !== index));
+                                                } else {
+                                                    const newFileIndex = index - existingImageUrls.length;
+                                                    setNewImageFiles(prev => prev.filter((_, i) => i !== newFileIndex));
+                                                }
                                             }}
                                             className="absolute top-1 right-1 bg-white/80 rounded-full p-1 hover:bg-white text-gray-600"
                                         >

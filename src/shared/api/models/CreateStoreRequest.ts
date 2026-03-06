@@ -1,14 +1,17 @@
 export interface CreateStoreRequest {
     name: string;
-    branch?: string;
+    bizRegNo?: string;
     roadAddress: string;
     jibunAddress?: string;
-    storeCategories: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
+    latitude?: number;
+    longitude?: number;
     storePhone?: string;
+    representativeName?: string;
     introduction?: string;
-    latitude: number;
-    longitude: number;
     operatingHours?: string;
+    storeCategories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
     storeMoods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>;
-    universityIds: number[];
+    universityIds?: number[];
+    profileImageUrl?: string;
+    imageUrls?: string[];
 }

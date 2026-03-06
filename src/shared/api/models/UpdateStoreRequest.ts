@@ -3,13 +3,14 @@ export interface UpdateStoreRequest {
     branch?: string;
     roadAddress?: string;
     jibunAddress?: string;
-    storeCategories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
-    storePhone?: string;
-    introduction?: string;
     latitude?: number;
     longitude?: number;
+    phone?: string;
+    representativeName?: string;
+    introduction?: string;
     operatingHours?: string;
+    storeCategories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
     storeMoods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>;
-    universityIds?: number[];
-    preserveImageIds?: string[];
+    profileImageUrl?: string;
+    imageUrls?: string[];
 }

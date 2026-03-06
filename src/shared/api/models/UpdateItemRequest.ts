@@ -2,6 +2,11 @@ export interface UpdateItemRequest {
     name?: string;
     price?: number;
     description?: string;
-    badge?: 'BEST' | 'NEW' | 'HOT' | 'VEGAN' | string;
+    isSoldOut?: boolean;
     itemOrder?: number;
+    isRepresentative?: boolean;
+    isHidden?: boolean;
+    badge?: 'BEST' | 'NEW' | 'HOT' | 'VEGAN';
+    itemCategoryId?: number;
+    imageUrl?: string;
 }

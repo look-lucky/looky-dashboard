@@ -23,12 +23,14 @@ export class StoreClaimService {
      * @throws ApiError
      */
     public static createStoreClaims(
-        requestBody?: {
-            request: string;
-            /**
-             * 사업자등록증 이미지
-             */
-            image: Blob;
+        requestBody: {
+            storeId: number;
+            userId?: number;
+            bizRegNo: string;
+            representativeName: string;
+            storeName: string;
+            storePhone?: string;
+            licenseImageUrl?: string;
         },
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {

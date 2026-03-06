@@ -6,10 +6,10 @@ import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
-import { ItemService } from '../../shared/api/services/ItemService';
+import { ItemService, type UpdateItemRequest } from '../../shared/api/services/ItemService';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
-import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
+import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 
 interface StoreListProps {
     universityId: number;
@@ -254,7 +254,7 @@ export function StoreList({ universityId }: StoreListProps) {
             branch: selectedStore.branch || '',
             roadAddress: selectedStore.roadAddress,
             jibunAddress: selectedStore.jibunAddress,
-            storePhone: selectedStore.phone || '',
+            phone: selectedStore.phone || '',
             introduction: selectedStore.introduction || '',
             storeCategories: selectedStore.storeCategories || [],
             latitude: selectedStore.latitude,
@@ -272,52 +272,52 @@ export function StoreList({ universityId }: StoreListProps) {
     const handleSave = async () => {
         if (!selectedStore?.id || !editForm) return;
         try {
-            const preserveImageIds = imagePreviews.filter(url => !url.startsWith('blob:'));
-            const requestData: Record<string, any> = { ...editForm, preserveImageIds };
-            if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = 0;
-            if (typeof requestData.longitude !== 'number' || isNaN(requestData.longitude)) requestData.longitude = 0;
+            // Upload new images, preserve existing URLs (non-blob)
+            const existingUrls = imagePreviews.filter(url => !url.startsWith('blob:'));
+            const newImageUrls = images.length > 0 ? await uploadImages(images) : [];
+            const allImageUrls = [...existingUrls, ...newImageUrls];
 
-            await StoreService.updateStore(selectedStore.id, {
-                // @ts-ignore
-                request: requestData,
-                images: images.length > 0 ? images : undefined
-            });
+            const requestData: UpdateStoreRequest = {
+                ...editForm,
+                imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+            };
+            if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = undefined;
+            if (typeof requestData.longitude !== 'number' || isNaN(requestData.longitude)) requestData.longitude = undefined;
+
+            await StoreService.updateStore(selectedStore.id, requestData);
 
             // Process Menu Item changes
             const promises = menuItems.map(async (item) => {
                 if (item.isDeleted && item.id) {
-                    // Deleted existing item
                     return ItemService.deleteItem(item.id);
                 } else if (!item.isDeleted && item.id) {
-                    // Update existing item
-                    // Even if unchanged, sending an update is harmless. 
-                    // Better approach is tracking dirty state, but this works.
+                    let imageUrl: string | undefined = item.imageUrl;
+                    if (item.imageFile) {
+                        imageUrl = await uploadImage(item.imageFile);
+                    }
                     const updateReq: UpdateItemRequest = {
                         name: item.name,
                         price: item.price,
                         description: item.description,
                         badge: item.badge,
-                        itemOrder: item.itemOrder
+                        itemOrder: item.itemOrder,
+                        imageUrl,
                     };
-                    return ItemService.updateItem(item.id, {
-                        // @ts-ignore
-                        request: updateReq,
-                        image: item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' })
-                    });
+                    return ItemService.updateItem(item.id, updateReq);
                 } else if (!item.isDeleted && !item.id && item.name.trim() !== '') {
-                    // Create new item
+                    let imageUrl: string | undefined;
+                    if (item.imageFile) {
+                        imageUrl = await uploadImage(item.imageFile);
+                    }
                     const createReq: CreateItemRequest = {
                         name: item.name,
                         price: item.price,
                         description: item.description,
                         badge: item.badge,
-                        itemOrder: item.itemOrder
+                        itemOrder: item.itemOrder,
+                        imageUrl,
                     };
-                    return ItemService.createItem(selectedStore.id!, {
-                        // @ts-ignore
-                        request: createReq,
-                        image: item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' })
-                    });
+                    return ItemService.createItem(selectedStore.id!, createReq);
                 }
             });
 
@@ -828,7 +828,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700">전화번호</label>
-                                                            <input type="text" value={editForm.storePhone || ''} onChange={e => handleInputChange('storePhone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                            <input type="text" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                                                         </div>
 
                                                         <div>

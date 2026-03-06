@@ -12,6 +12,19 @@ import type { Pageable } from '../models/Pageable';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
+
+export interface CreateStoreNewsRequest {
+    title: string;
+    content: string;
+    imageUrls?: string[];
+}
+
+export interface UpdateStoreNewsRequest {
+    title?: string;
+    content?: string;
+    imageUrls?: string[];
+}
+
 export class StoreNewsService {
     /**
      * [공통] 소식 목록 조회
@@ -40,19 +53,13 @@ export class StoreNewsService {
      * [점주] 소식 등록
      * 가게에 새로운 소식을 등록합니다.
      * @param storeId 가게 ID
-     * @param formData
+     * @param requestBody
      * @returns CommonResponseLong 소식 등록 성공
      * @throws ApiError
      */
     public static createStoreNews(
         storeId: number,
-        formData?: {
-            /**
-             * 소식 이미지 목록
-             */
-            images?: Array<Blob>;
-            request: string;
-        },
+        requestBody: CreateStoreNewsRequest,
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -60,8 +67,8 @@ export class StoreNewsService {
             path: {
                 'storeId': storeId,
             },
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 403: `권한 없음 (본인 가게 아님)`,
                 404: `가게 찾을 수 없음`,
@@ -171,19 +178,13 @@ export class StoreNewsService {
      * [점주] 소식 수정
      * 소식을 수정합니다.
      * @param newsId 소식 ID
-     * @param formData
+     * @param requestBody
      * @returns CommonResponseVoid OK
      * @throws ApiError
      */
     public static updateStoreNews(
         newsId: number,
-        formData?: {
-            /**
-             * 변경할 소식 이미지 목록
-             */
-            images?: Array<Blob>;
-            request: string;
-        },
+        requestBody: UpdateStoreNewsRequest,
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
@@ -191,8 +192,8 @@ export class StoreNewsService {
             path: {
                 'newsId': newsId,
             },
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
         });
     }
     /**

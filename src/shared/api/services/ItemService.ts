@@ -6,9 +6,24 @@ import type { CommonResponseItemResponse } from '../models/CommonResponseItemRes
 import type { CommonResponseListItemResponse } from '../models/CommonResponseListItemResponse';
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
+import type { CreateItemRequest } from '../models/CreateItemRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
+
+export interface UpdateItemRequest {
+    name?: string;
+    price?: number;
+    description?: string;
+    isSoldOut?: boolean;
+    itemOrder?: number;
+    isRepresentative?: boolean;
+    isHidden?: boolean;
+    badge?: 'BEST' | 'NEW' | 'HOT' | 'VEGAN';
+    itemCategoryId?: number;
+    imageUrl?: string;
+}
+
 export class ItemService {
     /**
      * [공통] 상점별 상품 목록 조회
@@ -34,20 +49,14 @@ export class ItemService {
     /**
      * [점주] 상품 등록
      * 상점에 새로운 상품을 등록합니다. (본인 상점만 가능)
-     * @param storeId 상품 ID
-     * @param formData
+     * @param storeId 상점 ID
+     * @param requestBody
      * @returns CommonResponseLong 상품 등록 성공
      * @throws ApiError
      */
     public static createItem(
         storeId: number,
-        formData?: {
-            /**
-             * 상품 이미지
-             */
-            image?: Blob;
-            request?: string;
-        },
+        requestBody: CreateItemRequest,
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -55,8 +64,8 @@ export class ItemService {
             path: {
                 'storeId': storeId,
             },
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `잘못된 요청 데이터`,
                 403: `권한 없음 (본인 소유 상점 아님)`,
@@ -111,19 +120,13 @@ export class ItemService {
      * [점주] 상품 수정
      * 상품 정보를 수정합니다. (본인 상점만 가능)
      * @param itemId 상품 ID
-     * @param formData
+     * @param requestBody
      * @returns CommonResponseVoid 상품 수정 성공
      * @throws ApiError
      */
     public static updateItem(
         itemId: number,
-        formData?: {
-            /**
-             * 변경할 상품 이미지
-             */
-            image?: Blob;
-            request?: string;
-        },
+        requestBody: UpdateItemRequest,
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
@@ -131,8 +134,8 @@ export class ItemService {
             path: {
                 'itemId': itemId,
             },
-            formData: formData,
-            mediaType: 'multipart/form-data',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 403: `권한 없음 (본인 소유 상점 아님)`,
                 404: `상품 없음`,
