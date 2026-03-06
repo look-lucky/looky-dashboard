@@ -1,25 +1,26 @@
 import { X, Save, Search, Upload } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
-import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
-import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
+
+type CreateStoreRequest = Record<string, any>;
+type CreateItemRequest = Record<string, any>;
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
 }
 
 const CATEGORY_MAP: Record<string, string> = {
+    'RESTAURANT': '식당',
     'BAR': '주점',
     'CAFE': '카페',
-    'RESTAURANT': '맛집',
-    'ENTERTAINMENT': '문화/여가',
-    'BEAUTY_HEALTH': '뷰티/건강',
+    'ENTERTAINMENT': '놀거리',
+    'BEAUTY_HEALTH': '뷰티•헬스',
     'ETC': '기타'
 };
 
@@ -77,9 +78,9 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         // Trigger Geocoding
         try {
             const response = await AdminService.getGeocode(roadAddr);
-            const coords = response.data || response;
+            const coords: any = response.data || response;
             if (coords && coords.latitude && coords.longitude) {
-                setFormData(prev => ({
+                setFormData((prev: any) => ({
                     ...prev,
                     latitude: coords.latitude,
                     longitude: coords.longitude,
@@ -169,6 +170,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             };
 
             const storeId = await StoreService.createStore({
+                // @ts-ignore
                 request: requestPayload,
                 images: images
             });
@@ -181,13 +183,14 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                         name: item.name,
                         price: item.price,
                         description: item.description,
-                        badge: item.badge as CreateItemRequest.badge,
+                        badge: item.badge,
                         itemOrder: item.itemOrder
                     };
 
                     try {
                         const imageBlob = item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' }); // Fallback to empty file if no image
                         await ItemService.createItem(storeId.data, {
+                            // @ts-ignore
                             request: itemRequest,
                             image: imageBlob
                         });

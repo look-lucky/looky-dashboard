@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export type UpdateUniversityRequest = {
-    name: string;
-    emailDomains: Array<string>;
+    universityId: number;
 };
 

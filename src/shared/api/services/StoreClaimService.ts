@@ -4,12 +4,13 @@
 /* eslint-disable */
 import type { BizVerificationRequest } from '../models/BizVerificationRequest';
 import type { CommonResponseBizVerificationResponse } from '../models/CommonResponseBizVerificationResponse';
+import type { CommonResponseListMyStoreClaimResponse } from '../models/CommonResponseListMyStoreClaimResponse';
+import type { CommonResponseListStoreResponse } from '../models/CommonResponseListStoreResponse';
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponsePageStoreClaimResponse } from '../models/CommonResponsePageStoreClaimResponse';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
 import type { Pageable } from '../models/Pageable';
 import type { StoreClaimRejectionRequest } from '../models/StoreClaimRejectionRequest';
-import type { StoreClaimRequest } from '../models/StoreClaimRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -23,7 +24,7 @@ export class StoreClaimService {
      */
     public static createStoreClaims(
         requestBody?: {
-            request: StoreClaimRequest;
+            request: string;
             /**
              * 사업자등록증 이미지
              */
@@ -114,6 +115,36 @@ export class StoreClaimService {
             },
             body: requestBody,
             mediaType: 'application/json',
+        });
+    }
+    /**
+     * [점주] 미등록 상점 검색
+     * 시스템에 등록된 미등록 상점을 이름 또는 주소로 검색합니다.
+     * @param keyword
+     * @returns CommonResponseListStoreResponse OK
+     * @throws ApiError
+     */
+    public static searchUnclaimedStores(
+        keyword: string,
+    ): CancelablePromise<CommonResponseListStoreResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/store-claims/search',
+            query: {
+                'keyword': keyword,
+            },
+        });
+    }
+    /**
+     * [점주] 내 상점 소유 요청 목록 조회
+     * 점주가 자신이 신청한 상점 소유 요청 목록을 조회합니다.
+     * @returns CommonResponseListMyStoreClaimResponse OK
+     * @throws ApiError
+     */
+    public static getMyStoreClaims(): CancelablePromise<CommonResponseListMyStoreClaimResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/store-claims/my',
         });
     }
     /**

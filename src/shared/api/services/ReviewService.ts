@@ -6,10 +6,8 @@ import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponsePageResponseReviewResponse } from '../models/CommonResponsePageResponseReviewResponse';
 import type { CommonResponseReviewStatsResponse } from '../models/CommonResponseReviewStatsResponse';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
-import type { CreateReviewRequest } from '../models/CreateReviewRequest';
 import type { Pageable } from '../models/Pageable';
 import type { ReportRequest } from '../models/ReportRequest';
-import type { UpdateReviewRequest } from '../models/UpdateReviewRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -41,17 +39,17 @@ export class ReviewService {
         });
     }
     /**
-     * [학생] 리뷰 작성
-     * 상점에 대한 리뷰를 작성합니다.
+     * [공통] 리뷰 및 답글 작성
+     * 상점에 대한 리뷰(학생) 또는 답글(점주, 학생)을 작성합니다.
      * @param storeId 상점 ID
-     * @param requestBody
-     * @returns CommonResponseLong 리뷰 작성 성공
+     * @param formData
+     * @returns CommonResponseLong 리뷰/답글 작성 성공
      * @throws ApiError
      */
     public static createReview(
         storeId: number,
-        requestBody?: {
-            request: CreateReviewRequest;
+        formData?: {
+            request: string;
             /**
              * 리뷰 이미지 목록
              */
@@ -64,11 +62,12 @@ export class ReviewService {
             path: {
                 'storeId': storeId,
             },
-            body: requestBody,
-            mediaType: 'application/json',
+            formData: formData,
+            mediaType: 'multipart/form-data',
             errors: {
                 400: `잘못된 요청 데이터`,
-                404: `상점 없음`,
+                403: `권한 없음 (점주의 일반 리뷰 작성 등)`,
+                404: `상점 또는 원본 리뷰 없음`,
                 409: `이미 작성된 리뷰 존재`,
             },
         });
@@ -143,8 +142,8 @@ export class ReviewService {
         });
     }
     /**
-     * [학생] 리뷰 삭제
-     * 작성한 리뷰를 삭제합니다. (본인만 가능)
+     * [공통] 리뷰 삭제
+     * 작성한 리뷰 또는 답글을 삭제합니다. (본인만 가능)
      * @param reviewId 리뷰 ID
      * @returns void
      * @throws ApiError
@@ -165,17 +164,17 @@ export class ReviewService {
         });
     }
     /**
-     * [학생] 리뷰 수정
-     * 작성한 리뷰를 수정합니다. (본인만 가능)
+     * [공통] 리뷰 수정
+     * 작성한 리뷰 또는 답글을 수정합니다. (본인만 가능)
      * @param reviewId 리뷰 ID
-     * @param requestBody
+     * @param formData
      * @returns CommonResponseVoid 리뷰 수정 성공
      * @throws ApiError
      */
     public static updateReview(
         reviewId: number,
-        requestBody?: {
-            request: UpdateReviewRequest;
+        formData?: {
+            request: string;
             /**
              * 리뷰 이미지 목록
              */
@@ -188,8 +187,8 @@ export class ReviewService {
             path: {
                 'reviewId': reviewId,
             },
-            body: requestBody,
-            mediaType: 'application/json',
+            formData: formData,
+            mediaType: 'multipart/form-data',
             errors: {
                 403: `권한 없음 (본인 리뷰 아님)`,
                 404: `리뷰 없음`,
@@ -214,6 +213,24 @@ export class ReviewService {
             },
             errors: {
                 404: `상점 없음`,
+            },
+        });
+    }
+    /**
+     * [공통] 내 리뷰 목록 조회
+     * 내가 작성한 리뷰 목록을 조회합니다.
+     * @param pageable 페이징 정보
+     * @returns CommonResponsePageResponseReviewResponse 성공
+     * @throws ApiError
+     */
+    public static getMyReviews(
+        pageable: Pageable,
+    ): CancelablePromise<CommonResponsePageResponseReviewResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/reviews/my',
+            query: {
+                'pageable': pageable,
             },
         });
     }

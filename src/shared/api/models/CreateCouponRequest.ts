@@ -4,22 +4,27 @@
 /* eslint-disable */
 export type CreateCouponRequest = {
     title: string;
-    description?: string;
-    targetOrganizationId?: number;
     issueStartsAt?: string;
     issueEndsAt?: string;
-    totalQuantity: number;
+    validDays: number;
+    totalQuantity?: number;
     limitPerUser: number;
+    benefitType: CreateCouponRequest.benefitType;
+    benefitValue?: string;
+    minOrderAmount?: number;
     status?: CreateCouponRequest.status;
-    targetItemIds?: Array<number>;
 };
 export namespace CreateCouponRequest {
+    export enum benefitType {
+        FIXED_DISCOUNT = 'FIXED_DISCOUNT',
+        PERCENTAGE_DISCOUNT = 'PERCENTAGE_DISCOUNT',
+        SERVICE_GIFT = 'SERVICE_GIFT',
+    }
     export enum status {
-        DRAFT = 'DRAFT',
-        SCHEDULED = 'SCHEDULED',
         ACTIVE = 'ACTIVE',
-        STOPPED = 'STOPPED',
+        SOLD_OUT = 'SOLD_OUT',
         EXPIRED = 'EXPIRED',
+        WITHDRAWN_BY_OWNER = 'WITHDRAWN_BY_OWNER',
     }
 }
 

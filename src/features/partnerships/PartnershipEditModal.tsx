@@ -27,9 +27,9 @@ export function PartnershipEditModal({ partnership, onClose, onSuccess }: Partne
                 partnership.id!,
                 {
                     benefit,
-                    ...(startsAt && { startsAt }),
-                    ...(endsAt && { endsAt }),
-                }
+                    startsAt: startsAt || undefined,
+                    endsAt: endsAt || undefined,
+                } as any
             );
             alert('제휴 혜택이 수정되었습니다.');
             onSuccess();

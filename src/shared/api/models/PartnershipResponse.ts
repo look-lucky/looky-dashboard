@@ -9,14 +9,16 @@ export type PartnershipResponse = {
     universityName?: string;
     category?: PartnershipResponse.category;
     benefit?: string;
+    startsAt?: string;
+    endsAt?: string;
     storeId?: number;
     storeName?: string;
 };
 export namespace PartnershipResponse {
     export enum category {
-        UNIVERSITY_COUNCIL = 'UNIVERSITY_COUNCIL',
         COLLEGE = 'COLLEGE',
         DEPARTMENT = 'DEPARTMENT',
+        UNIVERSITY_COUNCIL = 'UNIVERSITY_COUNCIL',
         CLUB_ASSOCIATION = 'CLUB_ASSOCIATION',
     }
 }

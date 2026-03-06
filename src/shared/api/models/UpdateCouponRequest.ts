@@ -2,22 +2,24 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { JsonNullableCouponBenefitType } from './JsonNullableCouponBenefitType';
+import type { JsonNullableCouponStatus } from './JsonNullableCouponStatus';
+import type { JsonNullableInteger } from './JsonNullableInteger';
+import type { JsonNullableLocalDateTime } from './JsonNullableLocalDateTime';
+import type { JsonNullableString } from './JsonNullableString';
+/**
+ * 쿠폰 수정 요청
+ */
 export type UpdateCouponRequest = {
-    title?: string;
-    description?: string;
-    issueStartsAt?: string;
-    issueEndsAt?: string;
-    totalQuantity?: number;
-    limitPerUser?: number;
-    status?: UpdateCouponRequest.status;
+    title?: JsonNullableString;
+    issueStartsAt?: JsonNullableLocalDateTime;
+    issueEndsAt?: JsonNullableLocalDateTime;
+    validDays?: JsonNullableInteger;
+    totalQuantity?: JsonNullableInteger;
+    limitPerUser?: JsonNullableInteger;
+    benefitType?: JsonNullableCouponBenefitType;
+    benefitValue?: JsonNullableString;
+    minOrderAmount?: JsonNullableInteger;
+    status?: JsonNullableCouponStatus;
 };
-export namespace UpdateCouponRequest {
-    export enum status {
-        DRAFT = 'DRAFT',
-        SCHEDULED = 'SCHEDULED',
-        ACTIVE = 'ACTIVE',
-        STOPPED = 'STOPPED',
-        EXPIRED = 'EXPIRED',
-    }
-}
 

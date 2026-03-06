@@ -4,16 +4,16 @@
 /* eslint-disable */
 export type EventResponse = {
     id?: number;
+    universityId?: number;
     title?: string;
     description?: string;
+    subtitle?: string;
     eventTypes?: Array<'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP'>;
     latitude?: number;
     longitude?: number;
-    place?: string;
-    subtitle?: string;
-    universityId?: number | null;
     startDateTime?: string;
     endDateTime?: string;
+    place?: string;
     status?: EventResponse.status;
     bannerImageUrl?: string;
     imageUrls?: Array<string>;

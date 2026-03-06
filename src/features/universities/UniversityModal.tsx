@@ -35,10 +35,10 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
             const domains = emailDomain.split(',').map(d => d.trim()).filter(d => d.length > 0);
 
             if (initialData && initialData.id) {
-                await UniversityService.updateUniversity(initialData.id, {
+                await UniversityService.updateUniversity1(initialData.id, {
                     name,
                     emailDomains: domains
-                });
+                } as any);
                 alert('수정되었습니다.');
             } else {
                 await UniversityService.createUniversity({

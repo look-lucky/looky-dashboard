@@ -2,9 +2,14 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { JsonNullableLocalDate } from './JsonNullableLocalDate';
+import type { JsonNullableString } from './JsonNullableString';
+/**
+ * 제휴 정보 수정 요청
+ */
 export type UpdatePartnershipRequest = {
-    benefit: string;
-    startsAt?: string;
-    endsAt?: string;
+    benefit?: JsonNullableString;
+    startsAt?: JsonNullableLocalDate;
+    endsAt?: JsonNullableLocalDate;
 };
 

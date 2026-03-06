@@ -109,19 +109,18 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 };
 
 export const getFormData = (options: ApiRequestOptions): FormData | undefined => {
-    const data = options.formData || (options.mediaType === 'multipart/form-data' ? options.body : undefined);
-    if (data) {
+    if (options.formData) {
         const formData = new FormData();
 
         const process = (key: string, value: any) => {
             if (isString(value) || isBlob(value)) {
                 formData.append(key, value);
             } else {
-                formData.append(key, new Blob([JSON.stringify(value)], { type: 'application/json' }));
+                formData.append(key, JSON.stringify(value));
             }
         };
 
-        Object.entries(data)
+        Object.entries(options.formData)
             .filter(([_, value]) => isDefined(value))
             .forEach(([key, value]) => {
                 if (Array.isArray(value)) {
@@ -161,11 +160,11 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
         ...options.headers,
         ...formHeaders,
     })
-        .filter(([_, value]) => isDefined(value))
-        .reduce((headers, [key, value]) => ({
-            ...headers,
-            [key]: String(value),
-        }), {} as Record<string, string>);
+    .filter(([_, value]) => isDefined(value))
+    .reduce((headers, [key, value]) => ({
+        ...headers,
+        [key]: String(value),
+    }), {} as Record<string, string>);
 
     if (isStringWithValue(token)) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -176,17 +175,14 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
         headers['Authorization'] = `Basic ${credentials}`;
     }
 
-    const hasBodyOrFormData = options.body !== undefined || options.formData !== undefined;
-    if (hasBodyOrFormData) {
+    if (options.body !== undefined) {
         if (options.mediaType) {
-            if (options.mediaType !== 'multipart/form-data') {
-                headers['Content-Type'] = options.mediaType;
-            }
+            headers['Content-Type'] = options.mediaType;
         } else if (isBlob(options.body)) {
             headers['Content-Type'] = options.body.type || 'application/octet-stream';
         } else if (isString(options.body)) {
             headers['Content-Type'] = 'text/plain';
-        } else if (!isFormData(options.body) && !options.formData) {
+        } else if (!isFormData(options.body)) {
             headers['Content-Type'] = 'application/json';
         }
     }
@@ -195,9 +191,6 @@ export const getHeaders = async (config: OpenAPIConfig, options: ApiRequestOptio
 };
 
 export const getRequestBody = (options: ApiRequestOptions): any => {
-    if (options.mediaType === 'multipart/form-data') {
-        return undefined;
-    }
     if (options.body) {
         return options.body;
     }
@@ -224,7 +217,6 @@ export const sendRequest = async <T>(
         withCredentials: config.WITH_CREDENTIALS,
         withXSRFToken: config.CREDENTIALS === 'include' ? config.WITH_CREDENTIALS : false,
         cancelToken: source.token,
-        responseType: options.responseType,
     };
 
     onCancel(() => source.cancel('The user aborted a request.'));

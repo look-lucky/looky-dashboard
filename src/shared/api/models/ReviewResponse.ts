@@ -5,11 +5,16 @@
 export type ReviewResponse = {
     reviewId?: number;
     storeId?: number;
+    storeName?: string;
+    parentReviewId?: number;
     username?: string;
+    nickname?: string;
     content?: string;
     rating?: number;
     createdAt?: string;
     likeCount?: number;
     imageUrls?: Array<string>;
+    liked?: boolean;
+    ownerReply?: boolean;
 };
 

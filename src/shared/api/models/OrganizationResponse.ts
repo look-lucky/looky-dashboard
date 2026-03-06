@@ -9,13 +9,15 @@ export type OrganizationResponse = {
     universityName?: string;
     category?: OrganizationResponse.category;
     name?: string;
+    parentId?: number;
+    parentName?: string;
     expiresAt?: string;
 };
 export namespace OrganizationResponse {
     export enum category {
-        UNIVERSITY_COUNCIL = 'UNIVERSITY_COUNCIL',
         COLLEGE = 'COLLEGE',
         DEPARTMENT = 'DEPARTMENT',
+        UNIVERSITY_COUNCIL = 'UNIVERSITY_COUNCIL',
         CLUB_ASSOCIATION = 'CLUB_ASSOCIATION',
     }
 }

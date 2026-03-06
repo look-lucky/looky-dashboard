@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
-import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
-import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
-// Type definitions for our local menu state editor
+type BadgeType = 'BEST' | 'NEW' | 'HOT' | 'VEGAN' | string;
 export interface MenuItemState {
     id?: number; // Only exists if fetched from server
     name: string;
     price?: number;
     description?: string;
-    badge?: CreateItemRequest.badge | UpdateItemRequest.badge;
+    badge?: BadgeType;
     itemOrder?: number;
     imageUrl?: string; // Existing image from backend
     imageFile?: File;  // Newly uploaded file

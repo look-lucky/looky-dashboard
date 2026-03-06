@@ -66,7 +66,7 @@ export class UniversityService {
      * @returns CommonResponseVoid OK
      * @throws ApiError
      */
-    public static updateUniversity(
+    public static updateUniversity1(
         universityId: number,
         requestBody: UpdateUniversityRequest,
     ): CancelablePromise<CommonResponseVoid> {

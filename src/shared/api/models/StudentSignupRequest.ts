@@ -5,12 +5,14 @@
 export type StudentSignupRequest = {
     username?: string;
     password?: string;
+    email?: string;
     nickname?: string;
     gender?: StudentSignupRequest.gender;
     birthDate?: string;
     universityId?: number;
     collegeId?: number;
     departmentId?: number;
+    isClubMember?: boolean;
 };
 export namespace StudentSignupRequest {
     export enum gender {

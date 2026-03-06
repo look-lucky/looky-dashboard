@@ -33,8 +33,8 @@ export class AdminPartnershipService {
         });
     }
     /**
-     * [관리자] 제휴 등록
-     * 특정 대학의 특정 조직에 제휴를 등록합니다.
+     * [관리자] 제휴 단건 등록
+     * 특정 대학의 특정 조직에 제휴를 단건으로 등록합니다.
      * @param universityId 대학 ID
      * @param organizationId 조직 ID
      * @param requestBody
@@ -176,10 +176,6 @@ export class AdminPartnershipService {
             query: {
                 'universityId': universityId,
             },
-            headers: {
-                'Accept': '*/*',
-            },
-            responseType: 'blob',
             errors: {
                 403: `권한 없음`,
             },

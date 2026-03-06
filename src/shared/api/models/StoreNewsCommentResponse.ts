@@ -5,6 +5,7 @@
 export type StoreNewsCommentResponse = {
     id?: number;
     userId?: number;
+    nickname?: string;
     content?: string;
     createdAt?: string;
     mine?: boolean;

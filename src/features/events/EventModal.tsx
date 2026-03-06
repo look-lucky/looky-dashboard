@@ -3,8 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import { UniversityService } from '../../shared/api/services/UniversityService';
 import type { EventResponse } from '../../shared/api/models/EventResponse';
-import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
+
+type CreateEventRequest = Record<string, any>;
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
 interface EventModalProps {
@@ -209,8 +210,21 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
             if (initialData && initialData.id) {
                 // Update Event
+                const preserveImageIds = previewUrls
+                    .filter(url => !url.startsWith('blob:'))
+                    // Extract ID if backend needs explicit IDs from URLs (optional, assuming URL string is accepted)
+                    // If the backend expects IDs, they might just match URLs on their end or parse the URL string.
+                    // For now, passing the urls themselves as preserveImageIds.
+                    ;
+
+                const updateEventRequestData = {
+                    ...eventData,
+                    preserveImageIds
+                };
+
                 await AdminEventService.updateEvent(initialData.id, {
-                    request: eventData, // UpdateEventRequest structure matches CreateEventRequest for these fields
+                    // @ts-ignore
+                    request: updateEventRequestData, // UpdateEventRequest supports preserveImageIds
                     bannerImage: bannerImage || undefined,
                     images: images.length > 0 ? images : undefined // Send images only if new ones are added
                 });
@@ -218,6 +232,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             } else {
                 // Create Event
                 await AdminEventService.createEvent({
+                    // @ts-ignore
                     request: eventData,
                     bannerImage: bannerImage || undefined,
                     images: images

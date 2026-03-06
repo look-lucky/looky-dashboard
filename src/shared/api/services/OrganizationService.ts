@@ -88,6 +88,24 @@ export class OrganizationService {
         });
     }
     /**
+     * [학생] 소속 변경
+     * 학생이 소속을 변경합니다. (기존 동종 소속 자동 탈퇴)
+     * @param organizationId
+     * @returns CommonResponseVoid OK
+     * @throws ApiError
+     */
+    public static changeOrganization(
+        organizationId: number,
+    ): CancelablePromise<CommonResponseVoid> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/organizations/{organizationId}/membership',
+            path: {
+                'organizationId': organizationId,
+            },
+        });
+    }
+    /**
      * [학생회] 소속 삭제
      * 소속을 삭제합니다.
      * @param organizationId
@@ -125,6 +143,24 @@ export class OrganizationService {
             },
             body: requestBody,
             mediaType: 'application/json',
+        });
+    }
+    /**
+     * [공통] 특정 단과대학의 학과 목록 조회
+     * 단과대학에 속한 학과 목록을 조회합니다.
+     * @param collegeId 단과대학 ID
+     * @returns CommonResponseListOrganizationResponse OK
+     * @throws ApiError
+     */
+    public static getDepartmentsByCollege(
+        collegeId: number,
+    ): CancelablePromise<CommonResponseListOrganizationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/organizations/{collegeId}/departments',
+            path: {
+                'collegeId': collegeId,
+            },
         });
     }
 }

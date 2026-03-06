@@ -2,7 +2,7 @@ import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { OrganizationService } from '../../shared/api/services/OrganizationService';
 import { CreateOrganizationRequest } from '../../shared/api/models/CreateOrganizationRequest';
-import { UpdateOrganizationRequest } from '../../shared/api/models/UpdateOrganizationRequest';
+import type { UpdateOrganizationRequest } from '../../shared/api/models/UpdateOrganizationRequest';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 
 interface OrganizationModalProps {
@@ -125,7 +125,7 @@ export function OrganizationModal({
                 };
 
                 if (initialData && initialData.id) {
-                    await OrganizationService.updateOrganization(initialData.id, payload as UpdateOrganizationRequest);
+                    await OrganizationService.updateOrganization(initialData.id, payload as unknown as UpdateOrganizationRequest);
                     alert('수정되었습니다.');
                 } else {
                     await OrganizationService.createOrganization(universityId, payload);

@@ -4,8 +4,6 @@
 /* eslint-disable */
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
-import type { CreateEventRequest } from '../models/CreateEventRequest';
-import type { UpdateEventRequest } from '../models/UpdateEventRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -13,16 +11,19 @@ export class AdminEventService {
     /**
      * [관리자] 이벤트 등록
      * 새로운 이벤트를 등록합니다.
-     * @param requestBody
+     * @param formData
      * @returns CommonResponseLong 이벤트 등록 성공
      * @throws ApiError
      */
     public static createEvent(
-        requestBody?: {
-            request: CreateEventRequest;
+        formData?: {
+            request: string;
+            /**
+             * 배너 이미지 (최대 1장)
+             */
             bannerImage?: Blob;
             /**
-             * 이벤트 이미지
+             * 일반 이미지
              */
             images?: Array<Blob>;
         },
@@ -30,7 +31,7 @@ export class AdminEventService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/admin/events',
-            formData: requestBody,
+            formData: formData,
             mediaType: 'multipart/form-data',
             errors: {
                 400: `잘못된 요청 데이터`,
@@ -64,17 +65,20 @@ export class AdminEventService {
      * [관리자] 이벤트 수정
      * 이벤트 정보를 수정합니다.
      * @param eventId 이벤트 ID
-     * @param requestBody
+     * @param formData
      * @returns CommonResponseVoid 이벤트 수정 성공
      * @throws ApiError
      */
     public static updateEvent(
         eventId: number,
-        requestBody?: {
-            request: UpdateEventRequest;
+        formData?: {
+            request: string;
+            /**
+             * 배너 이미지 (최대 1장)
+             */
             bannerImage?: Blob;
             /**
-             * 이벤트 이미지
+             * 일반 이미지
              */
             images?: Array<Blob>;
         },
@@ -85,7 +89,7 @@ export class AdminEventService {
             path: {
                 'eventId': eventId,
             },
-            formData: requestBody,
+            formData: formData,
             mediaType: 'multipart/form-data',
             errors: {
                 403: `권한 없음`,

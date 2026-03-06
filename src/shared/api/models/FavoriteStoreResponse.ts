@@ -9,5 +9,8 @@ export type FavoriteStoreResponse = {
     jibunAddress?: string;
     storeCategories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
     imageUrl?: string;
+    averageRating?: number;
+    reviewCount?: number;
+    createdAt?: string;
 };
 

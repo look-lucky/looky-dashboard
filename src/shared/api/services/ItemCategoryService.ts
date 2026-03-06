@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { CommonResponseListItemCategory } from '../models/CommonResponseListItemCategory';
+import type { CommonResponseListItemCategoryResponse } from '../models/CommonResponseListItemCategoryResponse';
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -13,12 +13,12 @@ export class ItemCategoryService {
      * [공통] 상품 카테고리 목록 조회
      * 매장의 상품 카테고리 목록을 조회합니다.
      * @param storeId
-     * @returns CommonResponseListItemCategory OK
+     * @returns CommonResponseListItemCategoryResponse OK
      * @throws ApiError
      */
     public static getItemCategories(
         storeId: number,
-    ): CancelablePromise<CommonResponseListItemCategory> {
+    ): CancelablePromise<CommonResponseListItemCategoryResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores/{storeId}/item-categories',

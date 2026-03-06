@@ -10,9 +10,9 @@ export type CompleteSocialSignupRequest = {
     universityId?: number;
     collegeId?: number;
     departmentId?: number;
+    isClubMember?: boolean;
     name?: string;
     email?: string;
-    phone?: string;
 };
 export namespace CompleteSocialSignupRequest {
     export enum role {

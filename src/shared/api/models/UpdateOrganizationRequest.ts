@@ -2,18 +2,17 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { JsonNullableLocalDateTime } from './JsonNullableLocalDateTime';
+import type { JsonNullableLong } from './JsonNullableLong';
+import type { JsonNullableOrganizationCategory } from './JsonNullableOrganizationCategory';
+import type { JsonNullableString } from './JsonNullableString';
+/**
+ * 조직(단과대/학과 등) 수정 요청
+ */
 export type UpdateOrganizationRequest = {
-    category: UpdateOrganizationRequest.category;
-    name: string;
-    parentId?: number;
-    expiresAt?: string;
+    category?: JsonNullableOrganizationCategory;
+    name?: JsonNullableString;
+    parentId?: JsonNullableLong;
+    expiresAt?: JsonNullableLocalDateTime;
 };
-export namespace UpdateOrganizationRequest {
-    export enum category {
-        UNIVERSITY_COUNCIL = 'UNIVERSITY_COUNCIL',
-        COLLEGE = 'COLLEGE',
-        DEPARTMENT = 'DEPARTMENT',
-        CLUB_ASSOCIATION = 'CLUB_ASSOCIATION',
-    }
-}
 

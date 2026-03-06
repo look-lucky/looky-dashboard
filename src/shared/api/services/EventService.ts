@@ -16,13 +16,14 @@ export class EventService {
      * @param keyword 검색 키워드 (제목)
      * @param eventTypes 이벤트 타입 필터 (복수 선택 가능)
      * @param status 상태 필터
+     * @param universityId 대학 ID
      * @returns CommonResponsePageResponseEventResponse 조회 성공
      * @throws ApiError
      */
     public static getEvents(
         pageable: Pageable,
         keyword?: string,
-        eventTypes?: Array<'FOOD_EVENT' | 'POPUP_STORE' | 'SCHOOL_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'COMMUNITY'>,
+        eventTypes?: Array<'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP'>,
         status?: 'UPCOMING' | 'LIVE' | 'ENDED',
         universityId?: number,
     ): CancelablePromise<CommonResponsePageResponseEventResponse> {
@@ -34,9 +35,7 @@ export class EventService {
                 'eventTypes': eventTypes,
                 'status': status,
                 'universityId': universityId,
-                'page': pageable.page,
-                'size': pageable.size,
-                'sort': pageable.sort,
+                'pageable': pageable,
             },
         });
     }

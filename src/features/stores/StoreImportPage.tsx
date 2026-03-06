@@ -114,7 +114,7 @@ export function StoreImportPage() {
         try {
             // Auto-geocode via API
             const response = await AdminService.getGeocode(roadAddr);
-            const coords = response.data || response; // Handle both direct object and CommonResponse
+            const coords: any = response.data || response; // Handle both direct object and CommonResponse
             if (coords && coords.latitude && coords.longitude) {
                 setSearchCoords({ lat: coords.latitude, lng: coords.longitude });
             } else {

@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CommonResponseCoordinate } from '../models/CommonResponseCoordinate';
 import type { CommonResponsePageResponseUserResponse } from '../models/CommonResponsePageResponseUserResponse';
 import type { CommonResponseString } from '../models/CommonResponseString';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
@@ -85,20 +86,24 @@ export class AdminService {
         });
     }
     /**
-     * [관리자] 주소 지오코딩
-     * 주소를 위도, 경도 좌표와 지번 주소로 변환합니다.
-     * @param address 검색할 주소
-     * @returns any 지오코딩 결과
+     * [관리자] 주소로 위경도 변환
+     * 주소를 입력받아 위도, 경도 좌표를 반환합니다.
+     * @param address 도로명 주소 (예: 전라북도 전주시 덕진구 명륜3길 22)
+     * @returns CommonResponseCoordinate 변환 성공
      * @throws ApiError
      */
     public static getGeocode(
         address: string,
-    ): CancelablePromise<any> {
+    ): CancelablePromise<CommonResponseCoordinate> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/admin/stores/geocode',
             query: {
                 'address': address,
+            },
+            errors: {
+                400: `잘못된 주소/API 호출 에러`,
+                500: `서버 에러`,
             },
         });
     }

@@ -19,9 +19,8 @@ export namespace UserResponse {
     export enum socialType {
         LOCAL = 'LOCAL',
         GOOGLE = 'GOOGLE',
-        NAVER = 'NAVER',
         KAKAO = 'KAKAO',
-        FIREBASE = 'FIREBASE',
+        APPLE = 'APPLE',
     }
 }
 

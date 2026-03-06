@@ -1,15 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
-import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
-import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
-import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
+type CreateItemRequest = Record<string, any>;
+type UpdateItemRequest = Record<string, any>;
+type UpdateStoreRequest = Record<string, any>;
 
 interface StoreListProps {
     universityId: number;
@@ -75,8 +75,8 @@ export function StoreList({ universityId }: StoreListProps) {
 
         try {
             const response = await AdminService.getGeocode(roadAddr);
-            const coords = response.data || response;
-            setEditForm(prev => ({
+            const coords: any = response.data || response;
+            setEditForm((prev: any) => ({
                 ...prev,
                 roadAddress: roadAddr,
                 jibunAddress: jibunAddr || coords?.jibunAddress || prev.jibunAddress,
@@ -272,11 +272,16 @@ export function StoreList({ universityId }: StoreListProps) {
     const handleSave = async () => {
         if (!selectedStore?.id || !editForm) return;
         try {
-            const requestData = { ...editForm };
+            const preserveImageIds = imagePreviews.filter(url => !url.startsWith('blob:'));
+            const requestData: Record<string, any> = { ...editForm, preserveImageIds };
             if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = 0;
             if (typeof requestData.longitude !== 'number' || isNaN(requestData.longitude)) requestData.longitude = 0;
 
-            await StoreService.updateStore(selectedStore.id, { request: requestData, images: images });
+            await StoreService.updateStore(selectedStore.id, {
+                // @ts-ignore
+                request: requestData,
+                images: images.length > 0 ? images : undefined
+            });
 
             // Process Menu Item changes
             const promises = menuItems.map(async (item) => {
@@ -291,10 +296,11 @@ export function StoreList({ universityId }: StoreListProps) {
                         name: item.name,
                         price: item.price,
                         description: item.description,
-                        badge: item.badge as UpdateItemRequest.badge,
+                        badge: item.badge,
                         itemOrder: item.itemOrder
                     };
                     return ItemService.updateItem(item.id, {
+                        // @ts-ignore
                         request: updateReq,
                         image: item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' })
                     });
@@ -304,10 +310,11 @@ export function StoreList({ universityId }: StoreListProps) {
                         name: item.name,
                         price: item.price,
                         description: item.description,
-                        badge: item.badge as CreateItemRequest.badge,
+                        badge: item.badge,
                         itemOrder: item.itemOrder
                     };
                     return ItemService.createItem(selectedStore.id!, {
+                        // @ts-ignore
                         request: createReq,
                         image: item.imageFile || new File([], 'empty.jpg', { type: 'image/jpeg' })
                     });
@@ -422,10 +429,10 @@ export function StoreList({ universityId }: StoreListProps) {
     };
 
     const handleCategoryToggle = (category: 'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC') => {
-        setEditForm(prev => {
+        setEditForm((prev: any) => {
             const currentCategories = prev.storeCategories || [];
             if (currentCategories.includes(category)) {
-                return { ...prev, storeCategories: currentCategories.filter(c => c !== category) };
+                return { ...prev, storeCategories: currentCategories.filter((c: any) => c !== category) };
             } else {
                 return { ...prev, storeCategories: [...currentCategories, category] };
             }

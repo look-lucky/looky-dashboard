@@ -11,6 +11,8 @@ export type ItemResponse = {
     imageUrl?: string;
     itemOrder?: number;
     badge?: ItemResponse.badge;
+    categoryId?: number;
+    categoryName?: string;
     hidden?: boolean;
     soldOut?: boolean;
     representative?: boolean;

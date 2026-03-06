@@ -77,7 +77,7 @@ export class FavoriteService {
     }
     /**
      * [학생] 내 단골 상점 목록 조회
-     * 내가 등록한 단골 상점 목록을 페이징하여 조회합니다.
+     * 내가 등록한 단골 상점 목록을 페이징하여 조회합니다.<br>정렬 기능: 찜한최신순(sort=createdAt,desc), 별점높은순(sort=store.averageRating,desc)
      * @param pageable 페이징 정보
      * @returns CommonResponsePageResponseFavoriteStoreResponse 조회 성공
      * @throws ApiError
