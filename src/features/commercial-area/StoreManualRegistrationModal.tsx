@@ -7,9 +7,8 @@ import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
-
-type CreateStoreRequest = Record<string, any>;
-type CreateItemRequest = Record<string, any>;
+import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
+import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -41,6 +40,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     const [formData, setFormData] = useState<{
         name: string;
         branch: string;
+        bizRegNo: string;
         address: string;
         jibunAddress: string;
         storeCategories: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
@@ -53,6 +53,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     }>({
         name: '',
         branch: '',
+        bizRegNo: '',
         address: '',
         jibunAddress: '',
         storeCategories: [],
@@ -155,8 +156,8 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         try {
             const requestPayload: CreateStoreRequest = {
                 name: formData.name,
-                branch: formData.branch,
-                bizRegNo: '000-00-00000',
+                branch: formData.branch || undefined,
+                bizRegNo: formData.bizRegNo || undefined,
                 roadAddress: formData.address,
                 jibunAddress: formData.jibunAddress,
                 storeCategories: formData.storeCategories,
@@ -349,6 +350,16 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         onChange={handleChange}
                                         className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                                         placeholder="자동 입력됩니다"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-gray-700">사업자등록번호</label>
+                                    <input
+                                        type="text"
+                                        placeholder="000-00-00000"
+                                        value={formData.bizRegNo}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, bizRegNo: e.target.value }))}
+                                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
 

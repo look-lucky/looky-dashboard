@@ -7,9 +7,9 @@ import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
-type CreateItemRequest = Record<string, any>;
-type UpdateItemRequest = Record<string, any>;
-type UpdateStoreRequest = Record<string, any>;
+import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
+import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
+import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
 
 interface StoreListProps {
     universityId: number;
@@ -252,9 +252,10 @@ export function StoreList({ universityId }: StoreListProps) {
         setEditForm({
             name: selectedStore.name,
             branch: selectedStore.branch || '',
+            bizRegNo: (selectedStore as any).bizRegNo || '',
             roadAddress: selectedStore.roadAddress,
             jibunAddress: selectedStore.jibunAddress,
-            phone: selectedStore.phone || '',
+            storePhone: selectedStore.phone || '',
             introduction: selectedStore.introduction || '',
             storeCategories: selectedStore.storeCategories || [],
             latitude: selectedStore.latitude,
@@ -828,7 +829,12 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700">전화번호</label>
-                                                            <input type="text" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                            <input type="text" value={editForm.storePhone || ''} onChange={e => handleInputChange('storePhone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                        </div>
+
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">사업자등록번호</label>
+                                                            <input type="text" value={editForm.bizRegNo || ''} onChange={e => handleInputChange('bizRegNo', e.target.value)} placeholder="000-00-00000" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                                                         </div>
 
                                                         <div>
