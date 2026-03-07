@@ -9,15 +9,10 @@ interface AddressSearchFieldsProps {
     roadAddress?: string;
     jibunAddress?: string;
     value?: string;
-    helperText?: string;
 }
 
 const FIELD_BUTTON_CLASS =
     'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
-
-function HelperText({ text }: { text: string }) {
-    return <p className="mt-1 text-xs text-gray-500">{text}</p>;
-}
 
 export function AddressSearchFields({
     onOpen,
@@ -28,7 +23,6 @@ export function AddressSearchFields({
     roadAddress,
     jibunAddress,
     value,
-    helperText,
 }: AddressSearchFieldsProps) {
     if (mode === 'single') {
 
