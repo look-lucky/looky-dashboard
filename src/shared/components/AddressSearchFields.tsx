@@ -31,7 +31,6 @@ export function AddressSearchFields({
     helperText,
 }: AddressSearchFieldsProps) {
     if (mode === 'single') {
-        const singleHelperText = helperText || '주소는 직접 입력할 수 없으며, 클릭하면 주소 검색 창이 열립니다.';
 
         return (
             <div>
@@ -46,7 +45,6 @@ export function AddressSearchFields({
                     <span className="truncate">{value || placeholder}</span>
                     <Search className="h-4 w-4 shrink-0 text-blue-600" />
                 </button>
-                <HelperText text={singleHelperText} />
             </div>
         );
     }
@@ -54,8 +52,6 @@ export function AddressSearchFields({
     const hasAddress = Boolean(roadAddress || jibunAddress);
 
     if (!hasAddress) {
-        const emptyHelperText = helperText || '주소는 직접 입력할 수 없으며, 클릭하면 주소 검색 창이 열립니다.';
-
         return (
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -69,12 +65,9 @@ export function AddressSearchFields({
                     <span>{placeholder}</span>
                     <Search className="h-4 w-4 text-blue-600" />
                 </button>
-                <HelperText text={emptyHelperText} />
             </div>
         );
     }
-
-    const filledHelperText = helperText || '주소를 수정하려면 도로명 주소 또는 지번 주소를 클릭하세요.';
 
     return (
         <div className="space-y-3">
@@ -100,7 +93,6 @@ export function AddressSearchFields({
                     {jibunAddress || '지번 주소가 없습니다'}
                 </button>
             </div>
-            <HelperText text={filledHelperText} />
         </div>
     );
 }
