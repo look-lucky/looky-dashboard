@@ -1,5 +1,5 @@
-import { X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { UniversityService } from '../../shared/api/services/UniversityService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import type { UpdateUniversityRequest } from '../../shared/api/models/UpdateUniversityRequest';
@@ -12,29 +12,48 @@ interface UniversityModalProps {
 
 export function UniversityModal({ onClose, onSuccess, initialData }: UniversityModalProps) {
     const [name, setName] = useState('');
-    const [emailDomain, setEmailDomain] = useState('');
+    const [emailDomains, setEmailDomains] = useState<string[]>(['']);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (initialData) {
             setName(initialData.name || '');
-            // 도메인 배열을 콤마로 구분된 문자열로 변환하여 표시 (수정 시)
-            setEmailDomain(initialData.emailDomains ? initialData.emailDomains.join(', ') : '');
+            setEmailDomains(initialData.emailDomains && initialData.emailDomains.length > 0 ? initialData.emailDomains : ['']);
+            return;
         }
+
+        setName('');
+        setEmailDomains(['']);
     }, [initialData]);
+
+    const handleDomainChange = (index: number, value: string) => {
+        setEmailDomains((prev) => prev.map((domain, domainIndex) => (
+            domainIndex === index ? value : domain
+        )));
+    };
+
+    const handleAddDomain = () => {
+        setEmailDomains((prev) => [...prev, '']);
+    };
+
+    const handleRemoveDomain = (index: number) => {
+        setEmailDomains((prev) => (
+            prev.length === 1 ? [''] : prev.filter((_, domainIndex) => domainIndex !== index)
+        ));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name || !emailDomain) {
+
+        const domains = emailDomains.map((domain) => domain.trim()).filter((domain) => domain.length > 0);
+
+        if (!name || domains.length === 0) {
             alert('모든 필드를 입력해주세요.');
             return;
         }
 
         setLoading(true);
         try {
-            // 콤마로 구분된 문자열을 배열로 변환하고 공백 제거
-            const domains = emailDomain.split(',').map(d => d.trim()).filter(d => d.length > 0);
-
             if (initialData && initialData.id) {
                 const payload = {
                     name,
@@ -45,10 +64,11 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
             } else {
                 await UniversityService.createUniversity({
                     name,
-                    emailDomains: domains
+                    emailDomains: domains,
                 });
                 alert('등록되었습니다.');
             }
+
             onSuccess();
         } catch (error) {
             console.error(error);
@@ -78,22 +98,45 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="예: 한국대학교"
+                            placeholder="예: 고려대학교"
                             required
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">이메일 도메인 *</label>
-                        <input
-                            type="text"
-                            value={emailDomain}
-                            onChange={(e) => setEmailDomain(e.target.value)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="예: korea.ac.kr"
-                            required
-                        />
-                        <p className="text-xs text-gray-500 mt-1">학생 인증 시 사용되는 이메일 도메인입니다. 여러 개일 경우 콤마(,)로 구분해주세요.</p>
+                        <div className="space-y-2">
+                            {emailDomains.map((emailDomain, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={emailDomain}
+                                        onChange={(e) => handleDomainChange(index, e.target.value)}
+                                        className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                                        placeholder="예: korea.ac.kr"
+                                        required={index === 0}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddDomain}
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors"
+                                        aria-label="도메인 추가"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveDomain(index)}
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        aria-label="도메인 삭제"
+                                        disabled={emailDomains.length === 1}
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">도메인은 한 칸에 하나씩 입력하고, 여러 개면 추가 버튼으로 계속 늘릴 수 있습니다.</p>
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3">
