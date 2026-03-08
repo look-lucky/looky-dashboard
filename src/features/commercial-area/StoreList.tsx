@@ -11,6 +11,7 @@ import { ItemService, type UpdateItemRequest } from '../../shared/api/services/I
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
+import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 
@@ -260,7 +261,7 @@ export function StoreList({ universityId }: StoreListProps) {
             branch: selectedStore.branch || '',
             roadAddress: selectedStore.roadAddress,
             jibunAddress: selectedStore.jibunAddress,
-            phone: selectedStore.phone || '',
+            phone: formatKoreanPhoneNumber(selectedStore.phone || ''),
             introduction: selectedStore.introduction || '',
             storeCategories: selectedStore.storeCategories || [],
             latitude: selectedStore.latitude,
@@ -371,6 +372,11 @@ export function StoreList({ universityId }: StoreListProps) {
                 const num = Number(numericValue);
                 return { ...prev, [field]: Number.isNaN(num) ? undefined : num };
             }
+
+            if (field === 'phone') {
+                return { ...prev, phone: formatKoreanPhoneNumber(String(value ?? '')) };
+            }
+
             return { ...prev, [field]: value } as UpdateStoreRequest;
         });
     };
@@ -814,7 +820,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700">전화번호</label>
-                                                            <input type="text" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                            <input type="tel" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} inputMode="numeric" autoComplete="tel-national" maxLength={13} placeholder="010-1234-5678" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                                                         </div>
 
                                                         <div>
@@ -922,7 +928,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <dt className="text-sm font-medium text-gray-500">전화번호</dt>
-                                                    <dd className="text-sm text-gray-900 col-span-2">{selectedStore.phone || '-'}</dd>
+                                                    <dd className="text-sm text-gray-900 col-span-2">{selectedStore.phone ? formatKoreanPhoneNumber(selectedStore.phone) : '-'}</dd>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <dt className="text-sm font-medium text-gray-500">소개</dt>

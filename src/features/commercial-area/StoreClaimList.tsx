@@ -3,6 +3,7 @@ import { StoreClaimService } from '../../shared/api/services/StoreClaimService';
 import type { StoreClaimResponse } from '../../shared/api/models/StoreClaimResponse';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check, X } from 'lucide-react';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
+import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 
 export function StoreClaimList() {
     const [currentTab, setCurrentTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
@@ -299,7 +300,7 @@ export function StoreClaimList() {
                                         </div>
                                         <div className="grid grid-cols-3 gap-4">
                                             <span className="text-sm font-medium text-gray-500">전화번호</span>
-                                            <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storePhone}</span>
+                                            <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storePhone ? formatKoreanPhoneNumber(selectedClaim.storePhone) : '-'}</span>
                                         </div>
                                         {selectedClaim.licenseImageUrl && (
                                             <div className="mt-4">

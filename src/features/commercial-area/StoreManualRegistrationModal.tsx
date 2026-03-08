@@ -11,6 +11,7 @@ import { ItemService } from '../../shared/api/services/ItemService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
+import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 
 interface StoreManualRegistrationModalProps {
@@ -230,6 +231,14 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             return;
         }
 
+        if (name === 'phone') {
+            setFormData(prev => ({
+                ...prev,
+                phone: formatKoreanPhoneNumber(value)
+            }));
+            return;
+        }
+
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -395,12 +404,15 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">전화번호</label>
                                     <input
-                                        type="text"
+                                        type="tel"
                                         name="phone"
                                         value={formData.phone}
                                         onChange={handleChange}
+                                        inputMode="numeric"
+                                        autoComplete="tel-national"
+                                        maxLength={13}
                                         className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                                        placeholder="02-0000-0000"
+                                        placeholder="010-1234-5678"
                                     />
                                 </div>
 
