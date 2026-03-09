@@ -6,7 +6,7 @@ import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
-import { StoreMenuEditor, type MenuCategoryState, type MenuItemState, getMenuCategoryLocalId } from './StoreMenuEditor';
+import { StoreMenuEditor, type MenuCategoryState, type MenuItemState, getMenuCategoryLocalId, getMenuItemLocalId, sortMenuItemsByOrder } from './StoreMenuEditor';
 import { ItemService, type UpdateItemRequest } from '../../shared/api/services/ItemService';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
@@ -254,7 +254,7 @@ export function StoreList({ universityId }: StoreListProps) {
             if (itemsResult.status === 'fulfilled' && itemsResult.value.data) {
                 const categoryIds = new Set(loadedCategories.map((category) => category.id));
 
-                const loadedItems = itemsResult.value.data.map((item) => {
+                const loadedItems = sortMenuItemsByOrder(itemsResult.value.data.map((item) => {
                     if (item.categoryId && !categoryIds.has(item.categoryId)) {
                         loadedCategories.push({
                             id: item.categoryId,
@@ -265,6 +265,7 @@ export function StoreList({ universityId }: StoreListProps) {
                     }
 
                     return {
+                        localId: item.id ? getMenuItemLocalId(item.id) : `legacy-item-${item.name ?? 'menu'}`,
                         id: item.id,
                         name: item.name || '',
                         price: item.price,
@@ -274,7 +275,7 @@ export function StoreList({ universityId }: StoreListProps) {
                         itemOrder: item.itemOrder,
                         imageUrl: item.imageUrl,
                     };
-                });
+                }));
 
                 setMenuItems(loadedItems);
             } else if (itemsResult.status === 'rejected') {
