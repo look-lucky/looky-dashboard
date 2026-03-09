@@ -6,7 +6,7 @@ import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
-import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
+import { StoreMenuEditor, type MenuCategoryState, type MenuItemState, getMenuCategoryLocalId } from './StoreMenuEditor';
 import { ItemService, type UpdateItemRequest } from '../../shared/api/services/ItemService';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
@@ -14,6 +14,7 @@ import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
+import { ItemCategoryService } from '../../shared/api/services/ItemCategoryService';
 
 interface StoreListProps {
     universityId: number;
@@ -65,6 +66,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
     // Menu Items State
     const [menuItems, setMenuItems] = useState<MenuItemState[]>([]);
+    const [menuCategories, setMenuCategories] = useState<MenuCategoryState[]>([]);
 
     // Images State
     const [images, setImages] = useState<File[]>([]);
@@ -219,25 +221,59 @@ export function StoreList({ universityId }: StoreListProps) {
             setImages([]);
             setImagePreviews([]);
             setMenuItems([]);
+            setMenuCategories([]);
 
-            // Try to fetch menu items
-            try {
-                const itemsResponse = await ItemService.getItems(store.id!);
-                if (itemsResponse.data) {
-                    const loadedItems = itemsResponse.data.map(item => ({
+            // Load menu categories and menu items in parallel.
+            const [itemsResult, categoriesResult] = await Promise.allSettled([
+                ItemService.getItems(store.id!),
+                ItemCategoryService.getItemCategories(store.id!),
+            ]);
+
+            const loadedCategories: MenuCategoryState[] = [];
+
+            if (categoriesResult.status === 'fulfilled' && categoriesResult.value.data) {
+                loadedCategories.push(
+                    ...categoriesResult.value.data.map((category) => ({
+                        id: category.id,
+                        localId: getMenuCategoryLocalId(category.id!),
+                        name: category.name || '',
+                    })),
+                );
+            } else if (categoriesResult.status === 'rejected') {
+                console.error('Failed to load menu categories', categoriesResult.reason);
+            }
+
+            if (itemsResult.status === 'fulfilled' && itemsResult.value.data) {
+                const categoryIds = new Set(loadedCategories.map((category) => category.id));
+
+                const loadedItems = itemsResult.value.data.map((item) => {
+                    if (item.categoryId && !categoryIds.has(item.categoryId)) {
+                        loadedCategories.push({
+                            id: item.categoryId,
+                            localId: getMenuCategoryLocalId(item.categoryId),
+                            name: item.categoryName || `카테고리 ${item.categoryId}`,
+                        });
+                        categoryIds.add(item.categoryId);
+                    }
+
+                    return {
                         id: item.id,
                         name: item.name || '',
                         price: item.price,
                         description: item.description,
                         badge: item.badge as MenuItemState['badge'],
+                        categoryLocalId: item.categoryId ? getMenuCategoryLocalId(item.categoryId) : undefined,
                         itemOrder: item.itemOrder,
                         imageUrl: item.imageUrl,
-                    }));
-                    setMenuItems(loadedItems);
-                }
-            } catch (err) {
-                console.error("Failed to load menus", err);
+                    };
+                });
+
+                setMenuItems(loadedItems);
+            } else if (itemsResult.status === 'rejected') {
+                console.error('Failed to load menus', itemsResult.reason);
             }
+
+            setMenuCategories(loadedCategories);
 
         } catch (e) {
             console.error(e);
@@ -252,6 +288,7 @@ export function StoreList({ universityId }: StoreListProps) {
         setImages([]);
         setImagePreviews([]);
         setMenuItems([]);
+        setMenuCategories([]);
     };
 
     const handleEditClick = () => {
@@ -279,6 +316,13 @@ export function StoreList({ universityId }: StoreListProps) {
 
     const handleSave = async () => {
         if (!selectedStore?.id || !editForm) return;
+
+        const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
+        if (invalidMenuCategory) {
+            alert('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
+            return;
+        }
+
         try {
             // Upload new images, preserve existing URLs (non-blob)
             const existingUrls = imagePreviews.filter(url => !url.startsWith('blob:'));
@@ -295,47 +339,115 @@ export function StoreList({ universityId }: StoreListProps) {
 
             await StoreService.updateStore(selectedStore.id, requestData);
 
-            // Process Menu Item changes
-            const promises = menuItems.map(async (item) => {
-                if (item.isDeleted && item.id) {
-                    return ItemService.deleteItem(item.id);
-                } else if (!item.isDeleted && item.id) {
-                    let imageUrl: string | undefined = item.imageUrl;
-                    if (item.imageFile) {
-                        imageUrl = await uploadImage(item.imageFile);
+            let failureCount = 0;
+            const categoryIdMap = new Map<string, number>();
+
+            for (const category of menuCategories) {
+                if (!category.isDeleted && category.id) {
+                    categoryIdMap.set(category.localId, category.id);
+                }
+            }
+
+            const deleteItemResults = await Promise.allSettled(
+                menuItems
+                    .filter((item) => item.isDeleted && item.id)
+                    .map((item) => ItemService.deleteItem(item.id!)),
+            );
+            failureCount += deleteItemResults.filter((result) => result.status === 'rejected').length;
+
+            const categoryUpsertResults = await Promise.allSettled(
+                menuCategories
+                    .filter((category) => !category.isDeleted)
+                    .map(async (category) => {
+                        const trimmedName = category.name.trim();
+
+                        if (category.id) {
+                            await ItemCategoryService.updateItemCategory(selectedStore.id!, category.id, { name: trimmedName });
+                            return;
+                        }
+
+                        const createdCategory = await ItemCategoryService.createItemCategory(selectedStore.id!, { name: trimmedName });
+                        if (typeof createdCategory.data !== 'number') {
+                            throw new Error('Category ID was not returned from createItemCategory.');
+                        }
+
+                        categoryIdMap.set(category.localId, createdCategory.data);
+                    }),
+            );
+            failureCount += categoryUpsertResults.filter((result) => result.status === 'rejected').length;
+
+            const itemResults = await Promise.allSettled(
+                menuItems.map(async (item) => {
+                    if (item.isDeleted) {
+                        return;
                     }
-                    const updateReq: UpdateItemRequest = {
-                        name: item.name,
-                        price: item.price,
-                        description: item.description,
-                        badge: item.badge,
-                        itemOrder: item.itemOrder,
-                        imageUrl,
-                    };
-                    return ItemService.updateItem(item.id, updateReq);
-                } else if (!item.isDeleted && !item.id && item.name.trim() !== '') {
+
+                    const trimmedName = item.name.trim();
+                    if (!item.id && trimmedName === '') {
+                        return;
+                    }
+
+                    const categoryId = item.categoryLocalId
+                        ? categoryIdMap.get(item.categoryLocalId)
+                        : undefined;
+
+                    if (item.categoryLocalId && !categoryId) {
+                        throw new Error(`Failed to resolve category for item "${item.name}".`);
+                    }
+
+                    if (item.id) {
+                        let imageUrl: string | undefined = item.imageUrl;
+                        if (item.imageFile) {
+                            imageUrl = await uploadImage(item.imageFile);
+                        }
+
+                        const updateReq = {
+                            name: item.name,
+                            price: item.price,
+                            description: item.description,
+                            badge: item.badge,
+                            itemOrder: item.itemOrder,
+                            itemCategoryId: categoryId ?? null,
+                            imageUrl,
+                        } satisfies Omit<UpdateItemRequest, 'itemCategoryId'> & { itemCategoryId?: number | null };
+
+                        return ItemService.updateItem(item.id, updateReq as UpdateItemRequest);
+                    }
+
                     let imageUrl: string | undefined;
                     if (item.imageFile) {
                         imageUrl = await uploadImage(item.imageFile);
                     }
+
                     const createReq: CreateItemRequest = {
                         name: item.name,
                         price: item.price,
                         description: item.description,
                         badge: item.badge,
                         itemOrder: item.itemOrder,
+                        itemCategoryId: categoryId,
                         imageUrl,
                     };
                     return ItemService.createItem(selectedStore.id!, createReq);
-                }
-            });
+                }),
+            );
+            failureCount += itemResults.filter((result) => result.status === 'rejected').length;
 
-            const results = await Promise.allSettled(promises);
-            const failedCount = results.filter(r => r.status === 'rejected').length;
+            const deleteCategoryResults = await Promise.allSettled(
+                menuCategories
+                    .filter((category) => category.isDeleted && category.id)
+                    .map((category) => ItemCategoryService.deleteItemCategory(selectedStore.id!, category.id!)),
+            );
+            failureCount += deleteCategoryResults.filter((result) => result.status === 'rejected').length;
 
-            if (failedCount > 0) {
-                console.error('Some menu items failed to save:', results);
-                alert(`상점 정보는 수정되었으나, ${failedCount}개의 메뉴 정보 처리에 실패했습니다.`);
+            if (failureCount > 0) {
+                console.error('Menu/category save failures', {
+                    deleteItemResults,
+                    categoryUpsertResults,
+                    itemResults,
+                    deleteCategoryResults,
+                });
+                alert(`상점 정보는 수정되었으나, 메뉴/카테고리 ${failureCount}건 처리에 실패했습니다.`);
             } else {
                 alert('상점 정보가 수정되었습니다.');
             }
@@ -896,6 +1008,8 @@ export function StoreList({ universityId }: StoreListProps) {
                                                         <StoreMenuEditor
                                                             items={menuItems}
                                                             onChange={setMenuItems}
+                                                            categories={menuCategories}
+                                                            onCategoriesChange={setMenuCategories}
                                                         />
                                                     </div>
                                                 </div>

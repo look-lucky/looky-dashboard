@@ -6,13 +6,14 @@ import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
-import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
+import { StoreMenuEditor, type MenuCategoryState, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
+import { ItemCategoryService } from '../../shared/api/services/ItemCategoryService';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -42,6 +43,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [menuItems, setMenuItems] = useState<MenuItemState[]>([]);
+    const [menuCategories, setMenuCategories] = useState<MenuCategoryState[]>([]);
 
     const [formData, setFormData] = useState<{
         name: string;
@@ -156,6 +158,12 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             return;
         }
 
+        const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
+        if (invalidMenuCategory) {
+            alert('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
+            return;
+        }
+
         setLoading(true);
         try {
             const uploadedImageUrls = images.length > 0 ? await uploadImages(images) : [];
@@ -178,33 +186,69 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
             const storeId = await StoreService.createStore(requestPayload);
 
-            // If menu items exist, save them sequentially
-            const validMenuItems = menuItems.filter(item => !item.isDeleted && item.name.trim() !== '');
-            if (validMenuItems.length > 0 && typeof storeId?.data === 'number') {
-                for (const item of validMenuItems) {
-                    let imageUrl: string | undefined;
-                    if (item.imageFile) {
-                        try {
-                            imageUrl = await uploadImage(item.imageFile);
-                        } catch (uploadErr) {
-                            console.error('Failed to upload item image:', item.name, uploadErr);
-                        }
-                    }
+            const createdStoreId = typeof storeId?.data === 'number' ? storeId.data : undefined;
 
-                    const itemRequest: CreateItemRequest = {
-                        name: item.name,
-                        price: item.price,
-                        description: item.description,
-                        badge: item.badge,
-                        itemOrder: item.itemOrder,
-                        imageUrl,
-                    };
+            const categoryIdMap = new Map<string, number>();
+            if (createdStoreId) {
+                const categoryResults = await Promise.allSettled(
+                    menuCategories
+                        .filter((category) => !category.isDeleted)
+                        .map(async (category) => {
+                            const createdCategory = await ItemCategoryService.createItemCategory(createdStoreId, {
+                                name: category.name.trim(),
+                            });
 
-                    try {
-                        await ItemService.createItem(storeId.data, itemRequest);
-                    } catch (itemErr) {
-                        console.error('Failed to create item:', item.name, itemErr);
-                    }
+                            if (typeof createdCategory.data !== 'number') {
+                                throw new Error('Category ID was not returned from createItemCategory.');
+                            }
+
+                            categoryIdMap.set(category.localId, createdCategory.data);
+                        }),
+                );
+
+                const categoryFailureCount = categoryResults.filter((result) => result.status === 'rejected').length;
+
+                // If menu items exist, save them after categories are prepared.
+                let itemFailureCount = 0;
+
+                const menuItemResults = await Promise.allSettled(
+                    menuItems
+                        .filter(item => !item.isDeleted && item.name.trim() !== '')
+                        .map(async (item) => {
+                            const categoryId = item.categoryLocalId
+                                ? categoryIdMap.get(item.categoryLocalId)
+                                : undefined;
+
+                            if (item.categoryLocalId && !categoryId) {
+                                throw new Error(`Failed to resolve category for item "${item.name}".`);
+                            }
+
+                            let imageUrl: string | undefined;
+                            if (item.imageFile) {
+                                imageUrl = await uploadImage(item.imageFile);
+                            }
+
+                            const itemRequest: CreateItemRequest = {
+                                name: item.name,
+                                price: item.price,
+                                description: item.description,
+                                badge: item.badge,
+                                itemOrder: item.itemOrder,
+                                itemCategoryId: categoryId,
+                                imageUrl,
+                            };
+
+                            await ItemService.createItem(createdStoreId, itemRequest);
+                        }),
+                );
+
+                itemFailureCount = menuItemResults.filter((result) => result.status === 'rejected').length;
+
+                if (categoryFailureCount > 0 || itemFailureCount > 0) {
+                    console.error('Menu/category create failures', { categoryResults, menuItemResults });
+                    alert(`상점은 등록되었으나, 메뉴/카테고리 ${categoryFailureCount + itemFailureCount}건 처리에 실패했습니다.`);
+                    onClose();
+                    return;
                 }
             }
 
@@ -496,6 +540,8 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                         <StoreMenuEditor
                             items={menuItems}
                             onChange={setMenuItems}
+                            categories={menuCategories}
+                            onCategoriesChange={setMenuCategories}
                         />
                     </div>
                 </form>
