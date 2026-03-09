@@ -324,7 +324,8 @@ export function StoreList({ universityId }: StoreListProps) {
         setIsEditMode(true);
     };
 
-    const handleSave = async () => {
+    const handleSave = async (e?: React.FormEvent<HTMLFormElement>) => {
+        e?.preventDefault();
         if (!selectedStore?.id || !editForm) return;
 
         const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
@@ -902,7 +903,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 </div>
                                             </div>
                                         ) : isEditMode ? (
-                                            <>
+                                            <form id="store-edit-form" onSubmit={handleSave}>
                                                 <div className="flex flex-col md:flex-row gap-6 text-left">
                                                     {/* Section 1: Basic Info */}
                                                     <div className="flex-1 space-y-4">
@@ -1057,7 +1058,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                         />
                                                     </div>
                                                 </div>
-                                            </>
+                                            </form>
                                         ) : (
                                             <dl className="space-y-4">
                                                 <div className="grid grid-cols-3 gap-4">
@@ -1103,8 +1104,8 @@ export function StoreList({ universityId }: StoreListProps) {
                                     {isEditMode ? (
                                         <>
                                             <button
-                                                type="button"
-                                                onClick={handleSave}
+                                                type="submit"
+                                                form="store-edit-form"
                                                 className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
                                             >
                                                 <Save className="w-4 h-4 mr-2" />

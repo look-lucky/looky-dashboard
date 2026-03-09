@@ -193,7 +193,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         closeCurrentCrop();
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!formData.name || !formData.address) {
             alert('필수 정보를 입력해주세요.');
@@ -210,8 +210,9 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         try {
             const uploadedImageUrls = images.length > 0 ? await uploadImages(images) : [];
 
-            const requestPayload: CreateStoreRequest = {
+            const requestPayload: CreateStoreRequest & { branch?: string } = {
                 name: formData.name,
+                branch: formData.branch.trim() || undefined,
                 roadAddress: formData.address,
                 jibunAddress: formData.jibunAddress,
                 storeCategories: formData.storeCategories,
@@ -366,7 +367,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
+                <form id="manual-store-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
                     {/* University Selection */}
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">대학 선택 (복수 선택 가능)</label>
@@ -599,7 +600,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     </button>
                     <button
                         type="submit"
-                        onClick={handleSubmit}
+                        form="manual-store-form"
                         className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
                         disabled={loading}
                     >
