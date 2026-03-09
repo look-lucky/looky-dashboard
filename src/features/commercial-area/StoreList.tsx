@@ -15,6 +15,7 @@ import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 import { ItemCategoryService } from '../../shared/api/services/ItemCategoryService';
+import { ImageCropper } from '../../shared/components/ImageCropper';
 
 interface StoreListProps {
     universityId: number;
@@ -34,6 +35,12 @@ const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as StoreCategory[];
 type StoreCategory = NonNullable<UpdateStoreRequest['storeCategories']>[number];
 type StoreStatusFilter = '' | 'UNCLAIMED' | 'ACTIVE' | 'BANNED';
 type PartnershipFilter = 'all' | 'yes' | 'no';
+
+interface PendingStoreImageCrop {
+    fileName: string;
+    fileType: string;
+    src: string;
+}
 
 export function StoreList({ universityId }: StoreListProps) {
     const [stores, setStores] = useState<StoreResponse[]>([]);
@@ -71,6 +78,7 @@ export function StoreList({ universityId }: StoreListProps) {
     // Images State
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [cropQueue, setCropQueue] = useState<PendingStoreImageCrop[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Address Search State
@@ -282,6 +290,7 @@ export function StoreList({ universityId }: StoreListProps) {
     };
 
     const closeModal = () => {
+        cropQueue.forEach(({ src }) => URL.revokeObjectURL(src));
         setSelectedStore(null);
         setIsEditMode(false);
         setDeleteConfirm(false);
@@ -289,6 +298,7 @@ export function StoreList({ universityId }: StoreListProps) {
         setImagePreviews([]);
         setMenuItems([]);
         setMenuCategories([]);
+        setCropQueue([]);
     };
 
     const handleEditClick = () => {
@@ -493,13 +503,35 @@ export function StoreList({ universityId }: StoreListProps) {
         });
     };
 
+    const currentCrop = cropQueue[0] ?? null;
+
+    const enqueueImageCrops = (files: File[]) => {
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
+
+        setCropQueue((prev) => [
+            ...prev,
+            ...imageFiles.map((file) => ({
+                fileName: file.name,
+                fileType: file.type,
+                src: URL.createObjectURL(file),
+            })),
+        ]);
+    };
+
+    const closeCurrentCrop = () => {
+        if (!currentCrop) return;
+        URL.revokeObjectURL(currentCrop.src);
+        setCropQueue((prev) => prev.slice(1));
+    };
+
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
-            setImages(prev => [...prev, ...newFiles]);
+            enqueueImageCrops(Array.from(e.target.files));
+        }
 
-            const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+        if (e.target) {
+            e.target.value = '';
         }
     };
 
@@ -533,9 +565,7 @@ export function StoreList({ universityId }: StoreListProps) {
         if (!e.clipboardData?.files.length) return;
         const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
         if (pastedFiles.length > 0) {
-            setImages(prev => [...prev, ...pastedFiles]);
-            const newPreviews = pastedFiles.map(file => URL.createObjectURL(file));
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+            enqueueImageCrops(pastedFiles);
         }
     };
 
@@ -546,9 +576,7 @@ export function StoreList({ universityId }: StoreListProps) {
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (newFiles.length > 0) {
-                setImages(prev => [...prev, ...newFiles]);
-                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-                setImagePreviews(prev => [...prev, ...newPreviews]);
+                enqueueImageCrops(newFiles);
             }
         }
     };
@@ -556,6 +584,22 @@ export function StoreList({ universityId }: StoreListProps) {
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+    };
+
+    const handleCropComplete = (croppedImageUrl: string, blob: Blob) => {
+        if (!currentCrop) return;
+
+        const croppedFile = new File([blob], currentCrop.fileName, {
+            type: blob.type || currentCrop.fileType || 'image/jpeg',
+        });
+
+        setImages((prev) => [...prev, croppedFile]);
+        setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        closeCurrentCrop();
+    };
+
+    const handleCropCancel = () => {
+        closeCurrentCrop();
     };
 
     const handleCategoryToggle = (category: StoreCategory) => {
@@ -952,7 +996,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                         <div>
                                                             <div className="flex justify-between items-center mb-2">
                                                                 <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
-                                                                <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 됩니다.</span>
+                                                                <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 새 이미지는 4:3으로 크롭됩니다.</span>
                                                             </div>
 
                                                             <div
@@ -976,7 +1020,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                             {imagePreviews.length > 0 && (
                                                                 <div className="mt-3 grid grid-cols-4 gap-2">
                                                                     {imagePreviews.map((preview, idx) => (
-                                                                        <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                                        <div key={idx} className="relative aspect-[4/3] rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
                                                                             <img src={preview} alt="preview" className="w-full h-full object-cover" />
                                                                             <div className="absolute top-1 left-1">
                                                                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-600/80'}`}>
@@ -1114,6 +1158,15 @@ export function StoreList({ universityId }: StoreListProps) {
                 onClose={() => setIsAddressModalOpen(false)}
                 onComplete={handleAddressComplete}
             />
+
+            {currentCrop && (
+                <ImageCropper
+                    imageSrc={currentCrop.src}
+                    aspectRatio={4 / 3}
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                />
+            )}
         </div>
     );
 }
