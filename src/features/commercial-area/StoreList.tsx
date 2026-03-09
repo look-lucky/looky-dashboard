@@ -820,7 +820,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700">전화번호</label>
-                                                            <input type="tel" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} inputMode="numeric" autoComplete="tel-national" maxLength={13} placeholder="010-1234-5678" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                            <input type="tel" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} inputMode="numeric" autoComplete="tel-national" maxLength={14} placeholder="010-1234-5678" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                                                         </div>
 
                                                         <div>
