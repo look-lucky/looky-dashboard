@@ -1,6 +1,4 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { AuthService } from './services/AuthService';
-import { OpenAPI } from './core/OpenAPI';
 import { useAuthStore } from '../lib/auth/authStore';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
@@ -70,16 +68,9 @@ export const setupInterceptors = () => {
                 isRefreshing = true;
 
                 try {
-                    // 리프레시 토큰 요청
-                    const response = await AuthService.refresh();
+                    const accessToken = await useAuthStore.getState().refreshAccessToken();
 
-                    if (response.isSuccess && response.data?.accessToken) {
-                        const { accessToken } = response.data;
-
-                        // 토큰 저장 및 상태 업데이트
-                        OpenAPI.TOKEN = accessToken;
-                        useAuthStore.getState().login(accessToken);
-
+                    if (accessToken) {
                         // 오리지널 요청 헤더 업데이트
                         originalRequest.headers = originalRequest.headers ?? {};
                         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -95,8 +86,6 @@ export const setupInterceptors = () => {
                 } catch (refreshError: unknown) {
                     // 리프레시 실패 시 로그아웃 및 큐 에러 처리
                     processQueue(refreshError, null);
-                    useAuthStore.getState().logout();
-                    window.location.href = '/login'; // 로그인 페이지로 리다이렉트
                     return Promise.reject(refreshError);
                 } finally {
                     isRefreshing = false;
