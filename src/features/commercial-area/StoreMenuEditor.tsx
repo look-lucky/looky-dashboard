@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GripVertical, Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
 type BadgeType = 'BEST' | 'NEW' | 'HOT' | 'VEGAN';
@@ -181,6 +181,21 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
         onChange(buildOrderedMenuItems(reorderedItems, deletedItems));
     };
 
+    const moveMenuItemByOffset = (localId: string, offset: -1 | 1) => {
+        const sourceIndex = visibleItems.findIndex((item) => item.localId === localId);
+        const targetIndex = sourceIndex + offset;
+
+        if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= visibleItems.length) {
+            return;
+        }
+
+        const reorderedItems = [...visibleItems];
+        const [movedItem] = reorderedItems.splice(sourceIndex, 1);
+        reorderedItems.splice(targetIndex, 0, movedItem);
+
+        onChange(buildOrderedMenuItems(reorderedItems, deletedItems));
+    };
+
     const handleItemDragStart = (e: React.DragEvent, localId: string) => {
         setDraggedItemLocalId(localId);
         e.dataTransfer.effectAllowed = 'move';
@@ -353,6 +368,28 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                                 <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Order</span>
                                 <span className="text-sm font-bold text-indigo-600">{visibleIndex + 1}</span>
                             </div>
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => moveMenuItemByOffset(item.localId, -1)}
+                                    disabled={visibleIndex === 0}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title="위로 이동"
+                                    aria-label={`메뉴 순서 ${visibleIndex + 1} 위로 이동`}
+                                >
+                                    <ArrowUp className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => moveMenuItemByOffset(item.localId, 1)}
+                                    disabled={visibleIndex === visibleItems.length - 1}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title="아래로 이동"
+                                    aria-label={`메뉴 순서 ${visibleIndex + 1} 아래로 이동`}
+                                >
+                                    <ArrowDown className="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
 
                         <div
@@ -490,7 +527,7 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
 
             {visibleItems.length > 1 && (
                 <p className="text-xs text-center text-gray-500">
-                    왼쪽 핸들을 드래그해서 메뉴 순서를 조정할 수 있습니다.
+                    왼쪽 이동 버튼이나 드래그로 메뉴 순서를 조정할 수 있습니다.
                 </p>
             )}
 
