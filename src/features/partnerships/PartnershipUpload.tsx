@@ -76,9 +76,18 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
             }
             alert('업로드가 완료되었습니다.');
             onSuccess();
-        } catch (err) {
-            console.error(err);
-            setError('업로드 중 오류가 발생했습니다.');
+        } catch (err: any) {
+            console.error('Upload Error:', err);
+            
+            // API에서 발생한 상세 에러 메시지 추출
+            const responseData = err.body || err.response?.data;
+            const apiMessage = responseData?.data?.message || responseData?.message;
+            
+            if (apiMessage) {
+                setError(apiMessage);
+            } else {
+                setError('업로드 중 오류가 발생했습니다.');
+            }
         } finally {
             setUploading(false);
         }
@@ -185,7 +194,12 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
                 </button>
             </div>
 
-            {error && <p className="text-sm text-red-500 flex items-center mb-2"><AlertCircle className="w-4 h-4 mr-1" />{error}</p>}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start text-sm text-red-600 mt-2 mb-2">
+                    <AlertCircle className="w-4 h-4 mr-2 mt-0.5 shrink-0" />
+                    <span className="whitespace-pre-wrap flex-1">{error}</span>
+                </div>
+            )}
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-700 font-medium mb-1 flex items-center gap-1">
