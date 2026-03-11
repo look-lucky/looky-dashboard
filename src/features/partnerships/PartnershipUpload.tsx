@@ -3,6 +3,9 @@ import { useState, useRef, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import { OrganizationService } from '../../shared/api/services/OrganizationService';
 import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
+import { useAuthStore } from '../../shared/lib/auth/authStore';
+import { OpenAPI } from '../../shared/api/core/OpenAPI';
+import axios from 'axios';
 
 interface PartnershipUploadProps {
     universityId: number | null;
@@ -89,8 +92,15 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
 
         setLoadingTemplate(true);
         try {
-            const blob = await AdminPartnershipService.exportPartnershipTemplate(universityId);
-            const blobData = new Blob([blob]);
+            const token = useAuthStore.getState().accessToken;
+            const response = await axios.get(`${OpenAPI.BASE}/api/admin/partnerships/template`, {
+                params: { universityId },
+                headers: {
+                    Authorization: token ? `Bearer ${token}` : '',
+                },
+                responseType: 'blob',
+            });
+            const blobData = new Blob([response.data]);
             const url = window.URL.createObjectURL(blobData);
             const link = document.createElement('a');
             link.href = url;
