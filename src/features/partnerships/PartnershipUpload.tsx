@@ -33,7 +33,19 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
             setLoadingOrgs(true);
             try {
                 const response = await OrganizationService.getOrganizations(universityId);
-                setOrganizations(response.data || []);
+                const rawOrgs = response.data || [];
+                // 카테고리별 가나다순, 동일 카테고리 내에서는 조직명 가나다순 정렬
+                const sortedOrgs = rawOrgs.sort((a, b) => {
+                    const catA = a.category || '';
+                    const catB = b.category || '';
+                    if (catA === catB) {
+                        const nameA = a.name || '';
+                        const nameB = b.name || '';
+                        return nameA.localeCompare(nameB, 'ko');
+                    }
+                    return catA.localeCompare(catB, 'ko');
+                });
+                setOrganizations(sortedOrgs);
                 setSelectedOrganizationId('');
             } catch (err) {
                 console.error('Failed to fetch organizations', err);
