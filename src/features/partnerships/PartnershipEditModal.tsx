@@ -12,8 +12,8 @@ interface PartnershipEditModalProps {
 
 export function PartnershipEditModal({ partnership, onClose, onSuccess }: PartnershipEditModalProps) {
     const [benefit, setBenefit] = useState(partnership.benefit || '');
-    const [startsAt, setStartsAt] = useState('');
-    const [endsAt, setEndsAt] = useState('');
+    const [startsAt, setStartsAt] = useState(partnership.startsAt || '');
+    const [endsAt, setEndsAt] = useState(partnership.endsAt || '');
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async () => {
