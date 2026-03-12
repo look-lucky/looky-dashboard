@@ -37,6 +37,8 @@ interface PendingStoreImageCrop {
     fileName: string;
     fileType: string;
     src: string;
+    aspectRatio: number;
+    type: 'profile' | 'normal';
 }
 
 export function StoreManualRegistrationModal({ onClose }: StoreManualRegistrationModalProps) {
@@ -44,6 +46,10 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
     const [loading, setLoading] = useState(false);
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
+    const [profileImage, setProfileImage] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+    const profileFileInputRef = useRef<HTMLInputElement>(null);
 
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -109,7 +115,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
     const currentCrop = cropQueue[0] ?? null;
 
-    const enqueueImageCrops = (files: File[]) => {
+    const enqueueImageCrops = (files: File[], type: 'profile' | 'normal') => {
         const imageFiles = files.filter((file) => file.type.startsWith('image/'));
         if (imageFiles.length === 0) return;
 
@@ -119,6 +125,8 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 fileName: file.name,
                 fileType: file.type,
                 src: URL.createObjectURL(file),
+                aspectRatio: type === 'profile' ? 1 : 4 / 3,
+                type,
             })),
         ]);
     };
@@ -129,13 +137,30 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         setCropQueue((prev) => prev.slice(1));
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            enqueueImageCrops([e.target.files[0]], 'profile');
+        }
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const handleNormalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            enqueueImageCrops(Array.from(e.target.files));
+            enqueueImageCrops(Array.from(e.target.files), 'normal');
         }
 
         if (e.target) {
             e.target.value = '';
+        }
+    };
+
+    const removeProfileImage = () => {
+        setProfileImage(null);
+        if (profileImagePreview) {
+            URL.revokeObjectURL(profileImagePreview);
+            setProfileImagePreview(null);
         }
     };
 
@@ -149,7 +174,11 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         });
     };
 
-    const handleImageClick = () => {
+    const handleProfileImageClick = () => {
+        profileFileInputRef.current?.click();
+    };
+
+    const handleNormalImageClick = () => {
         fileInputRef.current?.click();
     };
 
@@ -157,17 +186,28 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         if (!e.clipboardData?.files.length) return;
         const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
         if (pastedFiles.length > 0) {
-            enqueueImageCrops(pastedFiles);
+            enqueueImageCrops(pastedFiles, 'normal');
         }
     };
 
-    const handleImagesDrop = (e: React.DragEvent) => {
+    const handleProfileImageDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (newFiles.length > 0) {
-                enqueueImageCrops(newFiles);
+                enqueueImageCrops([newFiles[0]], 'profile');
+            }
+        }
+    };
+
+    const handleNormalImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) {
+                enqueueImageCrops(newFiles, 'normal');
             }
         }
     };
@@ -184,8 +224,13 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
             type: blob.type || currentCrop.fileType || 'image/jpeg',
         });
 
-        setImages((prev) => [...prev, croppedFile]);
-        setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        if (currentCrop.type === 'profile') {
+            setProfileImage(croppedFile);
+            setProfileImagePreview(croppedImageUrl);
+        } else {
+            setImages((prev) => [...prev, croppedFile]);
+            setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        }
         closeCurrentCrop();
     };
 
@@ -208,6 +253,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
         setLoading(true);
         try {
+            const uploadedProfileImageUrl = profileImage ? await uploadImage(profileImage) : undefined;
             const uploadedImageUrls = images.length > 0 ? await uploadImages(images) : [];
 
             const requestPayload: CreateStoreRequest & { branch?: string } = {
@@ -223,7 +269,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 operatingHours: formData.operatingHours,
                 storeMoods: [],
                 universityIds: formData.universityIds,
-                profileImageUrl: uploadedImageUrls[0],
+                profileImageUrl: uploadedProfileImageUrl ?? uploadedImageUrls[0],
                 imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
             };
 
@@ -525,19 +571,56 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
                                 {/* Images Upload */}
                                 <div>
+                                    <div className="mb-6">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="block text-sm font-medium text-gray-700">가게 프로필 이미지</label>
+                                            <span className="text-xs text-gray-500">1:1 비율로 크롭됩니다.</span>
+                                        </div>
+                                        
+                                        {!profileImagePreview ? (
+                                            <div
+                                                onClick={handleProfileImageClick}
+                                                onDrop={handleProfileImageDrop}
+                                                onDragOver={handleDragOver}
+                                                className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center justify-center aspect-square w-32"
+                                            >
+                                                <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                                                <p className="text-[10px] text-gray-600">클릭 또는 드래그</p>
+                                            </div>
+                                        ) : (
+                                            <div className="relative aspect-square w-32 rounded-lg overflow-hidden border border-gray-200 group">
+                                                <img src={profileImagePreview} alt="profile preview" className="w-full h-full object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); removeProfileImage(); }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            ref={profileFileInputRef}
+                                            onChange={handleProfileImageChange}
+                                        />
+                                    </div>
+
                                     <div className="flex justify-between items-center mb-2">
                                         <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
-                                        <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 새 이미지는 4:3으로 크롭됩니다.</span>
+                                        <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 4:3 비율로 크롭됩니다.</span>
                                     </div>
 
                                     <div
-                                        onClick={handleImageClick}
-                                        onDrop={handleImagesDrop}
+                                        onClick={handleNormalImageClick}
+                                        onDrop={handleNormalImagesDrop}
                                         onDragOver={handleDragOver}
                                         className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                                     >
                                         <Upload className="mx-auto h-6 w-6 text-gray-400 mb-2" />
-                                        <p className="text-sm text-gray-600">클릭하거나 이미지를 드래그 앤 드롭해서 업로드하세요</p>
+                                        <p className="text-sm text-gray-600">클릭하거나 일반 이미지를 드래그 앤 드롭해서 업로드하세요</p>
                                     </div>
                                     <input
                                         type="file"
@@ -545,7 +628,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         accept="image/*"
                                         className="hidden"
                                         ref={fileInputRef}
-                                        onChange={handleImageChange}
+                                        onChange={handleNormalImageChange}
                                     />
 
                                     {imagePreviews.length > 0 && (
@@ -624,7 +707,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 {currentCrop && (
                     <ImageCropper
                         imageSrc={currentCrop.src}
-                        aspectRatio={4 / 3}
+                        aspectRatio={currentCrop.aspectRatio}
                         onCropComplete={handleCropComplete}
                         onCancel={handleCropCancel}
                     />

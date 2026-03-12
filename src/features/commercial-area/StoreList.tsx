@@ -40,6 +40,8 @@ interface PendingStoreImageCrop {
     fileName: string;
     fileType: string;
     src: string;
+    aspectRatio: number;
+    type: 'profile' | 'normal';
 }
 
 export function StoreList({ universityId }: StoreListProps) {
@@ -76,6 +78,10 @@ export function StoreList({ universityId }: StoreListProps) {
     const [menuCategories, setMenuCategories] = useState<MenuCategoryState[]>([]);
 
     // Images State
+    const [profileImage, setProfileImage] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+    const profileFileInputRef = useRef<HTMLInputElement>(null);
+
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [cropQueue, setCropQueue] = useState<PendingStoreImageCrop[]>([]);
@@ -295,6 +301,8 @@ export function StoreList({ universityId }: StoreListProps) {
         setSelectedStore(null);
         setIsEditMode(false);
         setDeleteConfirm(false);
+        setProfileImage(null);
+        setProfileImagePreview(null);
         setImages([]);
         setImagePreviews([]);
         setMenuItems([]);
@@ -318,6 +326,9 @@ export function StoreList({ universityId }: StoreListProps) {
             profileImageUrl: selectedStore.profileImageUrl
         });
 
+        setProfileImage(null);
+        setProfileImagePreview(selectedStore.profileImageUrl || null);
+
         const existingImages = selectedStore.imageUrls || [];
         setImagePreviews(existingImages);
         setImages([]);
@@ -336,6 +347,15 @@ export function StoreList({ universityId }: StoreListProps) {
         }
 
         try {
+            let uploadedProfileImageUrl: string | undefined = editForm.profileImageUrl;
+            if (profileImage) {
+                uploadedProfileImageUrl = await uploadImage(profileImage);
+            } else if (profileImagePreview && !profileImagePreview.startsWith('blob:')) {
+                uploadedProfileImageUrl = profileImagePreview;
+            } else if (!profileImagePreview) {
+                uploadedProfileImageUrl = undefined;
+            }
+
             // Upload new images, preserve existing URLs (non-blob)
             const existingUrls = imagePreviews.filter(url => !url.startsWith('blob:'));
             const newImageUrls = images.length > 0 ? await uploadImages(images) : [];
@@ -343,7 +363,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
             const requestData: UpdateStoreRequest = {
                 ...editForm,
-                profileImageUrl: allImageUrls[0],
+                profileImageUrl: uploadedProfileImageUrl ?? allImageUrls[0],
                 imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
             };
             if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = undefined;
@@ -507,7 +527,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
     const currentCrop = cropQueue[0] ?? null;
 
-    const enqueueImageCrops = (files: File[]) => {
+    const enqueueImageCrops = (files: File[], type: 'profile' | 'normal') => {
         const imageFiles = files.filter((file) => file.type.startsWith('image/'));
         if (imageFiles.length === 0) return;
 
@@ -517,6 +537,8 @@ export function StoreList({ universityId }: StoreListProps) {
                 fileName: file.name,
                 fileType: file.type,
                 src: URL.createObjectURL(file),
+                aspectRatio: type === 'profile' ? 1 : 4 / 3,
+                type,
             })),
         ]);
     };
@@ -527,13 +549,30 @@ export function StoreList({ universityId }: StoreListProps) {
         setCropQueue((prev) => prev.slice(1));
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            enqueueImageCrops([e.target.files[0]], 'profile');
+        }
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const handleNormalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            enqueueImageCrops(Array.from(e.target.files));
+            enqueueImageCrops(Array.from(e.target.files), 'normal');
         }
 
         if (e.target) {
             e.target.value = '';
+        }
+    };
+
+    const removeProfileImage = () => {
+        setProfileImage(null);
+        if (profileImagePreview) {
+            URL.revokeObjectURL(profileImagePreview);
+            setProfileImagePreview(null);
         }
     };
 
@@ -558,7 +597,11 @@ export function StoreList({ universityId }: StoreListProps) {
         }
     };
 
-    const handleImageClick = () => {
+    const handleProfileImageClick = () => {
+        profileFileInputRef.current?.click();
+    };
+
+    const handleNormalImageClick = () => {
         fileInputRef.current?.click();
     };
 
@@ -567,18 +610,30 @@ export function StoreList({ universityId }: StoreListProps) {
         if (!e.clipboardData?.files.length) return;
         const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
         if (pastedFiles.length > 0) {
-            enqueueImageCrops(pastedFiles);
+            enqueueImageCrops(pastedFiles, 'normal');
         }
     };
 
-    const handleImagesDrop = (e: React.DragEvent) => {
+    const handleProfileImagesDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!isEditMode) return;
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (newFiles.length > 0) {
-                enqueueImageCrops(newFiles);
+                enqueueImageCrops([newFiles[0]], 'profile');
+            }
+        }
+    };
+
+    const handleNormalImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isEditMode) return;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) {
+                enqueueImageCrops(newFiles, 'normal');
             }
         }
     };
@@ -595,8 +650,13 @@ export function StoreList({ universityId }: StoreListProps) {
             type: blob.type || currentCrop.fileType || 'image/jpeg',
         });
 
-        setImages((prev) => [...prev, croppedFile]);
-        setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        if (currentCrop.type === 'profile') {
+            setProfileImage(croppedFile);
+            setProfileImagePreview(croppedImageUrl);
+        } else {
+            setImages((prev) => [...prev, croppedFile]);
+            setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        }
         closeCurrentCrop();
     };
 
@@ -996,19 +1056,56 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                         {/* Images Upload */}
                                                         <div>
+                                                            <div className="mb-6">
+                                                                <div className="flex justify-between items-center mb-2">
+                                                                    <label className="block text-sm font-medium text-gray-700">가게 프로필 이미지</label>
+                                                                    <span className="text-xs text-gray-500">1:1 비율로 크롭됩니다.</span>
+                                                                </div>
+                                                                
+                                                                {!profileImagePreview ? (
+                                                                    <div
+                                                                        onClick={handleProfileImageClick}
+                                                                        onDrop={handleProfileImagesDrop}
+                                                                        onDragOver={handleDragOver}
+                                                                        className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center justify-center aspect-square w-24"
+                                                                    >
+                                                                        <Upload className="h-5 w-5 text-gray-400 mb-1" />
+                                                                        <p className="text-[10px] text-gray-600">클릭 또는 드래그</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="relative aspect-square w-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                                        <img src={profileImagePreview} alt="profile preview" className="w-full h-full object-cover" />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); removeProfileImage(); }}
+                                                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    className="hidden"
+                                                                    ref={profileFileInputRef}
+                                                                    onChange={handleProfileImageChange}
+                                                                />
+                                                            </div>
+
                                                             <div className="flex justify-between items-center mb-2">
                                                                 <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
-                                                                <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 새 이미지는 4:3으로 크롭됩니다.</span>
+                                                                <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 4:3 비율로 크롭됩니다.</span>
                                                             </div>
 
                                                             <div
-                                                                onClick={handleImageClick}
-                                                                onDrop={handleImagesDrop}
+                                                                onClick={handleNormalImageClick}
+                                                                onDrop={handleNormalImagesDrop}
                                                                 onDragOver={handleDragOver}
                                                                 className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                                                             >
                                                                 <Upload className="mx-auto h-5 w-5 text-gray-400 mb-1" />
-                                                                <p className="text-xs text-gray-600">클릭하거나 이미지를 드래그 앤 드롭해서 업로드하세요</p>
+                                                                <p className="text-xs text-gray-600">클릭하거나 일반 이미지를 드래그 앤 드롭해서 업로드하세요</p>
                                                             </div>
                                                             <input
                                                                 type="file"
@@ -1016,7 +1113,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                                 accept="image/*"
                                                                 className="hidden"
                                                                 ref={fileInputRef}
-                                                                onChange={handleImageChange}
+                                                                onChange={handleNormalImageChange}
                                                             />
 
                                                             {imagePreviews.length > 0 && (
@@ -1164,7 +1261,7 @@ export function StoreList({ universityId }: StoreListProps) {
             {currentCrop && (
                 <ImageCropper
                     imageSrc={currentCrop.src}
-                    aspectRatio={4 / 3}
+                    aspectRatio={currentCrop.aspectRatio}
                     onCropComplete={handleCropComplete}
                     onCancel={handleCropCancel}
                 />
