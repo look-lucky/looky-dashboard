@@ -3,6 +3,9 @@ import { useState, useRef, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import { OrganizationService } from '../../shared/api/services/OrganizationService';
 import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
+import { useAuthStore } from '../../shared/lib/auth/authStore';
+import { OpenAPI } from '../../shared/api/core/OpenAPI';
+import axios from 'axios';
 
 interface PartnershipUploadProps {
     universityId: number | null;
@@ -30,7 +33,19 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
             setLoadingOrgs(true);
             try {
                 const response = await OrganizationService.getOrganizations(universityId);
-                setOrganizations(response.data || []);
+                const rawOrgs = response.data || [];
+                // 카테고리별 가나다순, 동일 카테고리 내에서는 조직명 가나다순 정렬
+                const sortedOrgs = rawOrgs.sort((a, b) => {
+                    const catA = a.category || '';
+                    const catB = b.category || '';
+                    if (catA === catB) {
+                        const nameA = a.name || '';
+                        const nameB = b.name || '';
+                        return nameA.localeCompare(nameB, 'ko');
+                    }
+                    return catA.localeCompare(catB, 'ko');
+                });
+                setOrganizations(sortedOrgs);
                 setSelectedOrganizationId('');
             } catch (err) {
                 console.error('Failed to fetch organizations', err);
@@ -73,9 +88,18 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
             }
             alert('업로드가 완료되었습니다.');
             onSuccess();
-        } catch (err) {
-            console.error(err);
-            setError('업로드 중 오류가 발생했습니다.');
+        } catch (err: any) {
+            console.error('Upload Error:', err);
+            
+            // API에서 발생한 상세 에러 메시지 추출
+            const responseData = err.body || err.response?.data;
+            const apiMessage = responseData?.data?.message || responseData?.message;
+            
+            if (apiMessage) {
+                setError(apiMessage);
+            } else {
+                setError('업로드 중 오류가 발생했습니다.');
+            }
         } finally {
             setUploading(false);
         }
@@ -89,8 +113,15 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
 
         setLoadingTemplate(true);
         try {
-            const blob = await AdminPartnershipService.exportPartnershipTemplate(universityId);
-            const blobData = new Blob([blob]);
+            const token = useAuthStore.getState().accessToken;
+            const response = await axios.get(`${OpenAPI.BASE}/api/admin/partnerships/template`, {
+                params: { universityId },
+                headers: {
+                    Authorization: token ? `Bearer ${token}` : '',
+                },
+                responseType: 'blob',
+            });
+            const blobData = new Blob([response.data]);
             const url = window.URL.createObjectURL(blobData);
             const link = document.createElement('a');
             link.href = url;
@@ -175,7 +206,12 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
                 </button>
             </div>
 
-            {error && <p className="text-sm text-red-500 flex items-center mb-2"><AlertCircle className="w-4 h-4 mr-1" />{error}</p>}
+            {error && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start text-sm text-red-600 mt-2 mb-2">
+                    <AlertCircle className="w-4 h-4 mr-2 mt-0.5 shrink-0" />
+                    <span className="whitespace-pre-wrap flex-1">{error}</span>
+                </div>
+            )}
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-700 font-medium mb-1 flex items-center gap-1">

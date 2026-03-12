@@ -1,12 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../../shared/lib/auth/authStore';
-import { getRefreshDelayMs, isTokenExpired, refreshAccessToken } from '../../shared/lib/auth/tokenSession';
 
 export function AuthSessionManager() {
     const accessToken = useAuthStore((state) => state.accessToken);
     const setAuthReady = useAuthStore((state) => state.setAuthReady);
+    const refreshAccessToken = useAuthStore((state) => state.refreshAccessToken);
     const bootstrappedRef = useRef(false);
-    const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -19,7 +18,7 @@ export function AuthSessionManager() {
 
         const bootstrapAuth = async () => {
             try {
-                if (!accessToken || isTokenExpired(accessToken, 30)) {
+                if (!accessToken) {
                     await refreshAccessToken();
                 }
             } catch {
@@ -36,36 +35,7 @@ export function AuthSessionManager() {
         return () => {
             cancelled = true;
         };
-    }, [accessToken, setAuthReady]);
-
-    useEffect(() => {
-        if (refreshTimerRef.current) {
-            clearTimeout(refreshTimerRef.current);
-            refreshTimerRef.current = null;
-        }
-
-        if (!accessToken) {
-            return;
-        }
-
-        const delayMs = getRefreshDelayMs(accessToken, 60);
-
-        if (delayMs === 0) {
-            void refreshAccessToken().catch(() => undefined);
-            return;
-        }
-
-        refreshTimerRef.current = setTimeout(() => {
-            void refreshAccessToken().catch(() => undefined);
-        }, delayMs);
-
-        return () => {
-            if (refreshTimerRef.current) {
-                clearTimeout(refreshTimerRef.current);
-                refreshTimerRef.current = null;
-            }
-        };
-    }, [accessToken]);
+    }, [accessToken, refreshAccessToken, setAuthReady]);
 
     return null;
 }

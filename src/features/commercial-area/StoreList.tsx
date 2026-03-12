@@ -6,7 +6,7 @@ import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminService } from '../../shared/api/services/AdminService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
-import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
+import { StoreMenuEditor, type MenuCategoryState, type MenuItemState, getMenuCategoryLocalId, getMenuItemLocalId, sortMenuItemsByOrder } from './StoreMenuEditor';
 import { ItemService, type UpdateItemRequest } from '../../shared/api/services/ItemService';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
@@ -14,6 +14,8 @@ import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
+import { ItemCategoryService } from '../../shared/api/services/ItemCategoryService';
+import { ImageCropper } from '../../shared/components/ImageCropper';
 
 interface StoreListProps {
     universityId: number;
@@ -33,6 +35,14 @@ const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as StoreCategory[];
 type StoreCategory = NonNullable<UpdateStoreRequest['storeCategories']>[number];
 type StoreStatusFilter = '' | 'UNCLAIMED' | 'ACTIVE' | 'BANNED';
 type PartnershipFilter = 'all' | 'yes' | 'no';
+
+interface PendingStoreImageCrop {
+    fileName: string;
+    fileType: string;
+    src: string;
+    aspectRatio: number;
+    type: 'profile' | 'normal';
+}
 
 export function StoreList({ universityId }: StoreListProps) {
     const [stores, setStores] = useState<StoreResponse[]>([]);
@@ -65,10 +75,16 @@ export function StoreList({ universityId }: StoreListProps) {
 
     // Menu Items State
     const [menuItems, setMenuItems] = useState<MenuItemState[]>([]);
+    const [menuCategories, setMenuCategories] = useState<MenuCategoryState[]>([]);
 
     // Images State
+    const [profileImage, setProfileImage] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+    const profileFileInputRef = useRef<HTMLInputElement>(null);
+
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [cropQueue, setCropQueue] = useState<PendingStoreImageCrop[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Address Search State
@@ -219,25 +235,60 @@ export function StoreList({ universityId }: StoreListProps) {
             setImages([]);
             setImagePreviews([]);
             setMenuItems([]);
+            setMenuCategories([]);
 
-            // Try to fetch menu items
-            try {
-                const itemsResponse = await ItemService.getItems(store.id!);
-                if (itemsResponse.data) {
-                    const loadedItems = itemsResponse.data.map(item => ({
+            // Load menu categories and menu items in parallel.
+            const [itemsResult, categoriesResult] = await Promise.allSettled([
+                ItemService.getItems(store.id!),
+                ItemCategoryService.getItemCategories(store.id!),
+            ]);
+
+            const loadedCategories: MenuCategoryState[] = [];
+
+            if (categoriesResult.status === 'fulfilled' && categoriesResult.value.data) {
+                loadedCategories.push(
+                    ...categoriesResult.value.data.map((category) => ({
+                        id: category.id,
+                        localId: getMenuCategoryLocalId(category.id!),
+                        name: category.name || '',
+                    })),
+                );
+            } else if (categoriesResult.status === 'rejected') {
+                console.error('Failed to load menu categories', categoriesResult.reason);
+            }
+
+            if (itemsResult.status === 'fulfilled' && itemsResult.value.data) {
+                const categoryIds = new Set(loadedCategories.map((category) => category.id));
+
+                const loadedItems = sortMenuItemsByOrder(itemsResult.value.data.map((item) => {
+                    if (item.categoryId && !categoryIds.has(item.categoryId)) {
+                        loadedCategories.push({
+                            id: item.categoryId,
+                            localId: getMenuCategoryLocalId(item.categoryId),
+                            name: item.categoryName || `카테고리 ${item.categoryId}`,
+                        });
+                        categoryIds.add(item.categoryId);
+                    }
+
+                    return {
+                        localId: item.id ? getMenuItemLocalId(item.id) : `legacy-item-${item.name ?? 'menu'}`,
                         id: item.id,
                         name: item.name || '',
                         price: item.price,
                         description: item.description,
                         badge: item.badge as MenuItemState['badge'],
+                        categoryLocalId: item.categoryId ? getMenuCategoryLocalId(item.categoryId) : undefined,
                         itemOrder: item.itemOrder,
                         imageUrl: item.imageUrl,
-                    }));
-                    setMenuItems(loadedItems);
-                }
-            } catch (err) {
-                console.error("Failed to load menus", err);
+                    };
+                }));
+
+                setMenuItems(loadedItems);
+            } else if (itemsResult.status === 'rejected') {
+                console.error('Failed to load menus', itemsResult.reason);
             }
+
+            setMenuCategories(loadedCategories);
 
         } catch (e) {
             console.error(e);
@@ -246,12 +297,17 @@ export function StoreList({ universityId }: StoreListProps) {
     };
 
     const closeModal = () => {
+        cropQueue.forEach(({ src }) => URL.revokeObjectURL(src));
         setSelectedStore(null);
         setIsEditMode(false);
         setDeleteConfirm(false);
+        setProfileImage(null);
+        setProfileImagePreview(null);
         setImages([]);
         setImagePreviews([]);
         setMenuItems([]);
+        setMenuCategories([]);
+        setCropQueue([]);
     };
 
     const handleEditClick = () => {
@@ -270,6 +326,9 @@ export function StoreList({ universityId }: StoreListProps) {
             profileImageUrl: selectedStore.profileImageUrl
         });
 
+        setProfileImage(null);
+        setProfileImagePreview(selectedStore.profileImageUrl || null);
+
         const existingImages = selectedStore.imageUrls || [];
         setImagePreviews(existingImages);
         setImages([]);
@@ -277,9 +336,26 @@ export function StoreList({ universityId }: StoreListProps) {
         setIsEditMode(true);
     };
 
-    const handleSave = async () => {
+    const handleSave = async (e?: React.FormEvent<HTMLFormElement>) => {
+        e?.preventDefault();
         if (!selectedStore?.id || !editForm) return;
+
+        const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
+        if (invalidMenuCategory) {
+            alert('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
+            return;
+        }
+
         try {
+            let uploadedProfileImageUrl: string | undefined = editForm.profileImageUrl;
+            if (profileImage) {
+                uploadedProfileImageUrl = await uploadImage(profileImage);
+            } else if (profileImagePreview && !profileImagePreview.startsWith('blob:')) {
+                uploadedProfileImageUrl = profileImagePreview;
+            } else if (!profileImagePreview) {
+                uploadedProfileImageUrl = undefined;
+            }
+
             // Upload new images, preserve existing URLs (non-blob)
             const existingUrls = imagePreviews.filter(url => !url.startsWith('blob:'));
             const newImageUrls = images.length > 0 ? await uploadImages(images) : [];
@@ -287,7 +363,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
             const requestData: UpdateStoreRequest = {
                 ...editForm,
-                profileImageUrl: allImageUrls[0],
+                profileImageUrl: uploadedProfileImageUrl ?? allImageUrls[0],
                 imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
             };
             if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = undefined;
@@ -295,47 +371,115 @@ export function StoreList({ universityId }: StoreListProps) {
 
             await StoreService.updateStore(selectedStore.id, requestData);
 
-            // Process Menu Item changes
-            const promises = menuItems.map(async (item) => {
-                if (item.isDeleted && item.id) {
-                    return ItemService.deleteItem(item.id);
-                } else if (!item.isDeleted && item.id) {
-                    let imageUrl: string | undefined = item.imageUrl;
-                    if (item.imageFile) {
-                        imageUrl = await uploadImage(item.imageFile);
+            let failureCount = 0;
+            const categoryIdMap = new Map<string, number>();
+
+            for (const category of menuCategories) {
+                if (!category.isDeleted && category.id) {
+                    categoryIdMap.set(category.localId, category.id);
+                }
+            }
+
+            const deleteItemResults = await Promise.allSettled(
+                menuItems
+                    .filter((item) => item.isDeleted && item.id)
+                    .map((item) => ItemService.deleteItem(item.id!)),
+            );
+            failureCount += deleteItemResults.filter((result) => result.status === 'rejected').length;
+
+            const categoryUpsertResults = await Promise.allSettled(
+                menuCategories
+                    .filter((category) => !category.isDeleted)
+                    .map(async (category) => {
+                        const trimmedName = category.name.trim();
+
+                        if (category.id) {
+                            await ItemCategoryService.updateItemCategory(selectedStore.id!, category.id, { name: trimmedName });
+                            return;
+                        }
+
+                        const createdCategory = await ItemCategoryService.createItemCategory(selectedStore.id!, { name: trimmedName });
+                        if (typeof createdCategory.data !== 'number') {
+                            throw new Error('Category ID was not returned from createItemCategory.');
+                        }
+
+                        categoryIdMap.set(category.localId, createdCategory.data);
+                    }),
+            );
+            failureCount += categoryUpsertResults.filter((result) => result.status === 'rejected').length;
+
+            const itemResults = await Promise.allSettled(
+                menuItems.map(async (item) => {
+                    if (item.isDeleted) {
+                        return;
                     }
-                    const updateReq: UpdateItemRequest = {
-                        name: item.name,
-                        price: item.price,
-                        description: item.description,
-                        badge: item.badge,
-                        itemOrder: item.itemOrder,
-                        imageUrl,
-                    };
-                    return ItemService.updateItem(item.id, updateReq);
-                } else if (!item.isDeleted && !item.id && item.name.trim() !== '') {
+
+                    const trimmedName = item.name.trim();
+                    if (!item.id && trimmedName === '') {
+                        return;
+                    }
+
+                    const categoryId = item.categoryLocalId
+                        ? categoryIdMap.get(item.categoryLocalId)
+                        : undefined;
+
+                    if (item.categoryLocalId && !categoryId) {
+                        throw new Error(`Failed to resolve category for item "${item.name}".`);
+                    }
+
+                    if (item.id) {
+                        let imageUrl: string | undefined = item.imageUrl;
+                        if (item.imageFile) {
+                            imageUrl = await uploadImage(item.imageFile);
+                        }
+
+                        const updateReq = {
+                            name: item.name,
+                            price: item.price,
+                            description: item.description,
+                            badge: item.badge,
+                            itemOrder: item.itemOrder,
+                            itemCategoryId: categoryId ?? null,
+                            imageUrl,
+                        } satisfies Omit<UpdateItemRequest, 'itemCategoryId'> & { itemCategoryId?: number | null };
+
+                        return ItemService.updateItem(item.id, updateReq as UpdateItemRequest);
+                    }
+
                     let imageUrl: string | undefined;
                     if (item.imageFile) {
                         imageUrl = await uploadImage(item.imageFile);
                     }
+
                     const createReq: CreateItemRequest = {
                         name: item.name,
                         price: item.price,
                         description: item.description,
                         badge: item.badge,
                         itemOrder: item.itemOrder,
+                        itemCategoryId: categoryId,
                         imageUrl,
                     };
                     return ItemService.createItem(selectedStore.id!, createReq);
-                }
-            });
+                }),
+            );
+            failureCount += itemResults.filter((result) => result.status === 'rejected').length;
 
-            const results = await Promise.allSettled(promises);
-            const failedCount = results.filter(r => r.status === 'rejected').length;
+            const deleteCategoryResults = await Promise.allSettled(
+                menuCategories
+                    .filter((category) => category.isDeleted && category.id)
+                    .map((category) => ItemCategoryService.deleteItemCategory(selectedStore.id!, category.id!)),
+            );
+            failureCount += deleteCategoryResults.filter((result) => result.status === 'rejected').length;
 
-            if (failedCount > 0) {
-                console.error('Some menu items failed to save:', results);
-                alert(`상점 정보는 수정되었으나, ${failedCount}개의 메뉴 정보 처리에 실패했습니다.`);
+            if (failureCount > 0) {
+                console.error('Menu/category save failures', {
+                    deleteItemResults,
+                    categoryUpsertResults,
+                    itemResults,
+                    deleteCategoryResults,
+                });
+                alert(`상점 정보는 수정되었으나, 메뉴/카테고리 ${failureCount}건 처리에 실패했습니다.`);
             } else {
                 alert('상점 정보가 수정되었습니다.');
             }
@@ -381,13 +525,54 @@ export function StoreList({ universityId }: StoreListProps) {
         });
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
-            setImages(prev => [...prev, ...newFiles]);
+    const currentCrop = cropQueue[0] ?? null;
 
-            const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+    const enqueueImageCrops = (files: File[], type: 'profile' | 'normal') => {
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
+
+        setCropQueue((prev) => [
+            ...prev,
+            ...imageFiles.map((file) => ({
+                fileName: file.name,
+                fileType: file.type,
+                src: URL.createObjectURL(file),
+                aspectRatio: type === 'profile' ? 1 : 4 / 3,
+                type,
+            })),
+        ]);
+    };
+
+    const closeCurrentCrop = () => {
+        if (!currentCrop) return;
+        URL.revokeObjectURL(currentCrop.src);
+        setCropQueue((prev) => prev.slice(1));
+    };
+
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            enqueueImageCrops([e.target.files[0]], 'profile');
+        }
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const handleNormalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            enqueueImageCrops(Array.from(e.target.files), 'normal');
+        }
+
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const removeProfileImage = () => {
+        setProfileImage(null);
+        if (profileImagePreview) {
+            URL.revokeObjectURL(profileImagePreview);
+            setProfileImagePreview(null);
         }
     };
 
@@ -412,7 +597,11 @@ export function StoreList({ universityId }: StoreListProps) {
         }
     };
 
-    const handleImageClick = () => {
+    const handleProfileImageClick = () => {
+        profileFileInputRef.current?.click();
+    };
+
+    const handleNormalImageClick = () => {
         fileInputRef.current?.click();
     };
 
@@ -421,22 +610,30 @@ export function StoreList({ universityId }: StoreListProps) {
         if (!e.clipboardData?.files.length) return;
         const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
         if (pastedFiles.length > 0) {
-            setImages(prev => [...prev, ...pastedFiles]);
-            const newPreviews = pastedFiles.map(file => URL.createObjectURL(file));
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+            enqueueImageCrops(pastedFiles, 'normal');
         }
     };
 
-    const handleImagesDrop = (e: React.DragEvent) => {
+    const handleProfileImagesDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!isEditMode) return;
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (newFiles.length > 0) {
-                setImages(prev => [...prev, ...newFiles]);
-                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-                setImagePreviews(prev => [...prev, ...newPreviews]);
+                enqueueImageCrops([newFiles[0]], 'profile');
+            }
+        }
+    };
+
+    const handleNormalImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isEditMode) return;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) {
+                enqueueImageCrops(newFiles, 'normal');
             }
         }
     };
@@ -444,6 +641,27 @@ export function StoreList({ universityId }: StoreListProps) {
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
+    };
+
+    const handleCropComplete = (croppedImageUrl: string, blob: Blob) => {
+        if (!currentCrop) return;
+
+        const croppedFile = new File([blob], currentCrop.fileName, {
+            type: blob.type || currentCrop.fileType || 'image/jpeg',
+        });
+
+        if (currentCrop.type === 'profile') {
+            setProfileImage(croppedFile);
+            setProfileImagePreview(croppedImageUrl);
+        } else {
+            setImages((prev) => [...prev, croppedFile]);
+            setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        }
+        closeCurrentCrop();
+    };
+
+    const handleCropCancel = () => {
+        closeCurrentCrop();
     };
 
     const handleCategoryToggle = (category: StoreCategory) => {
@@ -746,7 +964,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 </div>
                                             </div>
                                         ) : isEditMode ? (
-                                            <>
+                                            <form id="store-edit-form" onSubmit={handleSave}>
                                                 <div className="flex flex-col md:flex-row gap-6 text-left">
                                                     {/* Section 1: Basic Info */}
                                                     <div className="flex-1 space-y-4">
@@ -820,7 +1038,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700">전화번호</label>
-                                                            <input type="tel" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} inputMode="numeric" autoComplete="tel-national" maxLength={13} placeholder="010-1234-5678" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                            <input type="tel" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} inputMode="numeric" autoComplete="tel-national" maxLength={14} placeholder="010-1234-5678" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                                                         </div>
 
                                                         <div>
@@ -838,19 +1056,56 @@ export function StoreList({ universityId }: StoreListProps) {
 
                                                         {/* Images Upload */}
                                                         <div>
+                                                            <div className="mb-6">
+                                                                <div className="flex justify-between items-center mb-2">
+                                                                    <label className="block text-sm font-medium text-gray-700">가게 프로필 이미지</label>
+                                                                    <span className="text-xs text-gray-500">1:1 비율로 크롭됩니다.</span>
+                                                                </div>
+                                                                
+                                                                {!profileImagePreview ? (
+                                                                    <div
+                                                                        onClick={handleProfileImageClick}
+                                                                        onDrop={handleProfileImagesDrop}
+                                                                        onDragOver={handleDragOver}
+                                                                        className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center justify-center aspect-square w-24"
+                                                                    >
+                                                                        <Upload className="h-5 w-5 text-gray-400 mb-1" />
+                                                                        <p className="text-[10px] text-gray-600">클릭 또는 드래그</p>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="relative aspect-square w-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                                        <img src={profileImagePreview} alt="profile preview" className="w-full h-full object-cover" />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); removeProfileImage(); }}
+                                                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    className="hidden"
+                                                                    ref={profileFileInputRef}
+                                                                    onChange={handleProfileImageChange}
+                                                                />
+                                                            </div>
+
                                                             <div className="flex justify-between items-center mb-2">
                                                                 <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
-                                                                <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 됩니다.</span>
+                                                                <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 4:3 비율로 크롭됩니다.</span>
                                                             </div>
 
                                                             <div
-                                                                onClick={handleImageClick}
-                                                                onDrop={handleImagesDrop}
+                                                                onClick={handleNormalImageClick}
+                                                                onDrop={handleNormalImagesDrop}
                                                                 onDragOver={handleDragOver}
                                                                 className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                                                             >
                                                                 <Upload className="mx-auto h-5 w-5 text-gray-400 mb-1" />
-                                                                <p className="text-xs text-gray-600">클릭하거나 이미지를 드래그 앤 드롭해서 업로드하세요</p>
+                                                                <p className="text-xs text-gray-600">클릭하거나 일반 이미지를 드래그 앤 드롭해서 업로드하세요</p>
                                                             </div>
                                                             <input
                                                                 type="file"
@@ -858,13 +1113,13 @@ export function StoreList({ universityId }: StoreListProps) {
                                                                 accept="image/*"
                                                                 className="hidden"
                                                                 ref={fileInputRef}
-                                                                onChange={handleImageChange}
+                                                                onChange={handleNormalImageChange}
                                                             />
 
                                                             {imagePreviews.length > 0 && (
                                                                 <div className="mt-3 grid grid-cols-4 gap-2">
                                                                     {imagePreviews.map((preview, idx) => (
-                                                                        <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                                        <div key={idx} className="relative aspect-[4/3] rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
                                                                             <img src={preview} alt="preview" className="w-full h-full object-cover" />
                                                                             <div className="absolute top-1 left-1">
                                                                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-600/80'}`}>
@@ -896,10 +1151,12 @@ export function StoreList({ universityId }: StoreListProps) {
                                                         <StoreMenuEditor
                                                             items={menuItems}
                                                             onChange={setMenuItems}
+                                                            categories={menuCategories}
+                                                            onCategoriesChange={setMenuCategories}
                                                         />
                                                     </div>
                                                 </div>
-                                            </>
+                                            </form>
                                         ) : (
                                             <dl className="space-y-4">
                                                 <div className="grid grid-cols-3 gap-4">
@@ -945,8 +1202,8 @@ export function StoreList({ universityId }: StoreListProps) {
                                     {isEditMode ? (
                                         <>
                                             <button
-                                                type="button"
-                                                onClick={handleSave}
+                                                type="submit"
+                                                form="store-edit-form"
                                                 className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
                                             >
                                                 <Save className="w-4 h-4 mr-2" />
@@ -1000,6 +1257,15 @@ export function StoreList({ universityId }: StoreListProps) {
                 onClose={() => setIsAddressModalOpen(false)}
                 onComplete={handleAddressComplete}
             />
+
+            {currentCrop && (
+                <ImageCropper
+                    imageSrc={currentCrop.src}
+                    aspectRatio={currentCrop.aspectRatio}
+                    onCropComplete={handleCropComplete}
+                    onCancel={handleCropCancel}
+                />
+            )}
         </div>
     );
 }

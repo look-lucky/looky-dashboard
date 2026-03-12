@@ -1,5 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import { refreshAccessToken } from '../lib/auth/tokenSession';
+import { useAuthStore } from '../lib/auth/authStore';
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
     _retry?: boolean;
@@ -61,7 +61,11 @@ export const setupInterceptors = () => {
                 isRefreshing = true;
 
                 try {
-                    const accessToken = await refreshAccessToken();
+                    const accessToken = await useAuthStore.getState().refreshAccessToken();
+
+                    if (!accessToken) {
+                        throw new Error('Token refresh failed');
+                    }
 
                     originalRequest.headers = originalRequest.headers ?? {};
                     originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -70,11 +74,6 @@ export const setupInterceptors = () => {
                     return axios(originalRequest);
                 } catch (refreshError: unknown) {
                     processQueue(refreshError, null);
-
-                    if (window.location.pathname !== '/login') {
-                        window.location.href = '/login';
-                    }
-
                     return Promise.reject(refreshError);
                 } finally {
                     isRefreshing = false;

@@ -5,14 +5,16 @@ import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminService } from '../../shared/api/services/AdminService';
+import { ImageCropper } from '../../shared/components/ImageCropper';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
-import { StoreMenuEditor, type MenuItemState } from './StoreMenuEditor';
+import { StoreMenuEditor, type MenuCategoryState, type MenuItemState } from './StoreMenuEditor';
 import { ItemService } from '../../shared/api/services/ItemService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
+import { ItemCategoryService } from '../../shared/api/services/ItemCategoryService';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -31,17 +33,31 @@ const CATEGORY_MAP: Record<StoreCategory, string> = {
 
 const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as StoreCategory[];
 
+interface PendingStoreImageCrop {
+    fileName: string;
+    fileType: string;
+    src: string;
+    aspectRatio: number;
+    type: 'profile' | 'normal';
+}
+
 export function StoreManualRegistrationModal({ onClose }: StoreManualRegistrationModalProps) {
     const { universities, selectedUniversityId } = useUniversity();
 
     const [loading, setLoading] = useState(false);
     const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
+    const [profileImage, setProfileImage] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+    const profileFileInputRef = useRef<HTMLInputElement>(null);
+
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [cropQueue, setCropQueue] = useState<PendingStoreImageCrop[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [menuItems, setMenuItems] = useState<MenuItemState[]>([]);
+    const [menuCategories, setMenuCategories] = useState<MenuCategoryState[]>([]);
 
     const [formData, setFormData] = useState<{
         name: string;
@@ -97,13 +113,54 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         }
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            const newFiles = Array.from(e.target.files);
-            setImages(prev => [...prev, ...newFiles]);
+    const currentCrop = cropQueue[0] ?? null;
 
-            const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+    const enqueueImageCrops = (files: File[], type: 'profile' | 'normal') => {
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
+
+        setCropQueue((prev) => [
+            ...prev,
+            ...imageFiles.map((file) => ({
+                fileName: file.name,
+                fileType: file.type,
+                src: URL.createObjectURL(file),
+                aspectRatio: type === 'profile' ? 1 : 4 / 3,
+                type,
+            })),
+        ]);
+    };
+
+    const closeCurrentCrop = () => {
+        if (!currentCrop) return;
+        URL.revokeObjectURL(currentCrop.src);
+        setCropQueue((prev) => prev.slice(1));
+    };
+
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            enqueueImageCrops([e.target.files[0]], 'profile');
+        }
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const handleNormalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            enqueueImageCrops(Array.from(e.target.files), 'normal');
+        }
+
+        if (e.target) {
+            e.target.value = '';
+        }
+    };
+
+    const removeProfileImage = () => {
+        setProfileImage(null);
+        if (profileImagePreview) {
+            URL.revokeObjectURL(profileImagePreview);
+            setProfileImagePreview(null);
         }
     };
 
@@ -117,7 +174,11 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         });
     };
 
-    const handleImageClick = () => {
+    const handleProfileImageClick = () => {
+        profileFileInputRef.current?.click();
+    };
+
+    const handleNormalImageClick = () => {
         fileInputRef.current?.click();
     };
 
@@ -125,21 +186,28 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         if (!e.clipboardData?.files.length) return;
         const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
         if (pastedFiles.length > 0) {
-            setImages(prev => [...prev, ...pastedFiles]);
-            const newPreviews = pastedFiles.map(file => URL.createObjectURL(file));
-            setImagePreviews(prev => [...prev, ...newPreviews]);
+            enqueueImageCrops(pastedFiles, 'normal');
         }
     };
 
-    const handleImagesDrop = (e: React.DragEvent) => {
+    const handleProfileImageDrop = (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (newFiles.length > 0) {
-                setImages(prev => [...prev, ...newFiles]);
-                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-                setImagePreviews(prev => [...prev, ...newPreviews]);
+                enqueueImageCrops([newFiles[0]], 'profile');
+            }
+        }
+    };
+
+    const handleNormalImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) {
+                enqueueImageCrops(newFiles, 'normal');
             }
         }
     };
@@ -149,19 +217,48 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
         e.stopPropagation();
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleCropComplete = (croppedImageUrl: string, blob: Blob) => {
+        if (!currentCrop) return;
+
+        const croppedFile = new File([blob], currentCrop.fileName, {
+            type: blob.type || currentCrop.fileType || 'image/jpeg',
+        });
+
+        if (currentCrop.type === 'profile') {
+            setProfileImage(croppedFile);
+            setProfileImagePreview(croppedImageUrl);
+        } else {
+            setImages((prev) => [...prev, croppedFile]);
+            setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        }
+        closeCurrentCrop();
+    };
+
+    const handleCropCancel = () => {
+        closeCurrentCrop();
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!formData.name || !formData.address) {
             alert('필수 정보를 입력해주세요.');
             return;
         }
 
+        const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
+        if (invalidMenuCategory) {
+            alert('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
+            return;
+        }
+
         setLoading(true);
         try {
+            const uploadedProfileImageUrl = profileImage ? await uploadImage(profileImage) : undefined;
             const uploadedImageUrls = images.length > 0 ? await uploadImages(images) : [];
 
-            const requestPayload: CreateStoreRequest = {
+            const requestPayload: CreateStoreRequest & { branch?: string } = {
                 name: formData.name,
+                branch: formData.branch.trim() || undefined,
                 roadAddress: formData.address,
                 jibunAddress: formData.jibunAddress,
                 storeCategories: formData.storeCategories,
@@ -172,39 +269,75 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 operatingHours: formData.operatingHours,
                 storeMoods: [],
                 universityIds: formData.universityIds,
-                profileImageUrl: uploadedImageUrls[0],
+                profileImageUrl: uploadedProfileImageUrl ?? uploadedImageUrls[0],
                 imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
             };
 
             const storeId = await StoreService.createStore(requestPayload);
 
-            // If menu items exist, save them sequentially
-            const validMenuItems = menuItems.filter(item => !item.isDeleted && item.name.trim() !== '');
-            if (validMenuItems.length > 0 && typeof storeId?.data === 'number') {
-                for (const item of validMenuItems) {
-                    let imageUrl: string | undefined;
-                    if (item.imageFile) {
-                        try {
-                            imageUrl = await uploadImage(item.imageFile);
-                        } catch (uploadErr) {
-                            console.error('Failed to upload item image:', item.name, uploadErr);
-                        }
-                    }
+            const createdStoreId = typeof storeId?.data === 'number' ? storeId.data : undefined;
 
-                    const itemRequest: CreateItemRequest = {
-                        name: item.name,
-                        price: item.price,
-                        description: item.description,
-                        badge: item.badge,
-                        itemOrder: item.itemOrder,
-                        imageUrl,
-                    };
+            const categoryIdMap = new Map<string, number>();
+            if (createdStoreId) {
+                const categoryResults = await Promise.allSettled(
+                    menuCategories
+                        .filter((category) => !category.isDeleted)
+                        .map(async (category) => {
+                            const createdCategory = await ItemCategoryService.createItemCategory(createdStoreId, {
+                                name: category.name.trim(),
+                            });
 
-                    try {
-                        await ItemService.createItem(storeId.data, itemRequest);
-                    } catch (itemErr) {
-                        console.error('Failed to create item:', item.name, itemErr);
-                    }
+                            if (typeof createdCategory.data !== 'number') {
+                                throw new Error('Category ID was not returned from createItemCategory.');
+                            }
+
+                            categoryIdMap.set(category.localId, createdCategory.data);
+                        }),
+                );
+
+                const categoryFailureCount = categoryResults.filter((result) => result.status === 'rejected').length;
+
+                // If menu items exist, save them after categories are prepared.
+                let itemFailureCount = 0;
+
+                const menuItemResults = await Promise.allSettled(
+                    menuItems
+                        .filter(item => !item.isDeleted && item.name.trim() !== '')
+                        .map(async (item) => {
+                            const categoryId = item.categoryLocalId
+                                ? categoryIdMap.get(item.categoryLocalId)
+                                : undefined;
+
+                            if (item.categoryLocalId && !categoryId) {
+                                throw new Error(`Failed to resolve category for item "${item.name}".`);
+                            }
+
+                            let imageUrl: string | undefined;
+                            if (item.imageFile) {
+                                imageUrl = await uploadImage(item.imageFile);
+                            }
+
+                            const itemRequest: CreateItemRequest = {
+                                name: item.name,
+                                price: item.price,
+                                description: item.description,
+                                badge: item.badge,
+                                itemOrder: item.itemOrder,
+                                itemCategoryId: categoryId,
+                                imageUrl,
+                            };
+
+                            await ItemService.createItem(createdStoreId, itemRequest);
+                        }),
+                );
+
+                itemFailureCount = menuItemResults.filter((result) => result.status === 'rejected').length;
+
+                if (categoryFailureCount > 0 || itemFailureCount > 0) {
+                    console.error('Menu/category create failures', { categoryResults, menuItemResults });
+                    alert(`상점은 등록되었으나, 메뉴/카테고리 ${categoryFailureCount + itemFailureCount}건 처리에 실패했습니다.`);
+                    onClose();
+                    return;
                 }
             }
 
@@ -280,7 +413,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
+                <form id="manual-store-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
                     {/* University Selection */}
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">대학 선택 (복수 선택 가능)</label>
@@ -410,7 +543,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         onChange={handleChange}
                                         inputMode="numeric"
                                         autoComplete="tel-national"
-                                        maxLength={13}
+                                        maxLength={14}
                                         className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
                                         placeholder="010-1234-5678"
                                     />
@@ -438,19 +571,56 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
                                 {/* Images Upload */}
                                 <div>
+                                    <div className="mb-6">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="block text-sm font-medium text-gray-700">가게 프로필 이미지</label>
+                                            <span className="text-xs text-gray-500">1:1 비율로 크롭됩니다.</span>
+                                        </div>
+                                        
+                                        {!profileImagePreview ? (
+                                            <div
+                                                onClick={handleProfileImageClick}
+                                                onDrop={handleProfileImageDrop}
+                                                onDragOver={handleDragOver}
+                                                className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center justify-center aspect-square w-32"
+                                            >
+                                                <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                                                <p className="text-[10px] text-gray-600">클릭 또는 드래그</p>
+                                            </div>
+                                        ) : (
+                                            <div className="relative aspect-square w-32 rounded-lg overflow-hidden border border-gray-200 group">
+                                                <img src={profileImagePreview} alt="profile preview" className="w-full h-full object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); removeProfileImage(); }}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            ref={profileFileInputRef}
+                                            onChange={handleProfileImageChange}
+                                        />
+                                    </div>
+
                                     <div className="flex justify-between items-center mb-2">
                                         <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
-                                        <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 됩니다.</span>
+                                        <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 4:3 비율로 크롭됩니다.</span>
                                     </div>
 
                                     <div
-                                        onClick={handleImageClick}
-                                        onDrop={handleImagesDrop}
+                                        onClick={handleNormalImageClick}
+                                        onDrop={handleNormalImagesDrop}
                                         onDragOver={handleDragOver}
                                         className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors"
                                     >
                                         <Upload className="mx-auto h-6 w-6 text-gray-400 mb-2" />
-                                        <p className="text-sm text-gray-600">클릭하거나 이미지를 드래그 앤 드롭해서 업로드하세요</p>
+                                        <p className="text-sm text-gray-600">클릭하거나 일반 이미지를 드래그 앤 드롭해서 업로드하세요</p>
                                     </div>
                                     <input
                                         type="file"
@@ -458,13 +628,13 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                         accept="image/*"
                                         className="hidden"
                                         ref={fileInputRef}
-                                        onChange={handleImageChange}
+                                        onChange={handleNormalImageChange}
                                     />
 
                                     {imagePreviews.length > 0 && (
                                         <div className="mt-3 grid grid-cols-4 gap-2">
                                             {imagePreviews.map((preview, idx) => (
-                                                <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                <div key={idx} className="relative aspect-[4/3] rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
                                                     <img src={preview} alt="preview" className="w-full h-full object-cover" />
                                                     <div className="absolute top-1 left-1">
                                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-600/80'}`}>
@@ -496,6 +666,8 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                         <StoreMenuEditor
                             items={menuItems}
                             onChange={setMenuItems}
+                            categories={menuCategories}
+                            onCategoriesChange={setMenuCategories}
                         />
                     </div>
                 </form>
@@ -511,7 +683,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     </button>
                     <button
                         type="submit"
-                        onClick={handleSubmit}
+                        form="manual-store-form"
                         className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
                         disabled={loading}
                     >
@@ -531,6 +703,15 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     onClose={() => setIsAddressModalOpen(false)}
                     onComplete={handleAddressComplete}
                 />
+
+                {currentCrop && (
+                    <ImageCropper
+                        imageSrc={currentCrop.src}
+                        aspectRatio={currentCrop.aspectRatio}
+                        onCropComplete={handleCropComplete}
+                        onCancel={handleCropCancel}
+                    />
+                )}
             </div>
         </div>
     );

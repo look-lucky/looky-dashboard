@@ -30,17 +30,21 @@ export function formatKoreanPhoneNumber(value: string): string {
     }
 
     if (/^050\d/.test(digits)) {
-        const trimmed = digits.slice(0, 11);
+        const trimmed = digits.slice(0, 12);
 
         if (trimmed.length <= 4) {
             return trimmed;
         }
 
-        if (trimmed.length <= 7) {
+        if (trimmed.length <= 8) {
             return `${trimmed.slice(0, 4)}-${trimmed.slice(4)}`;
         }
 
-        return `${trimmed.slice(0, 4)}-${trimmed.slice(4, trimmed.length - 4)}-${trimmed.slice(-4)}`;
+        if (trimmed.length <= 11) {
+            return `${trimmed.slice(0, 4)}-${trimmed.slice(4, trimmed.length - 4)}-${trimmed.slice(-4)}`;
+        }
+
+        return `${trimmed.slice(0, 4)}-${trimmed.slice(4, 8)}-${trimmed.slice(8)}`;
     }
 
     if (/^1\d{3}/.test(digits)) {

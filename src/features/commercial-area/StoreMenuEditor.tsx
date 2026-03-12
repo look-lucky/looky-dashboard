@@ -1,44 +1,114 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
 type BadgeType = 'BEST' | 'NEW' | 'HOT' | 'VEGAN';
+
+const createDraftId = (prefix: string) => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return `${prefix}-${crypto.randomUUID()}`;
+    }
+
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+export interface MenuCategoryState {
+    id?: number;
+    localId: string;
+    name: string;
+    isDeleted?: boolean;
+}
+
+export const getMenuCategoryLocalId = (categoryId: number) => `existing-${categoryId}`;
+
+export const createDraftMenuCategory = (): MenuCategoryState => ({
+    localId: createDraftId('menu-category'),
+    name: '',
+});
+
 export interface MenuItemState {
-    id?: number; // Only exists if fetched from server
+    localId: string;
+    id?: number;
     name: string;
     price?: number;
     description?: string;
     badge?: BadgeType;
+    categoryLocalId?: string;
     itemOrder?: number;
-    imageUrl?: string; // Existing image from backend
-    imageFile?: File;  // Newly uploaded file
-    isDeleted?: boolean; // Flag to mark for deletion upon save
+    imageUrl?: string;
+    imageFile?: File;
+    isDeleted?: boolean;
 }
+
+export const getMenuItemLocalId = (itemId: number) => `existing-item-${itemId}`;
+
+export const createDraftMenuItem = (itemOrder: number): MenuItemState => ({
+    localId: createDraftId('menu-item'),
+    name: '',
+    itemOrder,
+});
+
+export const sortMenuItemsByOrder = (items: MenuItemState[]) => [...items].sort((a, b) => {
+    const aDeleted = Boolean(a.isDeleted);
+    const bDeleted = Boolean(b.isDeleted);
+    if (aDeleted !== bDeleted) {
+        return aDeleted ? 1 : -1;
+    }
+
+    const aOrder = a.itemOrder ?? Number.MAX_SAFE_INTEGER;
+    const bOrder = b.itemOrder ?? Number.MAX_SAFE_INTEGER;
+    if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+    }
+
+    if (a.id && b.id && a.id !== b.id) {
+        return a.id - b.id;
+    }
+
+    return a.localId.localeCompare(b.localId);
+});
+
+export const normalizeMenuItemOrder = (items: MenuItemState[]) => {
+    let order = 1;
+
+    return items.map((item) => (
+        item.isDeleted
+            ? item
+            : { ...item, itemOrder: order++ }
+    ));
+};
+
+const buildOrderedMenuItems = (visibleItems: MenuItemState[], deletedItems: MenuItemState[] = []) =>
+    normalizeMenuItemOrder([...visibleItems, ...deletedItems]);
 
 interface StoreMenuEditorProps {
     items: MenuItemState[];
     onChange: (items: MenuItemState[]) => void;
+    categories: MenuCategoryState[];
+    onCategoriesChange: (categories: MenuCategoryState[]) => void;
 }
 
-export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChange }) => {
+export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChange, categories, onCategoriesChange }) => {
     const [cropState, setCropState] = useState<{ index: number; src: string } | null>(null);
+    const [draggedItemLocalId, setDraggedItemLocalId] = useState<string | null>(null);
 
-    // Add an empty menu item
+    const visibleItems = items.filter((item) => !item.isDeleted);
+    const deletedItems = items.filter((item) => item.isDeleted);
+    const visibleCategories = categories.filter((category) => !category.isDeleted);
+
     const handleAdd = () => {
-        onChange([
-            ...items,
-            { name: '', itemOrder: items.length + 1 }
-        ]);
+        onChange(buildOrderedMenuItems([
+            ...visibleItems,
+            createDraftMenuItem(visibleItems.length + 1),
+        ], deletedItems));
     };
 
-    // Update specific field of a specific item
     const handleChange = <K extends keyof MenuItemState>(index: number, field: K, value: MenuItemState[K]) => {
         const newItems = [...items];
         newItems[index] = { ...newItems[index], [field]: value };
         onChange(newItems);
     };
 
-    // Marks for deletion if it exists on server, strictly removes if it's new
     const handleRemove = (index: number) => {
         const item = items[index];
         const newItems = [...items];
@@ -49,20 +119,109 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
             newItems.splice(index, 1);
         }
 
-        // Re-calculate ordering
-        let order = 1;
-        const OrderedItems = newItems.map(it => {
-            if (!it.isDeleted) {
-                return { ...it, itemOrder: order++ };
-            }
-            return it;
-        });
-
-        onChange(OrderedItems);
+        onChange(buildOrderedMenuItems(
+            newItems.filter((nextItem) => !nextItem.isDeleted),
+            newItems.filter((nextItem) => nextItem.isDeleted),
+        ));
     };
 
-    // Handle image selection
-    const handleImageDrop = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const handleAddCategory = () => {
+        onCategoriesChange([...categories, createDraftMenuCategory()]);
+    };
+
+    const handleCategoryChange = (localId: string, name: string) => {
+        onCategoriesChange(
+            categories.map((category) => (
+                category.localId === localId
+                    ? { ...category, name }
+                    : category
+            )),
+        );
+    };
+
+    const handleRemoveCategory = (localId: string) => {
+        const nextCategories = categories.flatMap((category) => {
+            if (category.localId !== localId) {
+                return [category];
+            }
+
+            if (category.id) {
+                return [{ ...category, isDeleted: true }];
+            }
+
+            return [];
+        });
+
+        const nextItems = items.map((item) => (
+            item.categoryLocalId === localId
+                ? { ...item, categoryLocalId: undefined }
+                : item
+        ));
+
+        onCategoriesChange(nextCategories);
+        onChange(nextItems);
+    };
+
+    const moveMenuItem = (sourceLocalId: string, targetLocalId: string) => {
+        if (sourceLocalId === targetLocalId) {
+            return;
+        }
+
+        const sourceIndex = visibleItems.findIndex((item) => item.localId === sourceLocalId);
+        const targetIndex = visibleItems.findIndex((item) => item.localId === targetLocalId);
+
+        if (sourceIndex < 0 || targetIndex < 0) {
+            return;
+        }
+
+        const reorderedItems = [...visibleItems];
+        const [draggedItem] = reorderedItems.splice(sourceIndex, 1);
+        reorderedItems.splice(targetIndex, 0, draggedItem);
+
+        onChange(buildOrderedMenuItems(reorderedItems, deletedItems));
+    };
+
+    const moveMenuItemByOffset = (localId: string, offset: -1 | 1) => {
+        const sourceIndex = visibleItems.findIndex((item) => item.localId === localId);
+        const targetIndex = sourceIndex + offset;
+
+        if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= visibleItems.length) {
+            return;
+        }
+
+        const reorderedItems = [...visibleItems];
+        const [movedItem] = reorderedItems.splice(sourceIndex, 1);
+        reorderedItems.splice(targetIndex, 0, movedItem);
+
+        onChange(buildOrderedMenuItems(reorderedItems, deletedItems));
+    };
+
+    const handleItemDragStart = (e: React.DragEvent, localId: string) => {
+        setDraggedItemLocalId(localId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', localId);
+    };
+
+    const handleItemDrop = (e: React.DragEvent, targetLocalId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const sourceLocalId = e.dataTransfer.getData('text/plain') || draggedItemLocalId;
+        if (!sourceLocalId) {
+            return;
+        }
+
+        moveMenuItem(sourceLocalId, targetLocalId);
+        setDraggedItemLocalId(null);
+    };
+
+    const handleItemDragEnd = () => {
+        setDraggedItemLocalId(null);
+    };
+
+    const isFileTransfer = (transfer: DataTransfer | null) => Array.from(transfer?.types ?? []).includes('Files');
+
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
             const objectUrl = URL.createObjectURL(file);
@@ -82,27 +241,35 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
         const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
         if (pastedFiles.length > 0) {
             e.preventDefault();
-            e.stopPropagation(); // Stop paste bubble to main modal
-            const file = pastedFiles[0]; // Take only the first image
+            e.stopPropagation();
+            const file = pastedFiles[0];
             const objectUrl = URL.createObjectURL(file);
             setCropState({ index, src: objectUrl });
         }
     };
 
-    const handleDrop = (e: React.DragEvent, index: number) => {
+    const handleImageDrop = (e: React.DragEvent, index: number) => {
+        if (!isFileTransfer(e.dataTransfer)) {
+            return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const pastedFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
             if (pastedFiles.length > 0) {
-                const file = pastedFiles[0]; // Take only the first image
+                const file = pastedFiles[0];
                 const objectUrl = URL.createObjectURL(file);
                 setCropState({ index, src: objectUrl });
             }
         }
     };
 
-    const handleDragOver = (e: React.DragEvent) => {
+    const handleImageDragOver = (e: React.DragEvent) => {
+        if (!isFileTransfer(e.dataTransfer)) {
+            return;
+        }
+
         e.preventDefault();
         e.stopPropagation();
     };
@@ -124,27 +291,111 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
         setCropState(null);
     };
 
-    const visibleItems = items.filter(i => !i.isDeleted);
-
     return (
         <div className="flex flex-col gap-4">
-            {visibleItems.map((item) => {
-                // We need to find its absolute index in the state array, 
-                // in case some items before it were merely mocked deleted.
-                const stateIdx = items.findIndex(it => it === item);
+            <div className="rounded-lg border border-gray-200 bg-white p-4">
+                <div className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                    <div>
+                        <h5 className="text-sm font-semibold text-gray-900">메뉴 카테고리</h5>
+                        <p className="mt-1 text-xs text-gray-500">카테고리는 메뉴와 별도로 저장됩니다.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleAddCategory}
+                        className="inline-flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+                    >
+                        <Plus className="h-4 w-4" />
+                        카테고리 추가
+                    </button>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-2">
+                    {visibleCategories.length === 0 ? (
+                        <div className="rounded-md border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">
+                            등록된 메뉴 카테고리가 없습니다.
+                        </div>
+                    ) : (
+                        visibleCategories.map((category) => (
+                            <div key={category.localId} className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                                <input
+                                    type="text"
+                                    value={category.name}
+                                    onChange={(e) => handleCategoryChange(category.localId, e.target.value)}
+                                    placeholder="카테고리명 입력"
+                                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemoveCategory(category.localId)}
+                                    className="rounded-md border border-gray-200 bg-white p-2 text-gray-500 transition-colors hover:border-red-200 hover:text-red-500"
+                                    title="카테고리 삭제"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {visibleItems.map((item, visibleIndex) => {
+                const stateIdx = items.findIndex((stateItem) => stateItem.localId === item.localId);
 
                 return (
                     <div
-                        key={stateIdx}
-                        className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative flex flex-col md:flex-row gap-4 focus-within:ring-2 focus-within:ring-indigo-100"
+                        key={item.localId}
+                        className={`bg-gray-50 border border-gray-200 rounded-lg p-4 relative flex flex-col md:flex-row gap-4 focus-within:ring-2 focus-within:ring-indigo-100 ${draggedItemLocalId === item.localId ? 'opacity-60 ring-2 ring-indigo-200' : ''}`}
                         onPaste={(e) => handlePaste(e, stateIdx)}
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                        }}
+                        onDrop={(e) => handleItemDrop(e, item.localId)}
                     >
+                        <div className="flex w-full items-start gap-3 md:w-auto md:flex-col md:items-center">
+                            <button
+                                type="button"
+                                draggable
+                                onDragStart={(e) => handleItemDragStart(e, item.localId)}
+                                onDragEnd={handleItemDragEnd}
+                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600 cursor-grab active:cursor-grabbing"
+                                title="드래그해서 메뉴 순서 변경"
+                                aria-label={`메뉴 순서 ${visibleIndex + 1} 드래그 이동`}
+                            >
+                                <GripVertical className="h-4 w-4" />
+                            </button>
+                            <div className="flex min-w-[3rem] flex-col rounded-md border border-gray-200 bg-white px-2 py-1 text-center shadow-sm">
+                                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Order</span>
+                                <span className="text-sm font-bold text-indigo-600">{visibleIndex + 1}</span>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => moveMenuItemByOffset(item.localId, -1)}
+                                    disabled={visibleIndex === 0}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title="위로 이동"
+                                    aria-label={`메뉴 순서 ${visibleIndex + 1} 위로 이동`}
+                                >
+                                    <ArrowUp className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => moveMenuItemByOffset(item.localId, 1)}
+                                    disabled={visibleIndex === visibleItems.length - 1}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    title="아래로 이동"
+                                    aria-label={`메뉴 순서 ${visibleIndex + 1} 아래로 이동`}
+                                >
+                                    <ArrowDown className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
 
-                        {/* Image Uploader */}
                         <div
                             className="w-full md:w-32 h-32 shrink-0 relative bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center overflow-hidden group"
-                            onDrop={(e) => handleDrop(e, stateIdx)}
-                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleImageDrop(e, stateIdx)}
+                            onDragOver={handleImageDragOver}
                         >
                             {item.imageUrl ? (
                                 <>
@@ -167,13 +418,12 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                                         type="file"
                                         accept="image/*"
                                         className="hidden"
-                                        onChange={(e) => handleImageDrop(e, stateIdx)}
+                                        onChange={(e) => handleImageSelect(e, stateIdx)}
                                     />
                                 </label>
                             )}
                         </div>
 
-                        {/* Fields */}
                         <div className="flex-1 flex flex-col gap-3">
                             <div className="flex justify-between items-start">
                                 <div className="flex-1 mr-4">
@@ -195,7 +445,7 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <div>
                                     <label className="text-[10px] uppercase font-bold tracking-wider text-gray-500">가격</label>
                                     <div className="flex items-center">
@@ -215,9 +465,9 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                                     <select
                                         value={item.badge || ''}
                                         onChange={(e) => {
-                                        const badge = e.target.value as BadgeType | '';
-                                        handleChange(stateIdx, 'badge', badge === '' ? undefined : badge);
-                                    }}
+                                            const badge = e.target.value as BadgeType | '';
+                                            handleChange(stateIdx, 'badge', badge === '' ? undefined : badge);
+                                        }}
                                         className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                                     >
                                         <option value="">없음</option>
@@ -225,6 +475,22 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                                         <option value="NEW">NEW</option>
                                         <option value="HOT">HOT</option>
                                         <option value="VEGAN">VEGAN</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] uppercase font-bold tracking-wider text-gray-500">카테고리</label>
+                                    <select
+                                        value={item.categoryLocalId || ''}
+                                        onChange={(e) => handleChange(stateIdx, 'categoryLocalId', e.target.value || undefined)}
+                                        className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
+                                    >
+                                        <option value="">선택 안 함</option>
+                                        {visibleCategories.map((category) => (
+                                            <option key={category.localId} value={category.localId}>
+                                                {category.name.trim() || '이름 없는 카테고리'}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -259,10 +525,16 @@ export const StoreMenuEditor: React.FC<StoreMenuEditorProps> = ({ items, onChang
                 메뉴 추가하기
             </button>
 
+            {visibleItems.length > 1 && (
+                <p className="text-xs text-center text-gray-500">
+                    왼쪽 이동 버튼이나 드래그로 메뉴 순서를 조정할 수 있습니다.
+                </p>
+            )}
+
             {cropState && (
                 <ImageCropper
                     imageSrc={cropState.src}
-                    aspectRatio={1} // 1:1 ratio
+                    aspectRatio={1}
                     onCropComplete={handleCropComplete}
                     onCancel={handleCropCancel}
                 />
