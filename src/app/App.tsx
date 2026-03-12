@@ -9,12 +9,14 @@ import { EventPage } from '../pages/EventPage';
 import { LoginPage } from '../pages/LoginPage';
 import { StoreImportPage } from '../features/stores/StoreImportPage';
 import { AuthGuard } from '../widgets/auth/AuthGuard';
+import { AuthSessionManager } from '../widgets/auth/AuthSessionManager';
 import { UniversityProvider } from '../shared/contexts/UniversityContext';
 import { UniversityLayout } from '../widgets/layout/UniversityLayout';
 //
 function App() {
     return (
         <BrowserRouter>
+            <AuthSessionManager />
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route element={<AuthGuard />}>

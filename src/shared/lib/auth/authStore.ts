@@ -16,8 +16,10 @@ interface AuthState {
     accessToken: string | null;
     isAuthenticated: boolean;
     role: string | null;
+    authReady: boolean;
     login: (token: string) => void;
     logout: () => void;
+    setAuthReady: (ready: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -26,22 +28,34 @@ export const useAuthStore = create<AuthState>()(
             accessToken: null,
             isAuthenticated: false,
             role: null,
+            authReady: false,
             login: (token: string) => {
                 try {
                     const decoded = jwtDecode<DecodedToken>(token);
                     set({ accessToken: token, isAuthenticated: true, role: decoded.role });
                     OpenAPI.TOKEN = token;
+                    return;
                 } catch (error) {
                     console.error("Invalid token:", error);
                 }
+
+                set({ accessToken: null, isAuthenticated: false, role: null });
             },
             logout: () => {
                 set({ accessToken: null, isAuthenticated: false, role: null });
                 OpenAPI.TOKEN = undefined;
             },
+            setAuthReady: (ready: boolean) => {
+                set({ authReady: ready });
+            },
         }),
         {
             name: 'auth-storage',
+            partialize: (state) => ({
+                accessToken: state.accessToken,
+                isAuthenticated: state.isAuthenticated,
+                role: state.role,
+            }),
             onRehydrateStorage: () => (state) => {
                 if (state?.accessToken) {
                     OpenAPI.TOKEN = state.accessToken;
@@ -58,6 +72,5 @@ if (storage) {
     const token = parsed.state?.accessToken;
     if (token) {
         OpenAPI.TOKEN = token;
-        // Optionally re-decode or rely on persisted role
     }
 }

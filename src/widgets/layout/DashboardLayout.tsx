@@ -2,14 +2,21 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useAuthStore } from '../../shared/lib/auth/authStore';
 import { LogOut } from 'lucide-react';
+import { AuthService } from '../../shared/api/services/AuthService';
 
 export function DashboardLayout() {
     const logout = useAuthStore((state) => state.logout);
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
+    const handleLogout = async () => {
+        try {
+            await AuthService.logout();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        } finally {
+            logout();
+            navigate('/login');
+        }
     };
 
     return (
