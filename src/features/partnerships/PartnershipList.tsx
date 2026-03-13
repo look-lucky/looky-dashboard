@@ -7,21 +7,27 @@ import { PartnershipEditModal } from './PartnershipEditModal';
 interface PartnershipListProps {
     universityId: number;
     organizationId?: number | null;
+    categoryId?: string | null;
     refreshTrigger: number;
 }
 
-export function PartnershipList({ universityId, organizationId, refreshTrigger }: PartnershipListProps) {
+export function PartnershipList({ universityId, organizationId, categoryId, refreshTrigger }: PartnershipListProps) {
     const [partnerships, setPartnerships] = useState<PartnershipResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingPartnership, setEditingPartnership] = useState<PartnershipResponse | null>(null);
 
-    const filteredPartnerships = partnerships.filter(p =>
-        p.organizationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.storeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.benefit?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.category?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredPartnerships = partnerships.filter(p => {
+        const matchesSearchTerm = 
+            Boolean(p.organizationName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            Boolean(p.storeName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            Boolean(p.benefit?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            Boolean(p.category?.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+        const matchesCategory = categoryId && !organizationId ? p.category === categoryId : true;
+        
+        return matchesSearchTerm && matchesCategory;
+    });
 
     const fetchPartnerships = useCallback(async () => {
         setIsLoading(true);
