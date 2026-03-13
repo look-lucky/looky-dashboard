@@ -13,7 +13,6 @@ interface QueueItem {
 let isRefreshing = false;
 let failedQueue: QueueItem[] = [];
 
-// 실패한 요청들을 큐에 담는 함수
 const processQueue = (error: unknown, token: string | null = null) => {
     failedQueue.forEach((pending) => {
         if (error) {
@@ -33,20 +32,15 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 export const setupInterceptors = () => {
-    // Response Interceptor
     axios.interceptors.response.use(
-        (response) => {
-            return response;
-        },
+        (response) => response,
         async (error: AxiosError) => {
             const originalRequest = error.config as RetryableRequestConfig | undefined;
 
-            // originalRequest가 없으면 에러 반환
             if (!originalRequest) {
                 return Promise.reject(error);
             }
 
-            // 401 에러이고, 이미 재시도한 요청이 아니고, 로그인/리프레시 요청이 아닌 경우
             if (
                 error.response?.status === 401 &&
                 !originalRequest._retry &&
@@ -54,7 +48,6 @@ export const setupInterceptors = () => {
                 !originalRequest.url?.includes('/refresh')
             ) {
                 if (isRefreshing) {
-                    // 이미 리프레시 중이라면 큐에 담음
                     return new Promise<string>((resolve, reject) => {
                         failedQueue.push({ resolve, reject });
                     }).then((token) => {
@@ -70,21 +63,16 @@ export const setupInterceptors = () => {
                 try {
                     const accessToken = await useAuthStore.getState().refreshAccessToken();
 
-                    if (accessToken) {
-                        // 오리지널 요청 헤더 업데이트
-                        originalRequest.headers = originalRequest.headers ?? {};
-                        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-
-                        // 큐 처리
-                        processQueue(undefined, accessToken);
-
-                        // 원래 요청 재시도
-                        return axios(originalRequest);
+                    if (!accessToken) {
+                        throw new Error('Token refresh failed');
                     }
 
-                    throw new Error('Token refresh failed');
+                    originalRequest.headers = originalRequest.headers ?? {};
+                    originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                    processQueue(undefined, accessToken);
+
+                    return axios(originalRequest);
                 } catch (refreshError: unknown) {
-                    // 리프레시 실패 시 로그아웃 및 큐 에러 처리
                     processQueue(refreshError, null);
                     return Promise.reject(refreshError);
                 } finally {

@@ -102,6 +102,7 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">대상 조직</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상점</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">구분</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제휴 기간</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">혜택 내용</th>
                             <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                         </tr>
@@ -109,7 +110,7 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
                     <tbody className="bg-white divide-y divide-gray-200">
                         {filteredPartnerships.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                                     {searchTerm ? '검색 결과가 없습니다.' : '등록된 제휴 혜택이 없습니다.'}
                                 </td>
                             </tr>
@@ -127,7 +128,10 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
                                             {partnership.category}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {partnership.startsAt ? partnership.startsAt : '-'} ~ {partnership.endsAt ? partnership.endsAt : '-'}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate" title={partnership.benefit}>
                                         {partnership.benefit}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

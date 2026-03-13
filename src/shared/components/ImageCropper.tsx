@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Cropper, { type Area } from 'react-easy-crop';
 import { X, Check } from 'lucide-react';
 import { getCroppedImg } from '../utils/cropImage';
@@ -20,7 +20,7 @@ export function ImageCropper({ imageSrc, aspectRatio = 2.2933, onCropComplete, o
         setCroppedAreaPixels(nextCroppedAreaPixels);
     }, []);
 
-    const handleConfirm = async () => {
+    const handleConfirm = useCallback(async () => {
         if (!croppedAreaPixels || !imageSrc) return;
 
         setIsProcessing(true);
@@ -38,7 +38,19 @@ export function ImageCropper({ imageSrc, aspectRatio = 2.2933, onCropComplete, o
         } finally {
             setIsProcessing(false);
         }
-    };
+    }, [croppedAreaPixels, imageSrc, onCropComplete]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !isProcessing) {
+                e.preventDefault();
+                void handleConfirm();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleConfirm, isProcessing]);
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
