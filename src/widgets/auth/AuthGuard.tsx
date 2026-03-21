@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../shared/lib/auth/authStore';
 
 export function AuthGuard() {
-    const { isAuthenticated, role, authReady } = useAuthStore();
+    const { isAuthenticated, role, authReady, hadAuthenticatedSession, sessionExpired } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -12,7 +12,16 @@ export function AuthGuard() {
             return;
         }
 
+        if (sessionExpired) {
+            return;
+        }
+
         if (!isAuthenticated) {
+            if (hadAuthenticatedSession) {
+                useAuthStore.getState().markSessionExpired();
+                return;
+            }
+
             navigate('/login', { replace: true, state: { from: location } });
             return;
         }
@@ -22,9 +31,17 @@ export function AuthGuard() {
             useAuthStore.getState().logout();
             navigate('/login', { replace: true });
         }
-    }, [authReady, isAuthenticated, role, navigate, location]);
+    }, [authReady, hadAuthenticatedSession, isAuthenticated, role, navigate, location, sessionExpired]);
 
-    if (!authReady || !isAuthenticated || role !== 'ROLE_ADMIN') {
+    if (!authReady) {
+        return null;
+    }
+
+    if (sessionExpired) {
+        return <Outlet />;
+    }
+
+    if (!isAuthenticated || role !== 'ROLE_ADMIN') {
         return null;
     }
 

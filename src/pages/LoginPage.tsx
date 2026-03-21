@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthService } from '../shared/api/services/AuthService';
 import { Lock, User } from 'lucide-react';
 import { useAuthStore } from '../shared/lib/auth/authStore';
 
 export function LoginPage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const login = useAuthStore((state) => state.login);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const isReauth = searchParams.get('reauth') === '1';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,6 +23,14 @@ export function LoginPage() {
             const response = await AuthService.login({ username, password });
             if (response.data && response.data.accessToken) {
                 login(response.data.accessToken);
+                if (isReauth) {
+                    window.close();
+                    window.setTimeout(() => {
+                        navigate('/');
+                    }, 150);
+                    return;
+                }
+
                 navigate('/');
             } else {
                 throw new Error('No access token received');

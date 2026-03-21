@@ -18,13 +18,14 @@ interface AuthState {
     isAuthenticated: boolean;
     role: string | null;
     authReady: boolean;
+    hadAuthenticatedSession: boolean;
     sessionExpired: boolean;
     login: (token: string) => void;
     logout: () => void;
     setAuthReady: (ready: boolean) => void;
     markSessionExpired: () => void;
     clearSessionExpired: () => void;
-    refreshAccessToken: () => Promise<string | null>;
+    refreshAccessToken: (options?: { markSessionExpiredOnFailure?: boolean }) => Promise<string | null>;
 }
 
 const ACCESS_TOKEN_REFRESH_BUFFER_MS = 60_000;
@@ -62,6 +63,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             role: null,
             authReady: false,
+            hadAuthenticatedSession: false,
             sessionExpired: false,
             login: (token: string) => {
                 try {
@@ -70,6 +72,7 @@ export const useAuthStore = create<AuthState>()(
                         accessToken: token,
                         isAuthenticated: true,
                         role: decoded.role,
+                        hadAuthenticatedSession: true,
                         sessionExpired: false,
                     });
                     OpenAPI.TOKEN = token;
@@ -79,11 +82,23 @@ export const useAuthStore = create<AuthState>()(
                     console.error('Invalid token:', error);
                 }
 
-                set({ accessToken: null, isAuthenticated: false, role: null, sessionExpired: false });
+                set({
+                    accessToken: null,
+                    isAuthenticated: false,
+                    role: null,
+                    hadAuthenticatedSession: false,
+                    sessionExpired: false,
+                });
             },
             logout: () => {
                 clearRefreshTimer();
-                set({ accessToken: null, isAuthenticated: false, role: null, sessionExpired: false });
+                set({
+                    accessToken: null,
+                    isAuthenticated: false,
+                    role: null,
+                    hadAuthenticatedSession: false,
+                    sessionExpired: false,
+                });
                 OpenAPI.TOKEN = undefined;
             },
             setAuthReady: (ready: boolean) => {
@@ -91,13 +106,21 @@ export const useAuthStore = create<AuthState>()(
             },
             markSessionExpired: () => {
                 clearRefreshTimer();
-                set({ accessToken: null, isAuthenticated: false, role: null, sessionExpired: true });
+                set({
+                    accessToken: null,
+                    isAuthenticated: false,
+                    role: null,
+                    hadAuthenticatedSession: true,
+                    sessionExpired: true,
+                });
                 OpenAPI.TOKEN = undefined;
             },
             clearSessionExpired: () => {
                 set({ sessionExpired: false });
             },
-            refreshAccessToken: async () => {
+            refreshAccessToken: async (options) => {
+                const { markSessionExpiredOnFailure = true } = options ?? {};
+
                 if (refreshPromise) {
                     return refreshPromise;
                 }
@@ -115,7 +138,9 @@ export const useAuthStore = create<AuthState>()(
                     })
                     .catch((error) => {
                         console.error('Access token refresh failed:', error);
-                        get().markSessionExpired();
+                        if (markSessionExpiredOnFailure) {
+                            get().markSessionExpired();
+                        }
                         return null;
                     })
                     .finally(() => {
@@ -131,12 +156,17 @@ export const useAuthStore = create<AuthState>()(
                 accessToken: state.accessToken,
                 isAuthenticated: state.isAuthenticated,
                 role: state.role,
+                hadAuthenticatedSession: state.hadAuthenticatedSession,
+                sessionExpired: state.sessionExpired,
             }),
             onRehydrateStorage: () => (state) => {
                 if (state?.accessToken) {
                     OpenAPI.TOKEN = state.accessToken;
                     scheduleAccessTokenRefresh(state.accessToken);
+                    return;
                 }
+
+                OpenAPI.TOKEN = undefined;
             },
         }
     )

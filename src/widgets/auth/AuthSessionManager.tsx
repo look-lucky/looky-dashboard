@@ -19,7 +19,7 @@ export function AuthSessionManager() {
         const bootstrapAuth = async () => {
             try {
                 if (!accessToken) {
-                    await refreshAccessToken();
+                    await refreshAccessToken({ markSessionExpiredOnFailure: false });
                 }
             } catch {
                 // Ignore bootstrap refresh errors and let the guard redirect if needed.

@@ -1,14 +1,36 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { AlertTriangle, LogOut } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { useAuthStore } from '../../shared/lib/auth/authStore';
 import { AuthService } from '../../shared/api/services/AuthService';
 
+const REAUTH_WINDOW_NAME = 'looky-admin-reauth';
+
+const openOrFocusReauthWindow = (reauthWindowRef: React.MutableRefObject<Window | null>) => {
+    const existingWindow = reauthWindowRef.current;
+
+    if (existingWindow && !existingWindow.closed) {
+        existingWindow.focus();
+        return existingWindow;
+    }
+
+    const nextWindow = window.open('/login?reauth=1', REAUTH_WINDOW_NAME);
+
+    if (nextWindow) {
+        nextWindow.focus();
+        reauthWindowRef.current = nextWindow;
+    }
+
+    return nextWindow;
+};
+
 export function DashboardLayout() {
     const logout = useAuthStore((state) => state.logout);
     const sessionExpired = useAuthStore((state) => state.sessionExpired);
     const navigate = useNavigate();
+    const reauthWindowRef = useRef<Window | null>(null);
+    const [reauthWindowBlocked, setReauthWindowBlocked] = useState(false);
 
     const handleLogout = async () => {
         try {
@@ -22,22 +44,40 @@ export function DashboardLayout() {
     };
 
     const handleOpenLogin = () => {
-        window.open('/login', '_blank');
+        const loginWindow = openOrFocusReauthWindow(reauthWindowRef);
+        setReauthWindowBlocked(!loginWindow);
     };
 
     useEffect(() => {
         const handleStorage = (event: StorageEvent) => {
-            if (event.key !== 'auth-storage' || !event.newValue) {
+            if (event.key !== 'auth-storage') {
                 return;
             }
 
             try {
+                if (!event.newValue) {
+                    useAuthStore.getState().logout();
+                    return;
+                }
+
                 const parsed = JSON.parse(event.newValue);
                 const nextToken = parsed?.state?.accessToken;
+                const nextSessionExpired = parsed?.state?.sessionExpired === true;
+                const nextAuthenticated = parsed?.state?.isAuthenticated === true;
 
                 if (typeof nextToken === 'string' && nextToken.length > 0) {
                     useAuthStore.getState().login(nextToken);
                     useAuthStore.getState().clearSessionExpired();
+                    return;
+                }
+
+                if (nextSessionExpired) {
+                    useAuthStore.getState().markSessionExpired();
+                    return;
+                }
+
+                if (!nextAuthenticated) {
+                    useAuthStore.getState().logout();
                 }
             } catch (error) {
                 console.error('Failed to sync auth state from another tab.', error);
@@ -50,6 +90,17 @@ export function DashboardLayout() {
             window.removeEventListener('storage', handleStorage);
         };
     }, []);
+
+    useEffect(() => {
+        if (!sessionExpired) {
+            reauthWindowRef.current = null;
+            setReauthWindowBlocked(false);
+            return;
+        }
+
+        const loginWindow = openOrFocusReauthWindow(reauthWindowRef);
+        setReauthWindowBlocked(!loginWindow);
+    }, [sessionExpired]);
 
     return (
         <div className="min-h-screen bg-gray-50 flex font-sans text-gray-900">
@@ -86,8 +137,13 @@ export function DashboardLayout() {
                             <div className="flex-1">
                                 <h2 className="text-lg font-semibold text-gray-900">로그인이 만료되었습니다.</h2>
                                 <p className="mt-2 text-sm leading-6 text-gray-600">
-                                    현재 작성 중인 내용은 그대로 남아 있습니다. 새 탭에서 다시 로그인한 뒤 이 화면으로 돌아와 다시 제출하세요.
+                                    현재 작성 중인 내용은 그대로 남아 있습니다. 새 탭 로그인 창을 열었으니 다시 로그인한 뒤 이 화면으로 돌아와 다시 제출하세요.
                                 </p>
+                                {reauthWindowBlocked && (
+                                    <p className="mt-2 text-sm leading-6 text-amber-700">
+                                        브라우저가 새 탭 열기를 차단했습니다. 아래 버튼을 눌러 로그인 창을 다시 열어주세요.
+                                    </p>
+                                )}
                             </div>
                         </div>
 
