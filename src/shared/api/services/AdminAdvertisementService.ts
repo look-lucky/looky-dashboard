@@ -8,6 +8,7 @@ import { request as __request } from '../core/request';
 
 export type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
 export type AdvertisementStatus = 'SCHEDULED' | 'ACTIVE' | 'INACTIVE' | 'ENDED';
+export type Gender = 'MALE' | 'FEMALE' | 'UNKNOWN';
 
 export interface AdminAdvertisementResponse {
     id: number;
@@ -20,6 +21,11 @@ export interface AdminAdvertisementResponse {
     startAt: string;
     endAt: string;
     createdAt: string;
+    targetUniversityId: number | null;
+    targetUniversityName: string | null;
+    targetOrganizationId: number | null;
+    targetOrganizationName: string | null;
+    targetGender: Gender | null;
 }
 
 export interface CreateAdvertisementRequest {
@@ -30,6 +36,9 @@ export interface CreateAdvertisementRequest {
     displayOrder: number;
     startAt: string;
     endAt: string;
+    targetUniversityId?: number | null;
+    targetOrganizationId?: number | null;
+    targetGender?: Gender | null;
 }
 
 export interface UpdateAdvertisementRequest {
@@ -40,6 +49,9 @@ export interface UpdateAdvertisementRequest {
     startAt?: string | null;
     endAt?: string | null;
     status?: AdvertisementStatus | null;
+    targetUniversityId?: number | null;
+    targetOrganizationId?: number | null;
+    targetGender?: Gender | null;
 }
 
 export interface PageResponseAdminAdvertisementResponse {

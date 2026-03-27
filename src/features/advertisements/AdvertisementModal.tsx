@@ -5,9 +5,14 @@ import {
     type AdminAdvertisementResponse,
     type AdvertisementType,
     type AdvertisementStatus,
+    type Gender,
     type CreateAdvertisementRequest,
     type UpdateAdvertisementRequest,
 } from '../../shared/api/services/AdminAdvertisementService';
+import { UniversityService } from '../../shared/api/services/UniversityService';
+import { OrganizationService } from '../../shared/api/services/OrganizationService';
+import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
+import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { uploadImage } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
@@ -40,6 +45,13 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const [endAt, setEndAt] = useState('');
     const [status, setStatus] = useState<AdvertisementStatus>('ACTIVE');
 
+    // Target States
+    const [universities, setUniversities] = useState<UniversityResponse[]>([]);
+    const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
+    const [targetUniversityId, setTargetUniversityId] = useState<number | null>(null);
+    const [targetOrganizationId, setTargetOrganizationId] = useState<number | null>(null);
+    const [targetGender, setTargetGender] = useState<Gender | null>(null);
+
     // Image Handling
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -49,6 +61,23 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const imageInputRef = useRef<HTMLInputElement>(null);
 
     const selectedTypeInfo = AD_TYPES.find(t => t.value === advertisementType)!;
+
+    useEffect(() => {
+        UniversityService.getUniversities().then(res => {
+            setUniversities(res.data || []);
+        }).catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        if (targetUniversityId == null) {
+            setOrganizations([]);
+            setTargetOrganizationId(null);
+            return;
+        }
+        OrganizationService.getOrganizations(targetUniversityId).then(res => {
+            setOrganizations(res.data || []);
+        }).catch(() => {});
+    }, [targetUniversityId]);
 
     const formatDateForInput = (dateString: string) => {
         if (!dateString) return '';
@@ -66,6 +95,9 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
             setStatus(initialData.status === 'ACTIVE' || initialData.status === 'INACTIVE' ? initialData.status : 'ACTIVE');
             setExistingImageUrl(initialData.imageUrl || null);
             setImagePreviewUrl(initialData.imageUrl || null);
+            setTargetUniversityId(initialData.targetUniversityId ?? null);
+            setTargetOrganizationId(initialData.targetOrganizationId ?? null);
+            setTargetGender(initialData.targetGender ?? null);
         }
     }, [initialData]);
 
@@ -158,6 +190,9 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     startAt: new Date(startAt).toISOString(),
                     endAt: new Date(endAt).toISOString(),
                     status,
+                    targetUniversityId,
+                    targetOrganizationId,
+                    targetGender,
                 };
                 await AdminAdvertisementService.updateAdvertisement(initialData.id, requestData);
                 alert('광고가 수정되었습니다.');
@@ -170,6 +205,9 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     displayOrder,
                     startAt: new Date(startAt).toISOString(),
                     endAt: new Date(endAt).toISOString(),
+                    targetUniversityId,
+                    targetOrganizationId,
+                    targetGender,
                 };
                 await AdminAdvertisementService.createAdvertisement(requestData);
                 alert('광고가 등록되었습니다.');
@@ -349,6 +387,63 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                             required
                         />
                         <p className="text-xs text-gray-400 mt-1">숫자가 낮을수록 우선 노출됩니다.</p>
+                    </div>
+
+                    {/* 타겟 설정 */}
+                    <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-sm font-medium text-gray-700">타겟 설정 <span className="text-gray-400 font-normal">(선택 — 미설정 시 전체 대상)</span></p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">대학</label>
+                                <select
+                                    value={targetUniversityId ?? ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value === '' ? null : Number(e.target.value);
+                                        setTargetUniversityId(val);
+                                        setTargetOrganizationId(null);
+                                    }}
+                                    className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                >
+                                    <option value="">전체 대학</option>
+                                    {universities.map(u => (
+                                        <option key={u.id} value={u.id}>{u.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">단과대</label>
+                                <select
+                                    value={targetOrganizationId ?? ''}
+                                    onChange={(e) => setTargetOrganizationId(e.target.value === '' ? null : Number(e.target.value))}
+                                    disabled={targetUniversityId == null}
+                                    className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <option value="">전체 단과대</option>
+                                    {organizations.map(o => (
+                                        <option key={o.id} value={o.id}>{o.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">성별</label>
+                            <div className="flex gap-2">
+                                {([['', '전체'], ['MALE', '남성'], ['FEMALE', '여성']] as const).map(([val, label]) => (
+                                    <button
+                                        key={val}
+                                        type="button"
+                                        onClick={() => setTargetGender(val === '' ? null : val as Gender)}
+                                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                                            (val === '' ? targetGender == null : targetGender === val)
+                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
                     {/* 노출 기간 */}

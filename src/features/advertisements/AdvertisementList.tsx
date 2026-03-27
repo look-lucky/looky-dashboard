@@ -166,6 +166,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타입</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">순서</th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타겟</th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">기간</th>
                                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                             </tr>
@@ -218,6 +219,23 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                         {ad.displayOrder}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                        <div className="flex flex-col gap-0.5 min-w-[80px]">
+                                            {ad.targetUniversityName ? (
+                                                <span className="truncate max-w-[120px]" title={ad.targetUniversityName}>{ad.targetUniversityName}</span>
+                                            ) : (
+                                                <span className="text-gray-300">전체 대학</span>
+                                            )}
+                                            {ad.targetOrganizationName && (
+                                                <span className="text-xs text-gray-400 truncate max-w-[120px]" title={ad.targetOrganizationName}>{ad.targetOrganizationName}</span>
+                                            )}
+                                            {ad.targetGender && (
+                                                <span className="text-xs text-gray-400">
+                                                    {ad.targetGender === 'MALE' ? '남성' : ad.targetGender === 'FEMALE' ? '여성' : '미설정'}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center text-sm text-gray-500">
