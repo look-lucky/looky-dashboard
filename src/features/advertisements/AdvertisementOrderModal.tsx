@@ -1,5 +1,5 @@
 import { X, GripVertical, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     AdminAdvertisementService,
     type AdminAdvertisementResponse,
@@ -35,10 +35,14 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
     // 드래그 상태 — state로 관리해 시각적 피드백 제공
     const [dragFrom, setDragFrom] = useState<number | null>(null);
     const [dragTo, setDragTo] = useState<number | null>(null);
+    const dragFromRef = useRef<number | null>(null); // stale closure 방지
 
     useEffect(() => {
         setLoading(true);
-        AdminAdvertisementService.getAdvertisements(0, 100, selectedType)
+        setDragFrom(null);
+        setDragTo(null);
+        dragFromRef.current = null;
+        AdminAdvertisementService.getAdvertisements(0, 100, selectedType, 'ACTIVE')
             .then(res => {
                 const sorted = [...(res.data?.content ?? [])].sort((a, b) => a.displayOrder - b.displayOrder);
                 setItems(sorted);
@@ -52,6 +56,7 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
     // onDrop 기반: 드래그 중 setItems를 호출하지 않아 리렌더링으로 인한
     // 브라우저 드래그 상태 초기화 문제 없음
     const handleDragStart = (index: number) => {
+        dragFromRef.current = index; // ref는 항상 최신값 보장
         setDragFrom(index);
         setDragTo(index);
     };
@@ -63,22 +68,26 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
 
     const handleDrop = (e: React.DragEvent, dropIndex: number) => {
         e.preventDefault();
-        if (dragFrom === null || dragFrom === dropIndex) {
+        const from = dragFromRef.current; // ref에서 읽어 stale closure 방지
+        if (from === null || from === dropIndex) {
+            dragFromRef.current = null;
             setDragFrom(null);
             setDragTo(null);
             return;
         }
         setItems(prev => {
             const next = [...prev];
-            const [moved] = next.splice(dragFrom, 1);
+            const [moved] = next.splice(from, 1);
             next.splice(dropIndex, 0, moved);
             return next;
         });
+        dragFromRef.current = null;
         setDragFrom(null);
         setDragTo(null);
     };
 
     const handleDragEnd = () => {
+        dragFromRef.current = null;
         setDragFrom(null);
         setDragTo(null);
     };

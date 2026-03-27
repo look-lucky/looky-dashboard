@@ -1,11 +1,12 @@
 import { Edit2, Trash2, Calendar, ExternalLink, Search, ArrowUpDown } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     AdminAdvertisementService,
     type AdminAdvertisementResponse,
     type AdvertisementType,
     type AdvertisementStatus,
 } from '../../shared/api/services/AdminAdvertisementService';
+import { OrganizationService } from '../../shared/api/services/OrganizationService';
 import { AdvertisementOrderModal } from './AdvertisementOrderModal';
 
 interface AdvertisementListProps {
@@ -64,6 +65,9 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
     const [activeTab, setActiveTab] = useState<'' | AdvertisementType>('');
     const [statusFilter, setStatusFilter] = useState<'' | AdvertisementStatus>('');
     const [showOrderModal, setShowOrderModal] = useState(false);
+    // orgId → univId 매핑 (단과대를 대학별로 그루핑하기 위해)
+    const [orgUnivMap, setOrgUnivMap] = useState<Record<number, number>>({});
+    const fetchedUnivIdsRef = useRef<Set<number>>(new Set());
 
     const filteredAds = ads.filter(ad =>
         ad.title?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -98,6 +102,26 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
     useEffect(() => {
         setPage(0);
     }, [activeTab, statusFilter]);
+
+    // ads가 바뀌면 targetUniversities 기준으로 org→univ 매핑 fetch
+    useEffect(() => {
+        const univIds = new Set<number>();
+        ads.forEach(ad => (ad.targetUniversities ?? []).forEach(u => univIds.add(u.id)));
+        univIds.forEach(univId => {
+            if (fetchedUnivIdsRef.current.has(univId)) return;
+            fetchedUnivIdsRef.current.add(univId);
+            OrganizationService.getOrganizations(univId)
+                .then(res => {
+                    const orgs = res.data ?? [];
+                    setOrgUnivMap(prev => {
+                        const next = { ...prev };
+                        orgs.forEach(o => { if (o.id != null) next[o.id] = univId; });
+                        return next;
+                    });
+                })
+                .catch(() => { fetchedUnivIdsRef.current.delete(univId); });
+        });
+    }, [ads]);
 
     const handleDelete = async (id: number) => {
         if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -238,24 +262,33 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {ad.displayOrder}
+                                        {ad.status === 'ACTIVE' ? ad.displayOrder : '-'}
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500">
-                                        <div className="flex flex-col gap-0.5 min-w-[80px]">
+                                        <div className="flex flex-col gap-1 min-w-[120px]">
                                             {ad.targetUniversities && ad.targetUniversities.length > 0 ? (
-                                                ad.targetUniversities.map(u => (
-                                                    <span key={u.id} className="truncate max-w-[120px]" title={u.name}>{u.name}</span>
-                                                ))
+                                                ad.targetUniversities.map(u => {
+                                                    const univOrgs = (ad.targetOrganizations ?? []).filter(
+                                                        o => orgUnivMap[o.id] === u.id
+                                                    );
+                                                    return (
+                                                        <div key={u.id} className="flex flex-col gap-0.5">
+                                                            <span className="font-medium text-gray-700 truncate max-w-[140px]" title={u.name}>
+                                                                {u.name}
+                                                            </span>
+                                                            {univOrgs.map(o => (
+                                                                <span key={o.id} className="text-xs text-gray-400 truncate max-w-[140px] pl-2" title={o.name}>
+                                                                    └ {o.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })
                                             ) : (
                                                 <span className="text-gray-300">전체 대학</span>
                                             )}
-                                            {ad.targetOrganizations && ad.targetOrganizations.length > 0 && (
-                                                ad.targetOrganizations.map(o => (
-                                                    <span key={o.id} className="text-xs text-gray-400 truncate max-w-[120px]" title={o.name}>{o.name}</span>
-                                                ))
-                                            )}
                                             {ad.targetGender && (
-                                                <span className="text-xs text-gray-400">
+                                                <span className="text-xs text-gray-400 mt-0.5">
                                                     {ad.targetGender === 'MALE' ? '남성' : ad.targetGender === 'FEMALE' ? '여성' : '미설정'}
                                                 </span>
                                             )}
