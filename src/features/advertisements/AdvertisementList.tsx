@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Calendar, ExternalLink, Search } from 'lucide-react';
+import { Edit2, Trash2, Calendar, ExternalLink, Search, ArrowUpDown } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import {
     AdminAdvertisementService,
@@ -6,6 +6,7 @@ import {
     type AdvertisementType,
     type AdvertisementStatus,
 } from '../../shared/api/services/AdminAdvertisementService';
+import { AdvertisementOrderModal } from './AdvertisementOrderModal';
 
 interface AdvertisementListProps {
     refreshTrigger: number;
@@ -61,6 +62,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState<'' | AdvertisementType>('');
     const [statusFilter, setStatusFilter] = useState<'' | AdvertisementStatus>('');
+    const [showOrderModal, setShowOrderModal] = useState(false);
 
     const filteredAds = ads.filter(ad =>
         ad.title?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -123,7 +125,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
     return (
         <div className="space-y-4">
             {/* 검색 및 필터 */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                 <div className="relative flex-1">
                     <input
                         type="text"
@@ -152,6 +154,13 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                         <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
                 </select>
+                <button
+                    onClick={() => setShowOrderModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                >
+                    <ArrowUpDown className="w-4 h-4" />
+                    순서 관리
+                </button>
             </div>
 
             {filteredAds.length === 0 ? (
@@ -269,6 +278,16 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                         </tbody>
                     </table>
                 </div>
+            )}
+
+            {showOrderModal && (
+                <AdvertisementOrderModal
+                    onClose={() => setShowOrderModal(false)}
+                    onSuccess={() => {
+                        setShowOrderModal(false);
+                        void fetchAds();
+                    }}
+                />
             )}
 
             {/* 페이지네이션 */}

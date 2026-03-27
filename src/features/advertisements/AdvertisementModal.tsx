@@ -62,6 +62,9 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const [showCropper, setShowCropper] = useState(false);
     const imageInputRef = useRef<HTMLInputElement>(null);
 
+    // 이미 fetch 요청을 보낸 대학 ID 추적 (중복 요청 방지)
+    const fetchedUnivIds = useRef<Set<number>>(new Set());
+
     const selectedTypeInfo = AD_TYPES.find(t => t.value === advertisementType)!;
 
     useEffect(() => {
@@ -71,26 +74,18 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     }, []);
 
     useEffect(() => {
-        if (targetUniversityIds.length === 0) {
-            setOrganizationsByUniv({});
-            setTargetOrganizationIds([]);
-            return;
-        }
         targetUniversityIds.forEach(univId => {
-            if (organizationsByUniv[univId]) return;
+            if (fetchedUnivIds.current.has(univId)) return;
+            fetchedUnivIds.current.add(univId);
             OrganizationService.getOrganizations(univId).then(res => {
                 setOrganizationsByUniv(prev => ({
                     ...prev,
                     [univId]: (res.data || []).filter(o => o.category === OrganizationResponse.category.COLLEGE),
                 }));
-            }).catch(() => {});
+            }).catch(() => {
+                fetchedUnivIds.current.delete(univId);
+            });
         });
-        // 선택 해제된 대학의 단과대 ID 제거
-        const allAvailableOrgIds = new Set(
-            targetUniversityIds.flatMap(id => (organizationsByUniv[id] || []).map(o => o.id!))
-        );
-        setTargetOrganizationIds(prev => prev.filter(id => allAvailableOrgIds.has(id)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [targetUniversityIds]);
 
     const formatDateForInput = (dateString: string) => {
