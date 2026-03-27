@@ -42,7 +42,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const [title, setTitle] = useState('');
     const [advertisementType, setAdvertisementType] = useState<AdvertisementType>('POPUP');
     const [landingUrl, setLandingUrl] = useState('');
-    const [displayOrder, setDisplayOrder] = useState(0);
     const [startAt, setStartAt] = useState('');
     const [endAt, setEndAt] = useState('');
     const [status, setStatus] = useState<AdvertisementStatus>('ACTIVE');
@@ -98,7 +97,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
             setTitle(initialData.title || '');
             setAdvertisementType(initialData.advertisementType);
             setLandingUrl(initialData.landingUrl || '');
-            setDisplayOrder(initialData.displayOrder ?? 0);
             setStartAt(formatDateForInput(initialData.startAt || ''));
             setEndAt(formatDateForInput(initialData.endAt || ''));
             setStatus(initialData.status === 'ACTIVE' || initialData.status === 'INACTIVE' ? initialData.status : 'ACTIVE');
@@ -191,16 +189,24 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
             }
 
             if (initialData && initialData.id) {
+                // UPDATE: targeting 필드는 초기값과 다를 때만 포함
+                // (JsonNullable 패턴: 필드 미포함 = 변경 없음, null = 전체 초기화, 배열 = 지정)
+                const initialUnivIds = (initialData.targetUniversities ?? []).map(u => u.id).sort((a, b) => a - b);
+                const initialOrgIds = (initialData.targetOrganizations ?? []).map(o => o.id).sort((a, b) => a - b);
+                const currentUnivIds = [...targetUniversityIds].sort((a, b) => a - b);
+                const currentOrgIds = [...targetOrganizationIds].sort((a, b) => a - b);
+                const univChanged = JSON.stringify(initialUnivIds) !== JSON.stringify(currentUnivIds);
+                const orgChanged = JSON.stringify(initialOrgIds) !== JSON.stringify(currentOrgIds);
+
                 const requestData: UpdateAdvertisementRequest = {
                     title,
                     imageUrl,
                     landingUrl: landingUrl || null,
-                    displayOrder,
                     startAt: new Date(startAt).toISOString(),
                     endAt: new Date(endAt).toISOString(),
                     status,
-                    targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
-                    targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
+                    ...(univChanged ? { targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null } : {}),
+                    ...(orgChanged ? { targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null } : {}),
                     targetGender,
                 };
                 await AdminAdvertisementService.updateAdvertisement(initialData.id, requestData);
@@ -211,7 +217,7 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     advertisementType,
                     imageUrl,
                     landingUrl: landingUrl || null,
-                    displayOrder,
+                    displayOrder: 0,
                     startAt: new Date(startAt).toISOString(),
                     endAt: new Date(endAt).toISOString(),
                     targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
@@ -384,40 +390,27 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                         <p className="text-xs text-gray-400 mt-1">입력하지 않으면 광고 클릭 시 이동 없음</p>
                     </div>
 
-                    {/* 노출 순서 */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">노출 순서 *</label>
-                        <input
-                            type="number"
-                            min={0}
-                            value={displayOrder}
-                            onChange={(e) => setDisplayOrder(parseInt(e.target.value) || 0)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            required
-                        />
-                        <p className="text-xs text-gray-400 mt-1">숫자가 낮을수록 우선 노출됩니다.</p>
-                    </div>
-
                     {/* 타겟 설정 */}
                     <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <p className="text-sm font-medium text-gray-700">타겟 설정 <span className="text-gray-400 font-normal">(선택 — 미설정 시 전체 대상, 복수 선택 가능)</span></p>
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1.5">대학</label>
                             <div className="flex flex-wrap gap-1.5">
-                                {universities.map(u => {
-                                    const selected = targetUniversityIds.includes(u.id!);
+                                {universities.filter(u => u.id != null).map(u => {
+                                    const univId = u.id as number;
+                                    const selected = targetUniversityIds.includes(univId);
                                     return (
                                         <button
-                                            key={u.id}
+                                            key={univId}
                                             type="button"
                                             onClick={() => {
                                                 if (selected) {
-                                                    setTargetUniversityIds(prev => prev.filter(id => id !== u.id));
+                                                    setTargetUniversityIds(prev => prev.filter(id => id !== univId));
                                                     // 해당 대학 단과대 선택 해제
-                                                    const orgIds = (organizationsByUniv[u.id!] || []).map(o => o.id!);
-                                                    setTargetOrganizationIds(prev => prev.filter(id => !orgIds.includes(id)));
+                                                    const orgIds = new Set((organizationsByUniv[univId] || []).map(o => o.id));
+                                                    setTargetOrganizationIds(prev => prev.filter(id => !orgIds.has(id)));
                                                 } else {
-                                                    setTargetUniversityIds(prev => [...prev, u.id!]);
+                                                    setTargetUniversityIds(prev => [...prev, univId]);
                                                 }
                                             }}
                                             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
@@ -437,17 +430,18 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                             <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1.5">단과대</label>
                                 <div className="flex flex-wrap gap-1.5">
-                                    {targetUniversityIds.flatMap(univId => organizationsByUniv[univId] || []).map(o => {
-                                        const selected = targetOrganizationIds.includes(o.id!);
+                                    {targetUniversityIds.flatMap(univId => organizationsByUniv[univId] || []).filter(o => o.id != null).map(o => {
+                                        const orgId = o.id as number;
+                                        const selected = targetOrganizationIds.includes(orgId);
                                         return (
                                             <button
-                                                key={o.id}
+                                                key={orgId}
                                                 type="button"
                                                 onClick={() => {
                                                     if (selected) {
-                                                        setTargetOrganizationIds(prev => prev.filter(id => id !== o.id));
+                                                        setTargetOrganizationIds(prev => prev.filter(id => id !== orgId));
                                                     } else {
-                                                        setTargetOrganizationIds(prev => [...prev, o.id!]);
+                                                        setTargetOrganizationIds(prev => [...prev, orgId]);
                                                     }
                                                 }}
                                                 className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${

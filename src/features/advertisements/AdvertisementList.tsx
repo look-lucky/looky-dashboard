@@ -39,12 +39,6 @@ const STATUS_COLORS: Record<AdvertisementStatus, string> = {
     ENDED: 'bg-red-100 text-red-700',
 };
 
-const AD_TYPES: { value: '' | AdvertisementType; label: string }[] = [
-    { value: '', label: '전체 타입' },
-    { value: 'POPUP', label: '팝업' },
-    { value: 'BANNER', label: '배너' },
-    { value: 'FLOATING', label: '플로팅' },
-];
 
 const AD_STATUSES: { value: '' | AdvertisementStatus; label: string }[] = [
     { value: '', label: '전체 상태' },
@@ -54,13 +48,20 @@ const AD_STATUSES: { value: '' | AdvertisementStatus; label: string }[] = [
     { value: 'ENDED', label: '종료' },
 ];
 
+const TABS: { value: '' | AdvertisementType; label: string }[] = [
+    { value: '', label: '전체' },
+    { value: 'POPUP', label: '팝업' },
+    { value: 'BANNER', label: '배너' },
+    { value: 'FLOATING', label: '플로팅' },
+];
+
 export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListProps) {
     const [ads, setAds] = useState<AdminAdvertisementResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
-    const [typeFilter, setTypeFilter] = useState<'' | AdvertisementType>('');
+    const [activeTab, setActiveTab] = useState<'' | AdvertisementType>('');
     const [statusFilter, setStatusFilter] = useState<'' | AdvertisementStatus>('');
     const [showOrderModal, setShowOrderModal] = useState(false);
 
@@ -74,7 +75,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
             const response = await AdminAdvertisementService.getAdvertisements(
                 page,
                 10,
-                typeFilter || undefined,
+                activeTab || undefined,
                 statusFilter || undefined,
             );
             if (response.data) {
@@ -87,16 +88,16 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
         } finally {
             setLoading(false);
         }
-    }, [page, typeFilter, statusFilter]);
+    }, [page, activeTab, statusFilter]);
 
     useEffect(() => {
         void fetchAds();
     }, [refreshTrigger, fetchAds]);
 
-    // 필터 변경 시 첫 페이지로 이동
+    // 탭/필터 변경 시 첫 페이지로 이동
     useEffect(() => {
         setPage(0);
-    }, [typeFilter, statusFilter]);
+    }, [activeTab, statusFilter]);
 
     const handleDelete = async (id: number) => {
         if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -124,6 +125,32 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
 
     return (
         <div className="space-y-4">
+            {/* 탭 */}
+            <div className="flex items-center border-b border-gray-200">
+                {TABS.map(tab => (
+                    <button
+                        key={tab.value}
+                        onClick={() => setActiveTab(tab.value)}
+                        className={`px-5 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                            activeTab === tab.value
+                                ? 'border-blue-600 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+                {activeTab !== '' && (
+                    <button
+                        onClick={() => setShowOrderModal(true)}
+                        className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        <ArrowUpDown className="w-3.5 h-3.5" />
+                        순서 관리
+                    </button>
+                )}
+            </div>
+
             {/* 검색 및 필터 */}
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                 <div className="relative flex-1">
@@ -137,15 +164,6 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                     <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                 </div>
                 <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value as '' | AdvertisementType)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
-                >
-                    {AD_TYPES.map(t => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                    ))}
-                </select>
-                <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as '' | AdvertisementStatus)}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
@@ -154,13 +172,6 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                         <option key={s.value} value={s.value}>{s.label}</option>
                     ))}
                 </select>
-                <button
-                    onClick={() => setShowOrderModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
-                >
-                    <ArrowUpDown className="w-4 h-4" />
-                    순서 관리
-                </button>
             </div>
 
             {filteredAds.length === 0 ? (
@@ -282,6 +293,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
 
             {showOrderModal && (
                 <AdvertisementOrderModal
+                    initialType={activeTab || undefined}
                     onClose={() => setShowOrderModal(false)}
                     onSuccess={() => {
                         setShowOrderModal(false);

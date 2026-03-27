@@ -7,6 +7,7 @@ import {
 } from '../../shared/api/services/AdminAdvertisementService';
 
 interface AdvertisementOrderModalProps {
+    initialType?: AdvertisementType;
     onClose: () => void;
     onSuccess: () => void;
 }
@@ -17,8 +18,8 @@ const AD_TYPES: { value: AdvertisementType; label: string }[] = [
     { value: 'FLOATING', label: '플로팅' },
 ];
 
-export function AdvertisementOrderModal({ onClose, onSuccess }: AdvertisementOrderModalProps) {
-    const [selectedType, setSelectedType] = useState<AdvertisementType>('POPUP');
+export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: AdvertisementOrderModalProps) {
+    const [selectedType, setSelectedType] = useState<AdvertisementType>(initialType ?? 'POPUP');
     const [items, setItems] = useState<AdminAdvertisementResponse[]>([]);
     const [originalOrder, setOriginalOrder] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
