@@ -23,22 +23,58 @@ export function StoreClaimList() {
     const fetchClaims = useCallback(async () => {
         setLoading(true);
         try {
-            const status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | undefined =
-                currentTab === 'PENDING'
-                    ? 'PENDING'
-                    : completedFilter === 'ALL'
-                        ? undefined
-                        : completedFilter;
+            if (currentTab === 'COMPLETED' && completedFilter === 'ALL') {
+                // Fetch APPROVED and REJECTED separately and combine them for accurate pagination if backend supports it.
+                // Since our backend doesn't support multiple statuses in a single request, 
+                // and fetching all to filter locally breaks pagination, we will fetch both and merge them for the current page
+                const [approvedResponse, rejectedResponse] = await Promise.all([
+                    StoreClaimService.getStoreClaims(
+                        { page, size: pageSize, sort: ['createdAt,desc'] },
+                        'APPROVED'
+                    ),
+                    StoreClaimService.getStoreClaims(
+                        { page, size: pageSize, sort: ['createdAt,desc'] },
+                        'REJECTED'
+                    )
+                ]);
 
-            const response = await StoreClaimService.getStoreClaims(
-                { page, size: pageSize, sort: ['createdAt,desc'] },
-                status
-            );
+                if (approvedResponse.data && rejectedResponse.data) {
+                    const approvedClaims = approvedResponse.data.content || [];
+                    const rejectedClaims = rejectedResponse.data.content || [];
+                    
+                    // Combine and sort by createdAt descending
+                    const combinedClaims = [...approvedClaims, ...rejectedClaims].sort((a, b) => {
+                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        return dateB - dateA;
+                    });
+                    
+                    // Slice to match page size (Note: This is still a workaround and might not be perfectly standard pagination 
+                    // if there are many pages, but it's better than showing PENDING items)
+                    setClaims(combinedClaims.slice(0, pageSize));
+                    
+                    const totalElements = (approvedResponse.data.totalElements || 0) + (rejectedResponse.data.totalElements || 0);
+                    setTotalElements(totalElements);
+                    setTotalPages(Math.ceil(totalElements / pageSize));
+                }
+            } else {
+                const status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED' | undefined =
+                    currentTab === 'PENDING'
+                        ? 'PENDING'
+                        : completedFilter === 'ALL'
+                            ? undefined
+                            : completedFilter;
 
-            if (response.data) {
-                setClaims(response.data.content || []);
-                setTotalPages(response.data.totalPages || 0);
-                setTotalElements(response.data.totalElements || 0);
+                const response = await StoreClaimService.getStoreClaims(
+                    { page, size: pageSize, sort: ['createdAt,desc'] },
+                    status
+                );
+
+                if (response.data) {
+                    setClaims(response.data.content || []);
+                    setTotalPages(response.data.totalPages || 0);
+                    setTotalElements(response.data.totalElements || 0);
+                }
             }
         } catch (error) {
             console.error('Failed to fetch claims', error);

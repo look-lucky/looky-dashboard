@@ -118,6 +118,7 @@ export function PartnershipPage() {
                     <PartnershipList
                         universityId={selectedUniversityId}
                         organizationId={selectedOrganizationId}
+                        categoryId={selectedCategory}
                         refreshTrigger={refreshTrigger}
                     />
                 ) : (

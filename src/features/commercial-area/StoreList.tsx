@@ -925,31 +925,28 @@ export function StoreList({ universityId }: StoreListProps) {
             {/* Detail Modal */}
             {selectedStore && (
                 <div
-                    className="fixed inset-0 z-50 overflow-y-auto"
+                    className="fixed inset-0 z-50 p-4"
                     aria-labelledby="modal-title"
                     role="dialog"
                     aria-modal="true"
                     onPaste={handlePaste}
                 >
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className={`inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle ${isEditMode ? 'sm:max-w-4xl' : 'sm:max-w-lg'} sm:w-full sm:p-6`}>
-
-                            <div className="absolute top-0 right-0 pt-4 pr-4">
-                                <button type="button" onClick={closeModal} className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
+                    <div className="relative flex min-h-full items-center justify-center">
+                        <div className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-white text-left shadow-xl ${isEditMode ? 'max-w-4xl' : 'max-w-lg'}`}>
+                            <div className="flex items-center justify-between border-b border-gray-200 p-6">
+                                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                    {isEditMode ? '상점 정보 수정' : selectedStore.name}
+                                </h3>
+                                <button type="button" onClick={closeModal} className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none">
                                     <span className="sr-only">Close</span>
                                     <X className="h-6 w-6" />
                                 </button>
                             </div>
 
-                            <div className="sm:flex sm:items-start">
-                                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                        {isEditMode ? '상점 정보 수정' : selectedStore.name}
-                                    </h3>
-
-                                    <div className="mt-4 border-t border-gray-200 pt-4">
+                            <div className="flex-1 overflow-y-auto p-6">
+                                <div className="w-full">
+                                    <div className="border-t border-gray-200 pt-4">
                                         {deleteConfirm ? (
                                             <div className="text-center p-4 bg-red-50 rounded-lg">
                                                 <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-2" />
@@ -1196,15 +1193,14 @@ export function StoreList({ universityId }: StoreListProps) {
                                     </div>
                                 </div>
                             </div>
-
                             {!deleteConfirm && (
-                                <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-2">
+                                <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50 p-6 sm:flex-row-reverse">
                                     {isEditMode ? (
                                         <>
                                             <button
                                                 type="submit"
                                                 form="store-edit-form"
-                                                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                                className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
                                             >
                                                 <Save className="w-4 h-4 mr-2" />
                                                 저장
@@ -1212,7 +1208,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => setIsEditMode(false)}
-                                                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                                                className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm"
                                             >
                                                 취소
                                             </button>
@@ -1220,7 +1216,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                     ) : (
                                         <>
                                             {selectedStore.storeStatus === 'ACTIVE' ? (
-                                                <div className="w-full text-center sm:text-right text-sm text-gray-500 py-2">
+                                                <div className="w-full py-2 text-center text-sm text-gray-500 sm:text-right">
                                                     * 입점된 상점은 수정/삭제할 수 없습니다.
                                                 </div>
                                             ) : (
@@ -1228,7 +1224,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                     <button
                                                         type="button"
                                                         onClick={handleEditClick}
-                                                        className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-indigo-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                                        className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-indigo-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
                                                     >
                                                         <Edit2 className="w-4 h-4 mr-2" />
                                                         수정
@@ -1236,7 +1232,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                     <button
                                                         type="button"
                                                         onClick={() => setDeleteConfirm(true)}
-                                                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                                        className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
                                                     >
                                                         <Trash2 className="w-4 h-4 mr-2" />
                                                         삭제
