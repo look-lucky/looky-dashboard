@@ -11,6 +11,7 @@ import { StoreImportPage } from '../features/stores/StoreImportPage';
 import { AuthGuard } from '../widgets/auth/AuthGuard';
 import { UniversityProvider } from '../shared/contexts/UniversityContext';
 import { UniversityLayout } from '../widgets/layout/UniversityLayout';
+import { AdvertisementPage } from '../pages/AdvertisementPage';
 //
 function App() {
     return (
@@ -22,6 +23,7 @@ function App() {
                         <Route index element={<HomePage />} />
                         <Route path="universities" element={<UniversityOrgPage />} />
                         <Route path="reviews" element={<StoreReviewPage />} />
+                        <Route path="advertisements" element={<AdvertisementPage />} />
 
                         <Route element={
                             <UniversityProvider>

@@ -1,4 +1,4 @@
-import { Home, ClipboardList, MapPin, Handshake, GraduationCap, Calendar, Store, ChevronDown, ChevronRight, School, Download, type LucideIcon } from 'lucide-react';
+import { Home, ClipboardList, MapPin, Handshake, GraduationCap, Calendar, Store, ChevronDown, ChevronRight, School, Download, Megaphone, type LucideIcon } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useState, useEffect } from 'react';
@@ -23,6 +23,7 @@ const MENU_ITEMS: MenuItem[] = [
         ]
     },
     { name: '대학 / 소속 관리', path: '/universities', icon: GraduationCap },
+    { name: '광고 관리', path: '/advertisements', icon: Megaphone },
     {
         name: '대학별 관리',
         icon: School,
