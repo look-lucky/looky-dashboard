@@ -222,13 +222,17 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500">
                                         <div className="flex flex-col gap-0.5 min-w-[80px]">
-                                            {ad.targetUniversityName ? (
-                                                <span className="truncate max-w-[120px]" title={ad.targetUniversityName}>{ad.targetUniversityName}</span>
+                                            {ad.targetUniversities && ad.targetUniversities.length > 0 ? (
+                                                ad.targetUniversities.map(u => (
+                                                    <span key={u.id} className="truncate max-w-[120px]" title={u.name}>{u.name}</span>
+                                                ))
                                             ) : (
                                                 <span className="text-gray-300">전체 대학</span>
                                             )}
-                                            {ad.targetOrganizationName && (
-                                                <span className="text-xs text-gray-400 truncate max-w-[120px]" title={ad.targetOrganizationName}>{ad.targetOrganizationName}</span>
+                                            {ad.targetOrganizations && ad.targetOrganizations.length > 0 && (
+                                                ad.targetOrganizations.map(o => (
+                                                    <span key={o.id} className="text-xs text-gray-400 truncate max-w-[120px]" title={o.name}>{o.name}</span>
+                                                ))
                                             )}
                                             {ad.targetGender && (
                                                 <span className="text-xs text-gray-400">

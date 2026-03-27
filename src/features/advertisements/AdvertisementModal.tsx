@@ -8,6 +8,8 @@ import {
     type Gender,
     type CreateAdvertisementRequest,
     type UpdateAdvertisementRequest,
+    type TargetUniversityInfo,
+    type TargetOrganizationInfo,
 } from '../../shared/api/services/AdminAdvertisementService';
 import { UniversityService } from '../../shared/api/services/UniversityService';
 import { OrganizationService } from '../../shared/api/services/OrganizationService';
@@ -47,9 +49,9 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
 
     // Target States
     const [universities, setUniversities] = useState<UniversityResponse[]>([]);
-    const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
-    const [targetUniversityId, setTargetUniversityId] = useState<number | null>(null);
-    const [targetOrganizationId, setTargetOrganizationId] = useState<number | null>(null);
+    const [organizationsByUniv, setOrganizationsByUniv] = useState<Record<number, OrganizationResponse[]>>({});
+    const [targetUniversityIds, setTargetUniversityIds] = useState<number[]>([]);
+    const [targetOrganizationIds, setTargetOrganizationIds] = useState<number[]>([]);
     const [targetGender, setTargetGender] = useState<Gender | null>(null);
 
     // Image Handling
@@ -69,15 +71,27 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     }, []);
 
     useEffect(() => {
-        if (targetUniversityId == null) {
-            setOrganizations([]);
-            setTargetOrganizationId(null);
+        if (targetUniversityIds.length === 0) {
+            setOrganizationsByUniv({});
+            setTargetOrganizationIds([]);
             return;
         }
-        OrganizationService.getOrganizations(targetUniversityId).then(res => {
-            setOrganizations(res.data || []);
-        }).catch(() => {});
-    }, [targetUniversityId]);
+        targetUniversityIds.forEach(univId => {
+            if (organizationsByUniv[univId]) return;
+            OrganizationService.getOrganizations(univId).then(res => {
+                setOrganizationsByUniv(prev => ({
+                    ...prev,
+                    [univId]: (res.data || []).filter(o => o.category === OrganizationResponse.category.COLLEGE),
+                }));
+            }).catch(() => {});
+        });
+        // 선택 해제된 대학의 단과대 ID 제거
+        const allAvailableOrgIds = new Set(
+            targetUniversityIds.flatMap(id => (organizationsByUniv[id] || []).map(o => o.id!))
+        );
+        setTargetOrganizationIds(prev => prev.filter(id => allAvailableOrgIds.has(id)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [targetUniversityIds]);
 
     const formatDateForInput = (dateString: string) => {
         if (!dateString) return '';
@@ -95,8 +109,8 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
             setStatus(initialData.status === 'ACTIVE' || initialData.status === 'INACTIVE' ? initialData.status : 'ACTIVE');
             setExistingImageUrl(initialData.imageUrl || null);
             setImagePreviewUrl(initialData.imageUrl || null);
-            setTargetUniversityId(initialData.targetUniversityId ?? null);
-            setTargetOrganizationId(initialData.targetOrganizationId ?? null);
+            setTargetUniversityIds((initialData.targetUniversities ?? []).map((u: TargetUniversityInfo) => u.id));
+            setTargetOrganizationIds((initialData.targetOrganizations ?? []).map((o: TargetOrganizationInfo) => o.id));
             setTargetGender(initialData.targetGender ?? null);
         }
     }, [initialData]);
@@ -190,8 +204,8 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     startAt: new Date(startAt).toISOString(),
                     endAt: new Date(endAt).toISOString(),
                     status,
-                    targetUniversityId,
-                    targetOrganizationId,
+                    targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
+                    targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                     targetGender,
                 };
                 await AdminAdvertisementService.updateAdvertisement(initialData.id, requestData);
@@ -205,8 +219,8 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     displayOrder,
                     startAt: new Date(startAt).toISOString(),
                     endAt: new Date(endAt).toISOString(),
-                    targetUniversityId,
-                    targetOrganizationId,
+                    targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
+                    targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                     targetGender,
                 };
                 await AdminAdvertisementService.createAdvertisement(requestData);
@@ -391,40 +405,72 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
 
                     {/* 타겟 설정 */}
                     <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm font-medium text-gray-700">타겟 설정 <span className="text-gray-400 font-normal">(선택 — 미설정 시 전체 대상)</span></p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">대학</label>
-                                <select
-                                    value={targetUniversityId ?? ''}
-                                    onChange={(e) => {
-                                        const val = e.target.value === '' ? null : Number(e.target.value);
-                                        setTargetUniversityId(val);
-                                        setTargetOrganizationId(null);
-                                    }}
-                                    className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                >
-                                    <option value="">전체 대학</option>
-                                    {universities.map(u => (
-                                        <option key={u.id} value={u.id}>{u.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">단과대</label>
-                                <select
-                                    value={targetOrganizationId ?? ''}
-                                    onChange={(e) => setTargetOrganizationId(e.target.value === '' ? null : Number(e.target.value))}
-                                    disabled={targetUniversityId == null}
-                                    className="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <option value="">전체 단과대</option>
-                                    {organizations.map(o => (
-                                        <option key={o.id} value={o.id}>{o.name}</option>
-                                    ))}
-                                </select>
+                        <p className="text-sm font-medium text-gray-700">타겟 설정 <span className="text-gray-400 font-normal">(선택 — 미설정 시 전체 대상, 복수 선택 가능)</span></p>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">대학</label>
+                            <div className="flex flex-wrap gap-1.5">
+                                {universities.map(u => {
+                                    const selected = targetUniversityIds.includes(u.id!);
+                                    return (
+                                        <button
+                                            key={u.id}
+                                            type="button"
+                                            onClick={() => {
+                                                if (selected) {
+                                                    setTargetUniversityIds(prev => prev.filter(id => id !== u.id));
+                                                    // 해당 대학 단과대 선택 해제
+                                                    const orgIds = (organizationsByUniv[u.id!] || []).map(o => o.id!);
+                                                    setTargetOrganizationIds(prev => prev.filter(id => !orgIds.includes(id)));
+                                                } else {
+                                                    setTargetUniversityIds(prev => [...prev, u.id!]);
+                                                }
+                                            }}
+                                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                selected
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {u.name}
+                                        </button>
+                                    );
+                                })}
+                                {universities.length === 0 && <span className="text-xs text-gray-400">대학 목록 로딩 중...</span>}
                             </div>
                         </div>
+                        {targetUniversityIds.length > 0 && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1.5">단과대</label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {targetUniversityIds.flatMap(univId => organizationsByUniv[univId] || []).map(o => {
+                                        const selected = targetOrganizationIds.includes(o.id!);
+                                        return (
+                                            <button
+                                                key={o.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    if (selected) {
+                                                        setTargetOrganizationIds(prev => prev.filter(id => id !== o.id));
+                                                    } else {
+                                                        setTargetOrganizationIds(prev => [...prev, o.id!]);
+                                                    }
+                                                }}
+                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                    selected
+                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {o.name}
+                                            </button>
+                                        );
+                                    })}
+                                    {targetUniversityIds.every(id => !organizationsByUniv[id]) && (
+                                        <span className="text-xs text-gray-400">단과대 로딩 중...</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">성별</label>
                             <div className="flex gap-2">

@@ -10,6 +10,16 @@ export type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
 export type AdvertisementStatus = 'SCHEDULED' | 'ACTIVE' | 'INACTIVE' | 'ENDED';
 export type Gender = 'MALE' | 'FEMALE' | 'UNKNOWN';
 
+export interface TargetUniversityInfo {
+    id: number;
+    name: string;
+}
+
+export interface TargetOrganizationInfo {
+    id: number;
+    name: string;
+}
+
 export interface AdminAdvertisementResponse {
     id: number;
     title: string;
@@ -21,10 +31,8 @@ export interface AdminAdvertisementResponse {
     startAt: string;
     endAt: string;
     createdAt: string;
-    targetUniversityId: number | null;
-    targetUniversityName: string | null;
-    targetOrganizationId: number | null;
-    targetOrganizationName: string | null;
+    targetUniversities: TargetUniversityInfo[];
+    targetOrganizations: TargetOrganizationInfo[];
     targetGender: Gender | null;
 }
 
@@ -36,8 +44,8 @@ export interface CreateAdvertisementRequest {
     displayOrder: number;
     startAt: string;
     endAt: string;
-    targetUniversityId?: number | null;
-    targetOrganizationId?: number | null;
+    targetUniversityIds?: number[] | null;
+    targetOrganizationIds?: number[] | null;
     targetGender?: Gender | null;
 }
 
@@ -49,8 +57,8 @@ export interface UpdateAdvertisementRequest {
     startAt?: string | null;
     endAt?: string | null;
     status?: AdvertisementStatus | null;
-    targetUniversityId?: number | null;
-    targetOrganizationId?: number | null;
+    targetUniversityIds?: number[] | null;
+    targetOrganizationIds?: number[] | null;
     targetGender?: Gender | null;
 }
 
