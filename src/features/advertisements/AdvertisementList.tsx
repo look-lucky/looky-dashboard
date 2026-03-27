@@ -287,11 +287,9 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                             ) : (
                                                 <span className="text-gray-300">전체 대학</span>
                                             )}
-                                            {ad.targetGender && (
-                                                <span className="text-xs text-gray-400 mt-0.5">
-                                                    {ad.targetGender === 'MALE' ? '남성' : ad.targetGender === 'FEMALE' ? '여성' : '미설정'}
-                                                </span>
-                                            )}
+                                            <span className="text-xs text-gray-400 mt-0.5">
+                                                {ad.targetGender === 'MALE' ? '남성' : ad.targetGender === 'FEMALE' ? '여성' : '전체 성별'}
+                                            </span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
