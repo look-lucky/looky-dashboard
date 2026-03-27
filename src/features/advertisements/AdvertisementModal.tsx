@@ -14,7 +14,7 @@ import {
 import { UniversityService } from '../../shared/api/services/UniversityService';
 import { OrganizationService } from '../../shared/api/services/OrganizationService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
-import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
+import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { uploadImage } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
