@@ -1,5 +1,5 @@
 import { X, GripVertical, Loader2 } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
     AdminAdvertisementService,
     type AdminAdvertisementResponse,
@@ -18,6 +18,13 @@ const AD_TYPES: { value: AdvertisementType; label: string }[] = [
     { value: 'FLOATING', label: '플로팅' },
 ];
 
+const STATUS_LABELS: Record<string, string> = {
+    ACTIVE: '활성',
+    INACTIVE: '비활성',
+    SCHEDULED: '예약',
+    ENDED: '종료',
+};
+
 export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: AdvertisementOrderModalProps) {
     const [selectedType, setSelectedType] = useState<AdvertisementType>(initialType ?? 'POPUP');
     const [items, setItems] = useState<AdminAdvertisementResponse[]>([]);
@@ -25,8 +32,9 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
 
-    const dragIndex = useRef<number | null>(null);
-    const dragOverIndex = useRef<number | null>(null);
+    // 드래그 상태 — state로 관리해 시각적 피드백 제공
+    const [dragFrom, setDragFrom] = useState<number | null>(null);
+    const [dragTo, setDragTo] = useState<number | null>(null);
 
     useEffect(() => {
         setLoading(true);
@@ -40,27 +48,41 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
             .finally(() => setLoading(false));
     }, [selectedType]);
 
+    // ─── Drag handlers ────────────────────────────────────────────────────────
+    // onDrop 기반: 드래그 중 setItems를 호출하지 않아 리렌더링으로 인한
+    // 브라우저 드래그 상태 초기화 문제 없음
     const handleDragStart = (index: number) => {
-        dragIndex.current = index;
+        setDragFrom(index);
+        setDragTo(index);
     };
 
-    const handleDragEnter = (index: number) => {
-        dragOverIndex.current = index;
-        if (dragIndex.current === null || dragIndex.current === index) return;
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault(); // drop 허용에 필수
+        if (dragTo !== index) setDragTo(index);
+    };
 
+    const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+        e.preventDefault();
+        if (dragFrom === null || dragFrom === dropIndex) {
+            setDragFrom(null);
+            setDragTo(null);
+            return;
+        }
         setItems(prev => {
             const next = [...prev];
-            const [moved] = next.splice(dragIndex.current!, 1);
-            next.splice(index, 0, moved);
+            const [moved] = next.splice(dragFrom, 1);
+            next.splice(dropIndex, 0, moved);
             return next;
         });
-        dragIndex.current = index;
+        setDragFrom(null);
+        setDragTo(null);
     };
 
     const handleDragEnd = () => {
-        dragIndex.current = null;
-        dragOverIndex.current = null;
+        setDragFrom(null);
+        setDragTo(null);
     };
+    // ──────────────────────────────────────────────────────────────────────────
 
     const isDirty = items.some((ad, i) => ad.id !== originalOrder[i]);
 
@@ -69,17 +91,13 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
         try {
             const updates = items
                 .map((ad, index) => ({ ad, newOrder: index }))
-                .filter(({ ad, newOrder }) => {
-                    const originalIndex = originalOrder.indexOf(ad.id);
-                    return originalIndex !== newOrder;
-                });
+                .filter(({ ad, newOrder }) => originalOrder.indexOf(ad.id) !== newOrder);
 
             await Promise.all(
                 updates.map(({ ad, newOrder }) =>
                     AdminAdvertisementService.updateAdvertisement(ad.id, { displayOrder: newOrder })
                 )
             );
-
             onSuccess();
         } catch {
             alert('순서 저장에 실패했습니다.');
@@ -120,13 +138,12 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
                     ))}
                 </div>
 
-                {/* 안내 */}
                 <p className="px-6 pt-3 pb-1 text-xs text-gray-400">
-                    드래그하여 순서를 변경하세요. 위쪽이 먼저 노출됩니다.
+                    드래그하여 순서를 변경하고 저장하세요. 위쪽이 먼저 노출됩니다.
                 </p>
 
                 {/* 목록 */}
-                <div className="flex-1 overflow-y-auto px-6 py-3 space-y-2">
+                <div className="flex-1 overflow-y-auto px-6 py-3 space-y-1">
                     {loading ? (
                         <div className="flex items-center justify-center py-12 text-gray-400">
                             <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -137,35 +154,45 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
                             등록된 광고가 없습니다.
                         </div>
                     ) : (
-                        items.map((ad, index) => (
-                            <div
-                                key={ad.id}
-                                draggable
-                                onDragStart={() => handleDragStart(index)}
-                                onDragEnter={() => handleDragEnter(index)}
-                                onDragEnd={handleDragEnd}
-                                onDragOver={e => e.preventDefault()}
-                                className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl bg-white cursor-grab active:cursor-grabbing hover:border-blue-300 hover:shadow-sm transition-all select-none"
-                            >
-                                <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                                    {index + 1}
-                                </span>
-                                {ad.imageUrl && (
-                                    <img
-                                        src={ad.imageUrl}
-                                        alt={ad.title}
-                                        className="w-10 h-8 object-cover rounded-md border border-gray-100 flex-shrink-0"
-                                    />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-900 truncate">{ad.title}</p>
-                                    <p className="text-xs text-gray-400">
-                                        {ad.status === 'ACTIVE' ? '활성' : ad.status === 'INACTIVE' ? '비활성' : ad.status === 'SCHEDULED' ? '예약' : '종료'}
-                                    </p>
+                        items.map((ad, index) => {
+                            const isDragging = dragFrom === index;
+                            const isDropTarget = dragTo === index && dragFrom !== null && dragFrom !== index;
+
+                            return (
+                                <div
+                                    key={ad.id}
+                                    draggable
+                                    onDragStart={() => handleDragStart(index)}
+                                    onDragOver={e => handleDragOver(e, index)}
+                                    onDrop={e => handleDrop(e, index)}
+                                    onDragEnd={handleDragEnd}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border select-none transition-all cursor-grab active:cursor-grabbing ${
+                                        isDragging
+                                            ? 'opacity-40 bg-gray-50 border-dashed border-gray-300'
+                                            : isDropTarget
+                                            ? 'border-blue-500 bg-blue-50 shadow-md scale-[1.01]'
+                                            : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                                    }`}
+                                >
+                                    {/* 자식 요소에 pointer-events-none: 드래그 이벤트가 부모 div에만 전달됨 */}
+                                    <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0 pointer-events-none" />
+                                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center flex-shrink-0 pointer-events-none">
+                                        {index + 1}
+                                    </span>
+                                    {ad.imageUrl && (
+                                        <img
+                                            src={ad.imageUrl}
+                                            alt={ad.title}
+                                            className="w-10 h-8 object-cover rounded-md border border-gray-100 flex-shrink-0 pointer-events-none"
+                                        />
+                                    )}
+                                    <div className="flex-1 min-w-0 pointer-events-none">
+                                        <p className="text-sm font-medium text-gray-900 truncate">{ad.title}</p>
+                                        <p className="text-xs text-gray-400">{STATUS_LABELS[ad.status] ?? ad.status}</p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 

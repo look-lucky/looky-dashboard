@@ -392,10 +392,27 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
 
                     {/* 타겟 설정 */}
                     <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <p className="text-sm font-medium text-gray-700">타겟 설정 <span className="text-gray-400 font-normal">(선택 — 미설정 시 전체 대상, 복수 선택 가능)</span></p>
+                        <p className="text-sm font-medium text-gray-700">타겟 설정 <span className="text-gray-400 font-normal">(미설정 시 전체 대상, 복수 선택 가능)</span></p>
+
+                        {/* 대학 선택 */}
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1.5">대학</label>
                             <div className="flex flex-wrap gap-1.5">
+                                {/* 전체 버튼 */}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setTargetUniversityIds([]);
+                                        setTargetOrganizationIds([]);
+                                    }}
+                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                        targetUniversityIds.length === 0
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    전체
+                                </button>
                                 {universities.filter(u => u.id != null).map(u => {
                                     const univId = u.id as number;
                                     const selected = targetUniversityIds.includes(univId);
@@ -406,7 +423,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                             onClick={() => {
                                                 if (selected) {
                                                     setTargetUniversityIds(prev => prev.filter(id => id !== univId));
-                                                    // 해당 대학 단과대 선택 해제
                                                     const orgIds = new Set((organizationsByUniv[univId] || []).map(o => o.id));
                                                     setTargetOrganizationIds(prev => prev.filter(id => !orgIds.has(id)));
                                                 } else {
@@ -423,43 +439,74 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                         </button>
                                     );
                                 })}
-                                {universities.length === 0 && <span className="text-xs text-gray-400">대학 목록 로딩 중...</span>}
+                                {universities.length === 0 && <span className="text-xs text-gray-400">로딩 중...</span>}
                             </div>
                         </div>
+
+                        {/* 단과대 선택 — 대학별로 그룹화 */}
                         {targetUniversityIds.length > 0 && (
-                            <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1.5">단과대</label>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {targetUniversityIds.flatMap(univId => organizationsByUniv[univId] || []).filter(o => o.id != null).map(o => {
-                                        const orgId = o.id as number;
-                                        const selected = targetOrganizationIds.includes(orgId);
-                                        return (
-                                            <button
-                                                key={orgId}
-                                                type="button"
-                                                onClick={() => {
-                                                    if (selected) {
-                                                        setTargetOrganizationIds(prev => prev.filter(id => id !== orgId));
-                                                    } else {
-                                                        setTargetOrganizationIds(prev => [...prev, orgId]);
-                                                    }
-                                                }}
-                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                                                    selected
-                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                {o.name}
-                                            </button>
-                                        );
-                                    })}
-                                    {targetUniversityIds.every(id => !organizationsByUniv[id]) && (
-                                        <span className="text-xs text-gray-400">단과대 로딩 중...</span>
-                                    )}
-                                </div>
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium text-gray-600">단과대</label>
+                                {targetUniversityIds.map(univId => {
+                                    const univName = universities.find(u => u.id === univId)?.name ?? '';
+                                    const orgs = (organizationsByUniv[univId] || []).filter(o => o.id != null);
+                                    const allOrgIds = orgs.map(o => o.id as number);
+                                    const noneSelected = allOrgIds.every(id => !targetOrganizationIds.includes(id));
+
+                                    return (
+                                        <div key={univId} className="rounded-lg border border-gray-100 bg-white px-3 py-2">
+                                            <p className="text-xs text-gray-400 mb-1.5 font-medium">{univName}</p>
+                                            {orgs.length === 0 ? (
+                                                <span className="text-xs text-gray-300">로딩 중...</span>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {/* 단과대 전체 버튼 */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setTargetOrganizationIds(prev => prev.filter(id => !allOrgIds.includes(id)));
+                                                        }}
+                                                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                            noneSelected
+                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        전체
+                                                    </button>
+                                                    {orgs.map(o => {
+                                                        const orgId = o.id as number;
+                                                        const selected = targetOrganizationIds.includes(orgId);
+                                                        return (
+                                                            <button
+                                                                key={orgId}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (selected) {
+                                                                        setTargetOrganizationIds(prev => prev.filter(id => id !== orgId));
+                                                                    } else {
+                                                                        setTargetOrganizationIds(prev => [...prev, orgId]);
+                                                                    }
+                                                                }}
+                                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                                    selected
+                                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                                }`}
+                                                            >
+                                                                {o.name}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
+
+                        {/* 성별 선택 */}
                         <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">성별</label>
                             <div className="flex gap-2">
