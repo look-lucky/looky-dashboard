@@ -113,7 +113,7 @@ export function OrganizationModal({
                         name: n,
                         parentId: (category === CreateOrganizationRequest.category.DEPARTMENT && parentId) ? Number(parentId) : undefined
                     };
-                    return AdminOrganizationService.createOrganization(universityId, payload);
+                    return AdminOrganizationService.createOrganization1(universityId, payload);
                 });
 
                 await Promise.all(promises);
@@ -126,10 +126,10 @@ export function OrganizationModal({
                 };
 
                 if (initialData && initialData.id) {
-                    await AdminOrganizationService.updateOrganization(initialData.id, payload as unknown as UpdateOrganizationRequest);
+                    await AdminOrganizationService.updateOrganization1(initialData.id, payload as unknown as UpdateOrganizationRequest);
                     alert('수정되었습니다.');
                 } else {
-                    await AdminOrganizationService.createOrganization(universityId, payload);
+                    await AdminOrganizationService.createOrganization1(universityId, payload);
                     alert('등록되었습니다.');
                 }
             }

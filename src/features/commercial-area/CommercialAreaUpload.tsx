@@ -1,6 +1,6 @@
 import { Upload, FileSpreadsheet, Loader2, AlertCircle } from 'lucide-react';
 import { useState, useRef } from 'react';
-import { AdminService } from '../../shared/api/services/AdminService';
+import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 
 interface CommercialAreaUploadProps {
     onSuccess: () => void;
@@ -54,7 +54,7 @@ export function CommercialAreaUpload({ onSuccess }: CommercialAreaUploadProps) {
         setError(null);
 
         try {
-            await AdminService.uploadStoreData({ file });
+            await AdminStoreService.uploadStoreData({ formData: { file } } as any);
             setFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';

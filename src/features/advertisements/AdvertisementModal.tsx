@@ -453,6 +453,13 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                     const allOrgIds = orgs.map(o => o.id as number);
                                     const noneSelected = allOrgIds.every(id => !targetOrganizationIds.includes(id));
 
+                                    const colleges = orgs.filter(o => o.category === OrganizationResponse.category.COLLEGE || o.category === OrganizationResponse.category.UNIVERSITY_COUNCIL || !o.category || (o.category as string) === '');
+                                    const departments = orgs.filter(o => o.category === OrganizationResponse.category.DEPARTMENT);
+                                    
+                                    // Some departments might not have a valid parentId pointing to a college in colleges
+                                    const collegeIds = new Set(colleges.map(c => c.id));
+                                    const independentDepts = departments.filter(d => !d.parentId || !collegeIds.has(d.parentId));
+
                                     return (
                                         <div key={univId} className="rounded-lg border border-gray-100 bg-white px-3 py-2">
                                             <p className="text-xs text-gray-400 mb-1.5 font-medium">{univName}</p>
@@ -474,30 +481,95 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                                     >
                                                         전체
                                                     </button>
-                                                    {orgs.map(o => {
-                                                        const orgId = o.id as number;
-                                                        const selected = targetOrganizationIds.includes(orgId);
-                                                        return (
-                                                            <button
-                                                                key={orgId}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    if (selected) {
-                                                                        setTargetOrganizationIds(prev => prev.filter(id => id !== orgId));
-                                                                    } else {
-                                                                        setTargetOrganizationIds(prev => [...prev, orgId]);
-                                                                    }
-                                                                }}
-                                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                                                                    selected
-                                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                                                }`}
-                                                            >
-                                                                {o.name}
-                                                            </button>
-                                                        );
-                                                    })}
+                                                    <div className="flex flex-col gap-3">
+                                                        {colleges.map(college => {
+                                                            const colId = college.id as number;
+                                                            const colSelected = targetOrganizationIds.includes(colId);
+                                                            const collegeDepts = departments.filter(d => d.parentId === colId);
+                                                            
+                                                            return (
+                                                                <div key={colId} className="flex flex-col gap-1.5 p-2 rounded-lg border border-gray-100 bg-gray-50/50">
+                                                                    <div className="flex">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                if (colSelected) {
+                                                                                    setTargetOrganizationIds(prev => prev.filter(id => id !== colId));
+                                                                                } else {
+                                                                                    setTargetOrganizationIds(prev => [...prev, colId]);
+                                                                                }
+                                                                            }}
+                                                                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                                                colSelected
+                                                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                                            }`}
+                                                                        >
+                                                                            {college.name}
+                                                                        </button>
+                                                                    </div>
+                                                                    {collegeDepts.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1.5 ml-3 pl-3 border-l-2 border-gray-200 mt-1">
+                                                                            {collegeDepts.map(dept => {
+                                                                                const deptId = dept.id as number;
+                                                                                const deptSelected = targetOrganizationIds.includes(deptId);
+                                                                                return (
+                                                                                    <button
+                                                                                        key={deptId}
+                                                                                        type="button"
+                                                                                        onClick={() => {
+                                                                                            if (deptSelected) {
+                                                                                                setTargetOrganizationIds(prev => prev.filter(id => id !== deptId));
+                                                                                            } else {
+                                                                                                setTargetOrganizationIds(prev => [...prev, deptId]);
+                                                                                            }
+                                                                                        }}
+                                                                                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border ${
+                                                                                            deptSelected
+                                                                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                                                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                                                        }`}
+                                                                                    >
+                                                                                        {dept.name}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        
+                                                        {independentDepts.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1.5 p-2 rounded-lg border border-gray-100 bg-gray-50/50">
+                                                                <span className="text-xs text-gray-400 flex items-center mr-2">기타 학과:</span>
+                                                                {independentDepts.map(dept => {
+                                                                    const deptId = dept.id as number;
+                                                                    const deptSelected = targetOrganizationIds.includes(deptId);
+                                                                    return (
+                                                                        <button
+                                                                            key={deptId}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                if (deptSelected) {
+                                                                                    setTargetOrganizationIds(prev => prev.filter(id => id !== deptId));
+                                                                                } else {
+                                                                                    setTargetOrganizationIds(prev => [...prev, deptId]);
+                                                                                }
+                                                                            }}
+                                                                            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border ${
+                                                                                deptSelected
+                                                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                                                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                                            }`}
+                                                                        >
+                                                                            {dept.name}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

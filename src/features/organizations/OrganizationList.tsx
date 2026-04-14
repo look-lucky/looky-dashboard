@@ -57,7 +57,7 @@ export function OrganizationList({
         if (!confirm(`${selectedIds.size}개의 소속을 정말 삭제하시겠습니까?`)) return;
 
         try {
-            await Promise.all(Array.from(selectedIds).map(id => AdminOrganizationService.deleteOrganization(id)));
+            await Promise.all(Array.from(selectedIds).map(id => AdminOrganizationService.deleteOrganization1(id)));
             // Refresh logic
             if (universityId) {
             void fetchOrganizations();
@@ -108,7 +108,7 @@ export function OrganizationList({
         if (!confirm('정말 삭제하시겠습니까? 관련 데이터가 모두 삭제될 수 있습니다.')) return;
 
         try {
-            await AdminOrganizationService.deleteOrganization(id);
+            await AdminOrganizationService.deleteOrganization1(id);
             void fetchOrganizations();
         } catch (error) {
             console.error(error);
