@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { UniversityService } from '../../shared/api/services/UniversityService';
+import { AdminUniversityService } from '../../shared/api/services/AdminUniversityService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import type { UpdateUniversityRequest } from '../../shared/api/models/UpdateUniversityRequest';
 
@@ -59,10 +59,10 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
                     name,
                     emailDomains: domains,
                 } as unknown as UpdateUniversityRequest;
-                await UniversityService.updateUniversity1(initialData.id, payload);
+                await AdminUniversityService.updateUniversity2(initialData.id, payload);
                 alert('수정되었습니다.');
             } else {
-                await UniversityService.createUniversity({
+                await AdminUniversityService.createUniversity({
                     name,
                     emailDomains: domains,
                 });

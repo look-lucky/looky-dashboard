@@ -3,23 +3,25 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CommonResponseListHotStoreResponse } from '../models/CommonResponseListHotStoreResponse';
-import type { CommonResponseListStoreMapResponse } from '../models/CommonResponseListStoreMapResponse';
-import type { CommonResponseListStoreResponse } from '../models/CommonResponseListStoreResponse';
+import type { CommonResponseListOwnerStoreResponse } from '../models/CommonResponseListOwnerStoreResponse';
+import type { CommonResponseListStudentStoreMapResponse } from '../models/CommonResponseListStudentStoreMapResponse';
+import type { CommonResponseListStudentStoreResponse } from '../models/CommonResponseListStudentStoreResponse';
 import type { CommonResponseLong } from '../models/CommonResponseLong';
-import type { CommonResponsePageResponseStoreResponse } from '../models/CommonResponsePageResponseStoreResponse';
+import type { CommonResponsePageResponseStudentStoreResponse } from '../models/CommonResponsePageResponseStudentStoreResponse';
 import type { CommonResponseStoreRegistrationStatusResponse } from '../models/CommonResponseStoreRegistrationStatusResponse';
-import type { CommonResponseStoreResponse } from '../models/CommonResponseStoreResponse';
 import type { CommonResponseStoreStatsResponse } from '../models/CommonResponseStoreStatsResponse';
+import type { CommonResponseStudentStoreResponse } from '../models/CommonResponseStudentStoreResponse';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
-import type { CreateStoreRequest } from '../models/CreateStoreRequest';
-import type { UpdateStoreRequest } from '../models/UpdateStoreRequest';
 import type { Pageable } from '../models/Pageable';
+import type { StoreCreateRequest } from '../models/StoreCreateRequest';
 import type { StoreReportRequest } from '../models/StoreReportRequest';
+import type { StoreUpdateRequest } from '../models/StoreUpdateRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class StoreService {
     /**
+     * @deprecated
      * [학생] 상점 목록 조회
      * 전체 상점 목록을 페이징하여 조회합니다.
      * @param pageable 페이징 정보 (page, size, sort)
@@ -29,7 +31,7 @@ export class StoreService {
      * @param universityId 대학(상권) ID 필터
      * @param hasPartnership 제휴 업체 보유 여부 필터 (true: 있음, false: 없음, 생략: 전체)
      * @param storeStatus 상점 상태 필터 (UNCLAIMED, ACTIVE, BANNED, 생략: 전체)
-     * @returns CommonResponsePageResponseStoreResponse 상점 목록 조회 성공
+     * @returns CommonResponsePageResponseStudentStoreResponse 상점 목록 조회 성공
      * @throws ApiError
      */
     public static getStores(
@@ -40,7 +42,7 @@ export class StoreService {
         universityId?: number,
         hasPartnership?: boolean,
         storeStatus?: 'UNCLAIMED' | 'ACTIVE' | 'BANNED',
-    ): CancelablePromise<CommonResponsePageResponseStoreResponse> {
+    ): CancelablePromise<CommonResponsePageResponseStudentStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores',
@@ -56,6 +58,7 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상점 등록
      * 새로운 상점을 등록합니다.
      * @param requestBody
@@ -63,7 +66,7 @@ export class StoreService {
      * @throws ApiError
      */
     public static createStore(
-        requestBody: CreateStoreRequest,
+        requestBody: StoreCreateRequest,
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
@@ -73,11 +76,12 @@ export class StoreService {
             errors: {
                 400: `잘못된 요청 데이터`,
                 403: `권한 없음`,
-                409: `이미 존재하는 상점 이름`,
+                409: `이미 존재하는 상점 (상점명 + 지점명 기준)`,
             },
         });
     }
     /**
+     * @deprecated
      * [학생] 상점 신고
      * 특정 상점을 신고합니다.
      * @param storeId 상점 ID
@@ -85,7 +89,7 @@ export class StoreService {
      * @returns CommonResponseVoid 상점 신고 성공
      * @throws ApiError
      */
-    public static reportStore(
+    public static reportStore1(
         storeId: number,
         requestBody: StoreReportRequest,
     ): CancelablePromise<CommonResponseVoid> {
@@ -104,15 +108,16 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [학생] 상점 단건 조회
      * 상점 ID로 상점의 상세 정보를 조회합니다.
      * @param storeId 상점 ID
-     * @returns CommonResponseStoreResponse 상점 조회 성공
+     * @returns CommonResponseStudentStoreResponse 상점 조회 성공
      * @throws ApiError
      */
     public static getStore(
         storeId: number,
-    ): CancelablePromise<CommonResponseStoreResponse> {
+    ): CancelablePromise<CommonResponseStudentStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores/{storeId}',
@@ -125,6 +130,7 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상점 삭제
      * 상점을 삭제합니다. (본인 상점만 가능)
      * @param storeId 상점 ID
@@ -147,6 +153,7 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상점 정보 수정
      * 상점 정보를 수정합니다. (본인 상점만 가능)
      * @param storeId 상점 ID
@@ -156,7 +163,7 @@ export class StoreService {
      */
     public static updateStore(
         storeId: number,
-        requestBody: UpdateStoreRequest,
+        requestBody: StoreUpdateRequest,
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
@@ -169,11 +176,12 @@ export class StoreService {
             errors: {
                 403: `권한 없음 (본인 소유 상점 아님)`,
                 404: `상점 없음`,
-                409: `이미 존재하는 상점 이름`,
+                409: `이미 존재하는 상점 (상점명 + 지점명 기준)`,
             },
         });
     }
     /**
+     * @deprecated
      * [점주] 상점 통계 조회
      * 상점의 통계 데이터(단골 수, 쿠폰 발행/사용 수, 리뷰 수)를 조회합니다.
      * @param storeId 상점 ID
@@ -196,6 +204,7 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상점 등록 상태 조회
      * 상점의 정보 및 메뉴 등록 여부를 조회합니다.
      * @param storeId 상점 ID
@@ -217,19 +226,20 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [학생] 주위 상점 조회
      * 위도, 경도, 반경(km)을 기준으로 주위 상점을 조회합니다.
      * @param latitude 위도
      * @param longitude 경도
      * @param radius 반경(km)
-     * @returns CommonResponseListStoreResponse 상점 목록 조회 성공
+     * @returns CommonResponseListStudentStoreResponse 상점 목록 조회 성공
      * @throws ApiError
      */
-    public static getNearbyStores(
+    public static getNearbyStores1(
         latitude: number,
         longitude: number,
         radius: number,
-    ): CancelablePromise<CommonResponseListStoreResponse> {
+    ): CancelablePromise<CommonResponseListStudentStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores/nearby',
@@ -241,27 +251,29 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [점주] 자신의 상점 조회
      * 자신이 등록한 모든 상점을 조회합니다.
-     * @returns CommonResponseListStoreResponse 조회 성공
+     * @returns CommonResponseListOwnerStoreResponse 조회 성공
      * @throws ApiError
      */
-    public static getMyStores(): CancelablePromise<CommonResponseListStoreResponse> {
+    public static getMyStores1(): CancelablePromise<CommonResponseListOwnerStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores/my-stores',
         });
     }
     /**
+     * @deprecated
      * [학생] 지도용 상점 전체 조회
      * 지도를 위한 상점 전체 목록을 조회합니다.
      * @param universityId 대학(상권) ID 필터
-     * @returns CommonResponseListStoreMapResponse 조회 성공
+     * @returns CommonResponseListStudentStoreMapResponse 조회 성공
      * @throws ApiError
      */
-    public static getStoreMap(
+    public static getStoreMap1(
         universityId?: number,
-    ): CancelablePromise<CommonResponseListStoreMapResponse> {
+    ): CancelablePromise<CommonResponseListStudentStoreMapResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores/map',
@@ -271,17 +283,18 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [학생] 특정 위치 상점 목록 조회
      * 위도, 경도가 일치하는 상점 목록을 조회합니다. (같은 건물/위치)
      * @param latitude 위도
      * @param longitude 경도
-     * @returns CommonResponseListStoreResponse 상점 목록 조회 성공
+     * @returns CommonResponseListStudentStoreResponse 상점 목록 조회 성공
      * @throws ApiError
      */
-    public static getStoresByLocation(
+    public static getStoresByLocation1(
         latitude: number,
         longitude: number,
-    ): CancelablePromise<CommonResponseListStoreResponse> {
+    ): CancelablePromise<CommonResponseListStudentStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores/location',
@@ -292,12 +305,13 @@ export class StoreService {
         });
     }
     /**
+     * @deprecated
      * [학생] 이번 주 핫한 가게 조회
      * 학생의 소속 대학에서 이번 주 찜이 가장 많이 늘어난 상점 Top 10을 조회합니다.
      * @returns CommonResponseListHotStoreResponse 조회 성공
      * @throws ApiError
      */
-    public static getHotStores(): CancelablePromise<CommonResponseListHotStoreResponse> {
+    public static getHotStores1(): CancelablePromise<CommonResponseListHotStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/stores/hot',

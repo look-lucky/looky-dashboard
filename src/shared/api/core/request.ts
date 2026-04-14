@@ -79,14 +79,6 @@ export const getQueryString = (params: Record<string, any>): string => {
     };
 
     Object.entries(params).forEach(([key, value]) => {
-        // Spring pageable parameters should be sent as page/size/sort, not pageable[page]/pageable[size].
-        if (key === 'pageable' && isDefined(value) && typeof value === 'object' && !Array.isArray(value)) {
-            Object.entries(value).forEach(([nestedKey, nestedValue]) => {
-                process(nestedKey, nestedValue);
-            });
-            return;
-        }
-
         process(key, value);
     });
 

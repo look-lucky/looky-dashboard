@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * 최소 주문 금액
+ * 별점 (1~5)
  */
 export type JsonNullableInteger = {
     present?: boolean;

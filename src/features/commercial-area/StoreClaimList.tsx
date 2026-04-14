@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StoreClaimService } from '../../shared/api/services/StoreClaimService';
-import type { StoreClaimResponse } from '../../shared/api/models/StoreClaimResponse';
+import { AdminStoreClaimService } from '../../shared/api/services/AdminStoreClaimService';
+import type { AdminStoreClaimResponse } from '../../shared/api/models/AdminStoreClaimResponse';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check, X } from 'lucide-react';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
@@ -9,14 +9,14 @@ export function StoreClaimList() {
     const [currentTab, setCurrentTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
     const [completedFilter, setCompletedFilter] = useState<'ALL' | 'APPROVED' | 'REJECTED'>('ALL');
 
-    const [claims, setClaims] = useState<StoreClaimResponse[]>([]);
+    const [claims, setClaims] = useState<AdminStoreClaimResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const pageSize = 10;
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
-    const [selectedClaim, setSelectedClaim] = useState<StoreClaimResponse | null>(null);
+    const [selectedClaim, setSelectedClaim] = useState<AdminStoreClaimResponse | null>(null);
     const [rejectReason, setRejectReason] = useState('');
     const [isRejecting, setIsRejecting] = useState(false);
 
@@ -28,11 +28,11 @@ export function StoreClaimList() {
                 // Since our backend doesn't support multiple statuses in a single request, 
                 // and fetching all to filter locally breaks pagination, we will fetch both and merge them for the current page
                 const [approvedResponse, rejectedResponse] = await Promise.all([
-                    StoreClaimService.getStoreClaims(
+                    AdminStoreClaimService.getStoreClaims(
                         { page, size: pageSize, sort: ['createdAt,desc'] },
                         'APPROVED'
                     ),
-                    StoreClaimService.getStoreClaims(
+                    AdminStoreClaimService.getStoreClaims(
                         { page, size: pageSize, sort: ['createdAt,desc'] },
                         'REJECTED'
                     )
@@ -65,7 +65,7 @@ export function StoreClaimList() {
                             ? undefined
                             : completedFilter;
 
-                const response = await StoreClaimService.getStoreClaims(
+                const response = await AdminStoreClaimService.getStoreClaims(
                     { page, size: pageSize, sort: ['createdAt,desc'] },
                     status
                 );
@@ -92,7 +92,7 @@ export function StoreClaimList() {
         if (!confirm('정말 승인하시겠습니까?')) return;
 
         try {
-            await StoreClaimService.approve(selectedClaim.id);
+            await AdminStoreClaimService.approve(selectedClaim.id);
             alert('승인되었습니다.');
             closeModal();
             void fetchClaims();
@@ -110,7 +110,7 @@ export function StoreClaimList() {
         }
 
         try {
-            await StoreClaimService.reject(selectedClaim.id, { reason: rejectReason });
+            await AdminStoreClaimService.reject(selectedClaim.id, { reason: rejectReason });
             alert('반려되었습니다.');
             closeModal();
             void fetchClaims();
@@ -120,7 +120,7 @@ export function StoreClaimList() {
         }
     };
 
-    const openModal = (claim: StoreClaimResponse) => {
+    const openModal = (claim: AdminStoreClaimResponse) => {
         setSelectedClaim(claim);
         setIsRejecting(false);
         setRejectReason('');

@@ -2,31 +2,30 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { CommonResponseEventResponse } from '../models/CommonResponseEventResponse';
-import type { CommonResponsePageResponseEventResponse } from '../models/CommonResponsePageResponseEventResponse';
+import type { CommonResponsePageResponseStudentEventResponse } from '../models/CommonResponsePageResponseStudentEventResponse';
+import type { CommonResponseStudentEventResponse } from '../models/CommonResponseStudentEventResponse';
 import type { Pageable } from '../models/Pageable';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class EventService {
     /**
+     * @deprecated
      * [공통] 이벤트 목록 조회
-     * 이벤트 목록을 페이징하여 조회합니다. 이벤트 타입 복수선택 가능.
-     * @param pageable 페이징 정보
-     * @param keyword 검색 키워드 (제목)
+     * 이벤트 목록을 페이징 조회합니다.
+     * @param pageable 페이지 정보
+     * @param keyword 검색 키워드(제목)
      * @param eventTypes 이벤트 타입 필터 (복수 선택 가능)
      * @param status 상태 필터
-     * @param universityId 대학 ID
-     * @returns CommonResponsePageResponseEventResponse 조회 성공
+     * @returns CommonResponsePageResponseStudentEventResponse 조회 성공
      * @throws ApiError
      */
-    public static getEvents(
+    public static getEvents2(
         pageable: Pageable,
         keyword?: string,
         eventTypes?: Array<'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP'>,
         status?: 'UPCOMING' | 'LIVE' | 'ENDED',
-        universityId?: number,
-    ): CancelablePromise<CommonResponsePageResponseEventResponse> {
+    ): CancelablePromise<CommonResponsePageResponseStudentEventResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/events',
@@ -34,21 +33,21 @@ export class EventService {
                 'keyword': keyword,
                 'eventTypes': eventTypes,
                 'status': status,
-                'universityId': universityId,
                 'pageable': pageable,
             },
         });
     }
     /**
+     * @deprecated
      * [공통] 이벤트 단건 조회
      * 이벤트 ID로 상세 정보를 조회합니다.
      * @param eventId 이벤트 ID
-     * @returns CommonResponseEventResponse 조회 성공
+     * @returns CommonResponseStudentEventResponse 조회 성공
      * @throws ApiError
      */
-    public static getEvent(
+    public static getEvent2(
         eventId: number,
-    ): CancelablePromise<CommonResponseEventResponse> {
+    ): CancelablePromise<CommonResponseStudentEventResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/events/{eventId}',

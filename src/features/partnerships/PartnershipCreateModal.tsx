@@ -1,8 +1,8 @@
 import { X, Search, Store as StoreIcon, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
-import { OrganizationService } from '../../shared/api/services/OrganizationService';
-import { StoreService } from '../../shared/api/services/StoreService';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
+import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 
@@ -32,7 +32,7 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
     useEffect(() => {
         async function fetchOrganizations() {
             try {
-                const response = await OrganizationService.getOrganizations(universityId);
+                const response = await PublicOrganizationService.getOrganizations(universityId);
                 if (response.data) {
                     setOrganizations(response.data);
                     if (response.data.length > 0) {
@@ -59,9 +59,14 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
             setIsSearching(true);
             try {
                 // Assuming page 0, size 5 for search preview
-                const response = await StoreService.getStores(
-                    { page: 0, size: 5 },
-                    keyword
+                const response = await AdminStoreService.getStores1(
+                    keyword,
+                    undefined,
+                    universityId,
+                    undefined,
+                    undefined,
+                    0,
+                    5
                 );
                 if (response.data && response.data.content) {
                     setStores(response.data.content);

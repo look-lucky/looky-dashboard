@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * 대학교 이름
+ * 리뷰 내용
  */
 export type JsonNullableString = {
     present?: boolean;

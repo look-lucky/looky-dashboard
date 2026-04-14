@@ -1,19 +1,18 @@
 import { Edit2, Trash2, Calendar, MapPin, Tag, Search } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { EventService } from '../../shared/api/services/EventService';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
-import type { EventResponse } from '../../shared/api/models/EventResponse';
+import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 
 interface EventListProps {
     refreshTrigger: number;
-    onEdit: (event: EventResponse) => void;
+    onEdit: (event: AdminEventResponse) => void;
 }
 
 export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     const { selectedUniversityId } = useUniversity();
-    const [events, setEvents] = useState<EventResponse[]>([]);
+    const [events, setEvents] = useState<AdminEventResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -28,7 +27,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         if (!selectedUniversityId) return;
         setLoading(true);
         try {
-            const response = await EventService.getEvents({ page, size: 10 }, undefined, undefined, undefined, selectedUniversityId);
+            const response = await AdminEventService.getEvents({ page, size: 10 }, undefined, undefined, undefined, selectedUniversityId);
             if (response.data) {
                 setEvents(response.data.content || []);
                 setTotalPages(response.data.totalPages || 0);
@@ -115,7 +114,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
-                                        {(!event.universityId) && (
+                                        {(!event.targetUniversity?.id) && (
                                             <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
                                                 모든 학교
                                             </span>

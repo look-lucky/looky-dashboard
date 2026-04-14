@@ -1,20 +1,20 @@
 import { X, Save, Upload } from 'lucide-react';
 import { useState, useRef } from 'react';
-import { StoreService } from '../../shared/api/services/StoreService';
+import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
-import { AdminService } from '../../shared/api/services/AdminService';
+// Removed AdminService
 import { ImageCropper } from '../../shared/components/ImageCropper';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuCategoryState, type MenuItemState } from './StoreMenuEditor';
-import { ItemService } from '../../shared/api/services/ItemService';
+import { AdminItemService } from '../../shared/api/services/AdminItemService';
 import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
-import { ItemCategoryService } from '../../shared/api/services/ItemCategoryService';
+import { AdminItemCategoryService } from '../../shared/api/services/AdminItemCategoryService';
 
 interface StoreManualRegistrationModalProps {
     onClose: () => void;
@@ -98,7 +98,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
         // Trigger Geocoding
         try {
-            const response = await AdminService.getGeocode(roadAddr);
+            const response = await AdminStoreService.getGeocode(roadAddr);
             const coords = (response.data ?? (response as unknown as GeocodeResult)) as GeocodeResult;
             if (coords.latitude && coords.longitude) {
                 setFormData((prev) => ({
@@ -273,7 +273,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                 imageUrls: uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined,
             };
 
-            const storeId = await StoreService.createStore(requestPayload);
+            const storeId = await AdminStoreService.createStore2(requestPayload);
 
             const createdStoreId = typeof storeId?.data === 'number' ? storeId.data : undefined;
 
@@ -283,7 +283,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     menuCategories
                         .filter((category) => !category.isDeleted)
                         .map(async (category) => {
-                            const createdCategory = await ItemCategoryService.createItemCategory(createdStoreId, {
+                            const createdCategory = await AdminItemCategoryService.createItemCategory2(createdStoreId, {
                                 name: category.name.trim(),
                             });
 
@@ -327,7 +327,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 imageUrl,
                             };
 
-                            await ItemService.createItem(createdStoreId, itemRequest);
+                            await AdminItemService.createItem2(createdStoreId, itemRequest);
                         }),
                 );
 

@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * 상위 조직 ID (예: 단과대 ID)
+ * 카테고리 ID (null 전달 시 카테고리 해제)
  */
 export type JsonNullableLong = {
     present?: boolean;

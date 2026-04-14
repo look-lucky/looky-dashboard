@@ -20,6 +20,7 @@ export type StoreResponse = {
     storeCategories?: Array<'BAR' | 'CAFE' | 'RESTAURANT' | 'ENTERTAINMENT' | 'BEAUTY_HEALTH' | 'ETC'>;
     storeMoods?: Array<'SOLO_DINING' | 'GROUP_GATHERING' | 'LATE_NIGHT' | 'ROMANTIC'>;
     imageUrls?: Array<string>;
+    menuBoardImageUrls?: Array<string>;
     averageRating?: number;
     reviewCount?: number;
     holidayDates?: Array<string>;

@@ -6,5 +6,7 @@ export type UniversityResponse = {
     id?: number;
     name?: string;
     emailDomains?: Array<string>;
+    latitude?: number;
+    longitude?: number;
 };
 

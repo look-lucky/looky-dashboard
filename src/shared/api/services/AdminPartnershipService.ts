@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { CommonResponseListPartnershipResponse } from '../models/CommonResponseListPartnershipResponse';
+import type { CommonResponseListAdminPartnershipResponse } from '../models/CommonResponseListAdminPartnershipResponse';
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
 import type { CreatePartnershipRequest } from '../models/CreatePartnershipRequest';
@@ -12,17 +12,17 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class AdminPartnershipService {
     /**
-     * 조직별 제휴 목록 조회
+     * [관리자] 조직별 제휴 목록 조회
      * 특정 대학의 특정 조직의 모든 제휴를 조회합니다.
      * @param universityId 대학 ID
      * @param organizationId 조직 ID
-     * @returns CommonResponseListPartnershipResponse 조회 성공
+     * @returns CommonResponseListAdminPartnershipResponse 조회 성공
      * @throws ApiError
      */
     public static getPartnershipsByOrganization(
         universityId: number,
         organizationId: number,
-    ): CancelablePromise<CommonResponseListPartnershipResponse> {
+    ): CancelablePromise<CommonResponseListAdminPartnershipResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/admin/universities/{universityId}/organizations/{organizationId}/partnerships',
@@ -64,7 +64,7 @@ export class AdminPartnershipService {
         });
     }
     /**
-     * [학생회/관리자] 제휴 엑셀로 등록
+     * [관리자] 제휴 엑셀로 등록
      * 엑셀 파일을 업로드하여 제휴 정보를 일괄 등록/수정합니다.
      * @param organizationId 대상 조직 ID (관리자용)
      * @param formData
@@ -143,15 +143,15 @@ export class AdminPartnershipService {
         });
     }
     /**
-     * 대학별 제휴 목록 조회
+     * [관리자] 대학별 제휴 목록 조회
      * 특정 대학의 모든 제휴를 조회합니다.
      * @param universityId 대학 ID
-     * @returns CommonResponseListPartnershipResponse 조회 성공
+     * @returns CommonResponseListAdminPartnershipResponse 조회 성공
      * @throws ApiError
      */
     public static getPartnershipsByUniversity(
         universityId: number,
-    ): CancelablePromise<CommonResponseListPartnershipResponse> {
+    ): CancelablePromise<CommonResponseListAdminPartnershipResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/admin/universities/{universityId}/partnerships',

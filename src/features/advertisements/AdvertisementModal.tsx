@@ -1,18 +1,15 @@
 import { X, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import {
-    AdminAdvertisementService,
-    type AdminAdvertisementResponse,
-    type AdvertisementType,
-    type AdvertisementStatus,
-    type Gender,
-    type CreateAdvertisementRequest,
-    type UpdateAdvertisementRequest,
-    type TargetUniversityInfo,
-    type TargetOrganizationInfo,
-} from '../../shared/api/services/AdminAdvertisementService';
-import { UniversityService } from '../../shared/api/services/UniversityService';
-import { OrganizationService } from '../../shared/api/services/OrganizationService';
+import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
+import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
+import type { TargetUniversityInfo } from '../../shared/api/models/TargetUniversityInfo';
+import type { TargetOrganizationInfo } from '../../shared/api/models/TargetOrganizationInfo';
+
+type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
+type AdvertisementStatus = 'SCHEDULED' | 'ACTIVE' | 'INACTIVE' | 'ENDED';
+type Gender = 'MALE' | 'FEMALE' | 'UNKNOWN';
+import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { uploadImage } from '../../shared/utils/uploadImage';
@@ -67,7 +64,7 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const selectedTypeInfo = AD_TYPES.find(t => t.value === advertisementType)!;
 
     useEffect(() => {
-        UniversityService.getUniversities().then(res => {
+        PublicUniversityService.getUniversities().then(res => {
             setUniversities(res.data || []);
         }).catch(() => {});
     }, []);
@@ -76,10 +73,13 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
         targetUniversityIds.forEach(univId => {
             if (fetchedUnivIds.current.has(univId)) return;
             fetchedUnivIds.current.add(univId);
-            OrganizationService.getOrganizations(univId).then(res => {
+            PublicOrganizationService.getOrganizations(univId).then(res => {
                 setOrganizationsByUniv(prev => ({
                     ...prev,
-                    [univId]: (res.data || []).filter(o => o.category === OrganizationResponse.category.COLLEGE),
+                    [univId]: (res.data || []).filter(o => 
+                        o.category === OrganizationResponse.category.COLLEGE || 
+                        o.category === OrganizationResponse.category.DEPARTMENT
+                    ),
                 }));
             }).catch(() => {
                 fetchedUnivIds.current.delete(univId);
@@ -95,16 +95,16 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     useEffect(() => {
         if (initialData) {
             setTitle(initialData.title || '');
-            setAdvertisementType(initialData.advertisementType);
+            setAdvertisementType((initialData.advertisementType as AdvertisementType) || 'POPUP');
             setLandingUrl(initialData.landingUrl || '');
             setStartAt(formatDateForInput(initialData.startAt || ''));
             setEndAt(formatDateForInput(initialData.endAt || ''));
-            setStatus(initialData.status === 'ACTIVE' || initialData.status === 'INACTIVE' ? initialData.status : 'ACTIVE');
+            setStatus((initialData.status as AdvertisementStatus) === 'ACTIVE' || (initialData.status as AdvertisementStatus) === 'INACTIVE' ? (initialData.status as AdvertisementStatus) : 'ACTIVE');
             setExistingImageUrl(initialData.imageUrl || null);
             setImagePreviewUrl(initialData.imageUrl || null);
-            setTargetUniversityIds((initialData.targetUniversities ?? []).map((u: TargetUniversityInfo) => u.id));
-            setTargetOrganizationIds((initialData.targetOrganizations ?? []).map((o: TargetOrganizationInfo) => o.id));
-            setTargetGender(initialData.targetGender ?? null);
+            setTargetUniversityIds((initialData.targetUniversities ?? []).map((u: TargetUniversityInfo) => u.id!));
+            setTargetOrganizationIds((initialData.targetOrganizations ?? []).map((o: TargetOrganizationInfo) => o.id!));
+            setTargetGender(initialData.targetGender as Gender | null);
         }
     }, [initialData]);
 
@@ -191,14 +191,14 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
             if (initialData && initialData.id) {
                 // UPDATE: targeting 필드는 초기값과 다를 때만 포함
                 // (JsonNullable 패턴: 필드 미포함 = 변경 없음, null = 전체 초기화, 배열 = 지정)
-                const initialUnivIds = (initialData.targetUniversities ?? []).map(u => u.id).sort((a, b) => a - b);
-                const initialOrgIds = (initialData.targetOrganizations ?? []).map(o => o.id).sort((a, b) => a - b);
+                const initialUnivIds = (initialData.targetUniversities ?? []).map(u => u.id!).sort((a, b) => a - b);
+                const initialOrgIds = (initialData.targetOrganizations ?? []).map(o => o.id!).sort((a, b) => a - b);
                 const currentUnivIds = [...targetUniversityIds].sort((a, b) => a - b);
                 const currentOrgIds = [...targetOrganizationIds].sort((a, b) => a - b);
                 const univChanged = JSON.stringify(initialUnivIds) !== JSON.stringify(currentUnivIds);
                 const orgChanged = JSON.stringify(initialOrgIds) !== JSON.stringify(currentOrgIds);
 
-                const requestData: UpdateAdvertisementRequest = {
+                const requestData = {
                     title,
                     imageUrl,
                     landingUrl: landingUrl || null,
@@ -208,11 +208,11 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     ...(univChanged ? { targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null } : {}),
                     ...(orgChanged ? { targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null } : {}),
                     targetGender,
-                };
+                } as any; // Bypass JsonNullable OpenApi generator bug
                 await AdminAdvertisementService.updateAdvertisement(initialData.id, requestData);
                 alert('광고가 수정되었습니다.');
             } else {
-                const requestData: CreateAdvertisementRequest = {
+                const requestData = {
                     title,
                     advertisementType,
                     imageUrl,
@@ -223,7 +223,7 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
                     targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                     targetGender,
-                };
+                } as any;
                 await AdminAdvertisementService.createAdvertisement(requestData);
                 alert('광고가 등록되었습니다.');
             }
@@ -275,7 +275,7 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                     type="button"
                                     onClick={() => {
                                         if (!initialData) {
-                                            setAdvertisementType(type.value);
+                                            setAdvertisementType(type.value as AdvertisementType);
                                             setImageFile(null);
                                             setImagePreviewUrl(null);
                                             setExistingImageUrl(null);
@@ -443,10 +443,10 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                             </div>
                         </div>
 
-                        {/* 단과대 선택 — 대학별로 그룹화 */}
+                        {/* 단과대/학과 선택 — 대학별로 그룹화 */}
                         {targetUniversityIds.length > 0 && (
                             <div className="space-y-2">
-                                <label className="block text-xs font-medium text-gray-600">단과대</label>
+                                <label className="block text-xs font-medium text-gray-600">단과대 / 학과</label>
                                 {targetUniversityIds.map(univId => {
                                     const univName = universities.find(u => u.id === univId)?.name ?? '';
                                     const orgs = (organizationsByUniv[univId] || []).filter(o => o.id != null);
@@ -460,7 +460,7 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                                 <span className="text-xs text-gray-300">로딩 중...</span>
                                             ) : (
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {/* 단과대 전체 버튼 */}
+                                                    {/* 단과대/학과 전체 버튼 */}
                                                     <button
                                                         type="button"
                                                         onClick={() => {

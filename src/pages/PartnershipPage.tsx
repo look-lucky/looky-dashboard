@@ -4,7 +4,7 @@ import { PartnershipUpload } from '../features/partnerships/PartnershipUpload';
 import { PartnershipCreateModal } from '../features/partnerships/PartnershipCreateModal';
 import { Plus } from 'lucide-react';
 import { useUniversity } from '../shared/contexts/UniversityContext';
-import { OrganizationService } from '../shared/api/services/OrganizationService';
+import { PublicOrganizationService } from '../shared/api/services/PublicOrganizationService';
 import type { OrganizationResponse } from '../shared/api/models/OrganizationResponse';
 
 export function PartnershipPage() {
@@ -17,7 +17,7 @@ export function PartnershipPage() {
 
     const fetchOrganizations = async (universityId: number) => {
         try {
-            const response = await OrganizationService.getOrganizations(universityId);
+            const response = await PublicOrganizationService.getOrganizations(universityId);
             if (response.data) {
                 setOrganizations(response.data);
             }

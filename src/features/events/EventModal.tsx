@@ -1,9 +1,11 @@
 import { X, Upload } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
-import { UniversityService } from '../../shared/api/services/UniversityService';
-import type { EventResponse } from '../../shared/api/models/EventResponse';
+import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
+import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
+import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
 import type { UpdateEventRequest } from '../../shared/api/models/UpdateEventRequest';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
@@ -12,7 +14,7 @@ import { ImageCropper } from '../../shared/components/ImageCropper';
 interface EventModalProps {
     onClose: () => void;
     onSuccess: () => void;
-    initialData?: EventResponse | null;
+    initialData?: AdminEventResponse | null;
 }
 
 type EventType = 'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP';
@@ -36,6 +38,8 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [place, setPlace] = useState('');
     const [universityId, setUniversityId] = useState<number | null>(null);
     const [universities, setUniversities] = useState<UniversityResponse[]>([]);
+    const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
+    const [targetOrgIds, setTargetOrgIds] = useState<number[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
     const [latitude, setLatitude] = useState<number>(37.5665);
     const [longitude, setLongitude] = useState<number>(126.9780);
@@ -61,7 +65,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setSubtitle(initialData.subtitle || '');
             setDescription(initialData.description || '');
             setPlace(initialData.place || '');
-            setUniversityId(initialData.universityId ?? null);
+            setUniversityId(initialData.targetUniversity?.id ?? null);
             setSelectedTypes(initialData.eventTypes as EventType[] || []);
             setLatitude(initialData.latitude || 37.5665);
             setLongitude(initialData.longitude || 126.9780);
@@ -69,15 +73,19 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
             const existingBanner = initialData.bannerImageUrl || null;
             setExistingBannerUrl(existingBanner);
-            setBannerPreviewUrl(existingBanner);
-            const existingImgs = initialData.imageUrls || [];
             setExistingImageUrls(existingImgs);
             setPreviewUrls(existingImgs);
+            
+            if (initialData.targetOrganizations) {
+                setTargetOrgIds(initialData.targetOrganizations.map(org => org.id!));
+            } else {
+                setTargetOrgIds([]);
+            }
         }
 
         const fetchUniversities = async () => {
             try {
-                const response = await UniversityService.getUniversities();
+                const response = await PublicUniversityService.getUniversities();
                 setUniversities(response.data || []);
             } catch (error) {
                 console.error('Failed to fetch universities', error);
@@ -86,6 +94,33 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
         fetchUniversities();
     }, [initialData]);
+
+    useEffect(() => {
+        if (!universityId) {
+            setOrganizations([]);
+            setTargetOrgIds([]);
+            return;
+        }
+
+        const fetchOrgs = async () => {
+            try {
+                const response = await PublicOrganizationService.getOrganizations(universityId);
+                const rawOrgs = response.data || [];
+                const sortedOrgs = rawOrgs.filter(org => org.category === 'COLLEGE' || org.category === 'DEPARTMENT').sort((a, b) => {
+                    const catA = a.category || '';
+                    const catB = b.category || '';
+                    if (catA === catB) {
+                        return (a.name || '').localeCompare(b.name || '', 'ko');
+                    }
+                    return catA.localeCompare(catB, 'ko');
+                });
+                setOrganizations(sortedOrgs);
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        fetchOrgs();
+    }, [universityId]);
 
     const formatDateForInput = (dateString: string) => {
         if (!dateString) return '';
@@ -213,7 +248,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             const allImageUrls = [...existingImageUrls, ...newUploadedUrls];
 
             if (initialData && initialData.id) {
-                const requestData: UpdateEventRequest = {
+                const requestData = {
                     title,
                     subtitle: subtitle || undefined,
                     description,
@@ -226,7 +261,8 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
-                };
+                    targetOrganizationIds: targetOrgIds.length > 0 ? targetOrgIds : undefined,
+                } as any;
                 await AdminEventService.updateEvent(initialData.id, requestData);
                 alert('이벤트가 수정되었습니다.');
             } else {
@@ -243,6 +279,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+                    targetOrganizationIds: targetOrgIds.length > 0 ? targetOrgIds : undefined,
                 };
                 await AdminEventService.createEvent(requestData);
                 alert('이벤트가 등록되었습니다.');
@@ -405,6 +442,32 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             </select>
                         </div>
                     </div>
+                    {universityId && organizations.length > 0 && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">타겟 단과대/학과 (선택)</label>
+                            <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-48 overflow-y-auto">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {organizations.map(org => (
+                                        <div key={org.id} className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                id={`org-${org.id}`}
+                                                checked={targetOrgIds.includes(org.id!)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) setTargetOrgIds(prev => [...prev, org.id!]);
+                                                    else setTargetOrgIds(prev => prev.filter(id => id !== org.id));
+                                                }}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor={`org-${org.id}`} className="ml-2 block text-xs text-gray-900 truncate" title={`${org.name} (${org.category})`}>
+                                                {org.name} <span className="text-gray-500">({org.category === 'COLLEGE' ? '단과대' : '학과'})</span>
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">배너 이미지 (최대 1장)</label>

@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { OrganizationService } from '../../shared/api/services/OrganizationService';
+import { AdminOrganizationService } from '../../shared/api/services/AdminOrganizationService';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { CreateOrganizationRequest } from '../../shared/api/models/CreateOrganizationRequest';
 import type { UpdateOrganizationRequest } from '../../shared/api/models/UpdateOrganizationRequest';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
@@ -55,7 +56,7 @@ export function OrganizationModal({
     useEffect(() => {
         const fetchOrganizations = async () => {
             try {
-                const response = await OrganizationService.getOrganizations(universityId);
+                const response = await PublicOrganizationService.getOrganizations(universityId);
                 if (response.data) {
                     // Filter only colleges
                     const collegeList = response.data.filter(org => org.category === 'COLLEGE');
@@ -112,7 +113,7 @@ export function OrganizationModal({
                         name: n,
                         parentId: (category === CreateOrganizationRequest.category.DEPARTMENT && parentId) ? Number(parentId) : undefined
                     };
-                    return OrganizationService.createOrganization(universityId, payload);
+                    return AdminOrganizationService.createOrganization(universityId, payload);
                 });
 
                 await Promise.all(promises);
@@ -125,10 +126,10 @@ export function OrganizationModal({
                 };
 
                 if (initialData && initialData.id) {
-                    await OrganizationService.updateOrganization(initialData.id, payload as unknown as UpdateOrganizationRequest);
+                    await AdminOrganizationService.updateOrganization(initialData.id, payload as unknown as UpdateOrganizationRequest);
                     alert('수정되었습니다.');
                 } else {
-                    await OrganizationService.createOrganization(universityId, payload);
+                    await AdminOrganizationService.createOrganization(universityId, payload);
                     alert('등록되었습니다.');
                 }
             }

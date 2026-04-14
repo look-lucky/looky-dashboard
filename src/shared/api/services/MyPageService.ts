@@ -14,12 +14,13 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class MyPageService {
     /**
+     * @deprecated
      * [학생] 내 정보 조회
      * 학생의 대학, 단과대, 학과, 동아리 활동 여부를 조회합니다.
      * @returns CommonResponseStudentInfoResponse 조회 성공
      * @throws ApiError
      */
-    public static getStudentInfo(): CancelablePromise<CommonResponseStudentInfoResponse> {
+    public static getStudentInfo1(): CancelablePromise<CommonResponseStudentInfoResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/mypage/student/profile',
@@ -30,13 +31,14 @@ export class MyPageService {
         });
     }
     /**
+     * @deprecated
      * [학생] 프로필 수정
      * 학생의 프로필(닉네임, 단과대, 학과, 동아리 가입여부)을 수정합니다. 대학 변경은 별도 API 사용.
      * @param requestBody
      * @returns CommonResponseVoid 프로필 수정 성공
      * @throws ApiError
      */
-    public static updateStudentProfile(
+    public static updateStudentProfile1(
         requestBody: UpdateStudentProfileRequest,
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
@@ -51,13 +53,14 @@ export class MyPageService {
         });
     }
     /**
+     * @deprecated
      * [학생] 대학 변경
      * 학생의 소속 대학을 변경합니다. (기존 단과대/학과는 초기화됨)
      * @param requestBody
      * @returns CommonResponseVoid 대학 변경 성공
      * @throws ApiError
      */
-    public static updateUniversity(
+    public static updateUniversity1(
         requestBody: UpdateUniversityRequest,
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
@@ -72,6 +75,7 @@ export class MyPageService {
         });
     }
     /**
+     * @deprecated
      * [공통] 아이디 변경
      * 사용자의 아이디를 변경합니다.
      * @param requestBody
@@ -93,6 +97,7 @@ export class MyPageService {
         });
     }
     /**
+     * @deprecated
      * [공통] 비밀번호 변경
      * 사용자의 비밀번호를 변경합니다.
      * @param requestBody
@@ -113,12 +118,13 @@ export class MyPageService {
         });
     }
     /**
+     * @deprecated
      * [점주] 내 정보 조회
      * 점주의 이름, 이메일, 아이디, 성별, 생년월일을 조회합니다.
      * @returns CommonResponseOwnerInfoResponse 조회 성공
      * @throws ApiError
      */
-    public static getOwnerInfo(): CancelablePromise<CommonResponseOwnerInfoResponse> {
+    public static getOwnerInfo1(): CancelablePromise<CommonResponseOwnerInfoResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/mypage/owner/profile',

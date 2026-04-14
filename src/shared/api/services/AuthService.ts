@@ -18,7 +18,6 @@ import type { ResetPasswordRequest } from '../models/ResetPasswordRequest';
 import type { SendEmailCodeRequest } from '../models/SendEmailCodeRequest';
 import type { StudentSignupRequest } from '../models/StudentSignupRequest';
 import type { VerifyEmailCodeRequest } from '../models/VerifyEmailCodeRequest';
-import type { WithdrawRequest } from '../models/WithdrawRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -359,27 +358,6 @@ export class AuthService {
             url: '/api/auth/check-username',
             query: {
                 'username': username,
-            },
-        });
-    }
-    /**
-     * [공통] 회원 탈퇴
-     * 회원을 탈퇴 처리합니다. (Soft Delete)
-     * @param requestBody
-     * @returns void
-     * @throws ApiError
-     */
-    public static withdraw(
-        requestBody: WithdrawRequest,
-    ): CancelablePromise<void> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/auth/withdraw',
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                400: `잘못된 요청 (기타 사유 미입력 등)`,
-                401: `인증 실패`,
             },
         });
     }

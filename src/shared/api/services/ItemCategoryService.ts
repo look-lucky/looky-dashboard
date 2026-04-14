@@ -10,6 +10,7 @@ import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class ItemCategoryService {
     /**
+     * @deprecated
      * [공통] 상품 카테고리 목록 조회
      * 매장의 상품 카테고리 목록을 조회합니다.
      * @param storeId
@@ -28,6 +29,7 @@ export class ItemCategoryService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상품 카테고리 등록
      * 매장에 새로운 상품 카테고리를 등록합니다.
      * @param storeId
@@ -54,6 +56,7 @@ export class ItemCategoryService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상품 카테고리 삭제
      * 상품 카테고리를 삭제합니다. (사용 중인 상품이 있으면 삭제 불가)
      * @param storeId
@@ -78,6 +81,7 @@ export class ItemCategoryService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상품 카테고리 수정
      * 상품 카테고리 이름을 수정합니다.
      * @param storeId

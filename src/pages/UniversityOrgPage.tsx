@@ -6,7 +6,7 @@ import { UniversityModal } from '../features/universities/UniversityModal';
 import { OrganizationList } from '../features/organizations/OrganizationList';
 import { OrganizationModal } from '../features/organizations/OrganizationModal';
 import { CreateOrganizationRequest } from '../shared/api/models/CreateOrganizationRequest';
-import { UniversityService } from '../shared/api/services/UniversityService';
+import { PublicUniversityService } from '../shared/api/services/PublicUniversityService';
 import type { UniversityResponse } from '../shared/api/models/UniversityResponse';
 import type { OrganizationResponse } from '../shared/api/models/OrganizationResponse';
 
@@ -317,7 +317,7 @@ function UniversitySelector({
     useEffect(() => {
         (async () => {
             try {
-                const response = await UniversityService.getUniversities();
+                const response = await PublicUniversityService.getUniversities();
                 if (response.data) {
                     setUniversities(response.data);
                 }

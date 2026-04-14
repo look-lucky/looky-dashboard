@@ -1,10 +1,9 @@
 import { X, GripVertical, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import {
-    AdminAdvertisementService,
-    type AdminAdvertisementResponse,
-    type AdvertisementType,
-} from '../../shared/api/services/AdminAdvertisementService';
+import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
+import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
+
+type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
 
 interface AdvertisementOrderModalProps {
     initialType?: AdvertisementType;
@@ -42,11 +41,11 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
         setDragFrom(null);
         setDragTo(null);
         dragFromRef.current = null;
-        AdminAdvertisementService.getAdvertisements(0, 100, selectedType, 'ACTIVE')
+        AdminAdvertisementService.getAdvertisements({ page: 0, size: 100 }, selectedType, 'ACTIVE')
             .then(res => {
-                const sorted = [...(res.data?.content ?? [])].sort((a, b) => a.displayOrder - b.displayOrder);
+                const sorted = [...(res.data?.content ?? [])].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
                 setItems(sorted);
-                setOriginalOrder(sorted.map(ad => ad.id));
+                setOriginalOrder(sorted.map(ad => ad.id!));
             })
             .catch(() => setItems([]))
             .finally(() => setLoading(false));
@@ -100,11 +99,11 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
         try {
             const updates = items
                 .map((ad, index) => ({ ad, newOrder: index }))
-                .filter(({ ad, newOrder }) => originalOrder.indexOf(ad.id) !== newOrder);
+                .filter(({ ad, newOrder }) => originalOrder.indexOf(ad.id!) !== newOrder);
 
             await Promise.all(
                 updates.map(({ ad, newOrder }) =>
-                    AdminAdvertisementService.updateAdvertisement(ad.id, { displayOrder: newOrder })
+                    AdminAdvertisementService.updateAdvertisement(ad.id!, { displayOrder: newOrder } as any)
                 )
             );
             onSuccess();
@@ -136,11 +135,10 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
                             key={t.value}
                             type="button"
                             onClick={() => setSelectedType(t.value)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                                selectedType === t.value
-                                    ? 'bg-blue-600 text-white border-blue-600'
-                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                            }`}
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${selectedType === t.value
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                }`}
                         >
                             {t.label}
                         </button>
@@ -175,13 +173,12 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
                                     onDragOver={e => handleDragOver(e, index)}
                                     onDrop={e => handleDrop(e, index)}
                                     onDragEnd={handleDragEnd}
-                                    className={`flex items-center gap-3 p-3 rounded-xl border select-none transition-all cursor-grab active:cursor-grabbing ${
-                                        isDragging
-                                            ? 'opacity-40 bg-gray-50 border-dashed border-gray-300'
-                                            : isDropTarget
+                                    className={`flex items-center gap-3 p-3 rounded-xl border select-none transition-all cursor-grab active:cursor-grabbing ${isDragging
+                                        ? 'opacity-40 bg-gray-50 border-dashed border-gray-300'
+                                        : isDropTarget
                                             ? 'border-blue-500 bg-blue-50 shadow-md scale-[1.01]'
                                             : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm'
-                                    }`}
+                                        }`}
                                 >
                                     {/* 자식 요소에 pointer-events-none: 드래그 이벤트가 부모 div에만 전달됨 */}
                                     <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0 pointer-events-none" />
@@ -197,7 +194,7 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
                                     )}
                                     <div className="flex-1 min-w-0 pointer-events-none">
                                         <p className="text-sm font-medium text-gray-900 truncate">{ad.title}</p>
-                                        <p className="text-xs text-gray-400">{STATUS_LABELS[ad.status] ?? ad.status}</p>
+                                        <p className="text-xs text-gray-400">{STATUS_LABELS[(ad.status as string) || 'ACTIVE'] ?? ad.status}</p>
                                     </div>
                                 </div>
                             );

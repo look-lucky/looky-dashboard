@@ -7,25 +7,13 @@ import type { CommonResponseListItemResponse } from '../models/CommonResponseLis
 import type { CommonResponseLong } from '../models/CommonResponseLong';
 import type { CommonResponseVoid } from '../models/CommonResponseVoid';
 import type { CreateItemRequest } from '../models/CreateItemRequest';
+import type { UpdateItemRequest } from '../models/UpdateItemRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
-
-export interface UpdateItemRequest {
-    name?: string;
-    price?: number;
-    description?: string;
-    isSoldOut?: boolean;
-    itemOrder?: number;
-    isRepresentative?: boolean;
-    isHidden?: boolean;
-    badge?: 'BEST' | 'NEW' | 'HOT' | 'VEGAN';
-    itemCategoryId?: number;
-    imageUrl?: string;
-}
-
 export class ItemService {
     /**
+     * @deprecated
      * [공통] 상점별 상품 목록 조회
      * 특정 상점의 모든 상품을 조회합니다.
      * @param storeId 상점 ID
@@ -47,6 +35,7 @@ export class ItemService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상품 등록
      * 상점에 새로운 상품을 등록합니다. (본인 상점만 가능)
      * @param storeId 상점 ID
@@ -74,13 +63,14 @@ export class ItemService {
         });
     }
     /**
+     * @deprecated
      * [공통] 상품 단건 조회
      * 상품 ID로 상품의 상세 정보를 조회합니다.
      * @param itemId 상품 ID
      * @returns CommonResponseItemResponse 성공
      * @throws ApiError
      */
-    public static getItem(
+    public static getItem1(
         itemId: number,
     ): CancelablePromise<CommonResponseItemResponse> {
         return __request(OpenAPI, {
@@ -95,13 +85,14 @@ export class ItemService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상품 삭제
      * 상품을 삭제합니다. (본인 상점만 가능)
      * @param itemId 상품 ID
      * @returns void
      * @throws ApiError
      */
-    public static deleteItem(
+    public static deleteItem1(
         itemId: number,
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
@@ -117,6 +108,7 @@ export class ItemService {
         });
     }
     /**
+     * @deprecated
      * [점주] 상품 수정
      * 상품 정보를 수정합니다. (본인 상점만 가능)
      * @param itemId 상품 ID
@@ -124,7 +116,7 @@ export class ItemService {
      * @returns CommonResponseVoid 상품 수정 성공
      * @throws ApiError
      */
-    public static updateItem(
+    public static updateItem1(
         itemId: number,
         requestBody: UpdateItemRequest,
     ): CancelablePromise<CommonResponseVoid> {

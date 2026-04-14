@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, School } from 'lucide-react';
 import { OrganizationList } from '../features/organizations/OrganizationList';
 import { OrganizationModal } from '../features/organizations/OrganizationModal';
-import { UniversityService } from '../shared/api/services/UniversityService';
+import { PublicUniversityService } from '../shared/api/services/PublicUniversityService';
 import type { UniversityResponse } from '../shared/api/models/UniversityResponse';
 import type { OrganizationResponse } from '../shared/api/models/OrganizationResponse';
 
@@ -16,7 +16,7 @@ export function OrganizationPage() {
     useEffect(() => {
         async function fetchUniversities() {
             try {
-                const response = await UniversityService.getUniversities();
+                const response = await PublicUniversityService.getUniversities();
                 if (response.data) {
                     setUniversities(response.data);
                     if (response.data.length > 0) {

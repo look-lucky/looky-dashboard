@@ -1,6 +1,6 @@
 import { Edit2, Trash2, School } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { UniversityService } from '../../shared/api/services/UniversityService';
+import { AdminUniversityService } from '../../shared/api/services/AdminUniversityService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 
 interface UniversityListProps {
@@ -21,7 +21,7 @@ export function UniversityList({ refreshTrigger, onEdit, onSelect, selectedId }:
     const fetchUniversities = async () => {
         setLoading(true);
         try {
-            const response = await UniversityService.getUniversities();
+            const response = await AdminUniversityService.getUniversities_Admin();
             if (response.data) {
                 setUniversities(response.data);
                 // Auto-select first one if none selected and onSelect provided? 
@@ -38,7 +38,7 @@ export function UniversityList({ refreshTrigger, onEdit, onSelect, selectedId }:
         if (!confirm('정말 삭제하시겠습니까? 관련 데이터가 모두 삭제될 수 있습니다.')) return;
 
         try {
-            await UniversityService.deleteUniversity(id);
+            await AdminUniversityService.deleteUniversity(id);
             fetchUniversities();
         } catch (error) {
             console.error(error);

@@ -4,17 +4,17 @@ import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
-import { AdminService } from '../../shared/api/services/AdminService';
+import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuCategoryState, type MenuItemState, getMenuCategoryLocalId, getMenuItemLocalId, sortMenuItemsByOrder } from './StoreMenuEditor';
-import { ItemService, type UpdateItemRequest } from '../../shared/api/services/ItemService';
+import { AdminItemService, type UpdateItemRequest } from '../../shared/api/services/AdminItemService';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
-import { ItemCategoryService } from '../../shared/api/services/ItemCategoryService';
+import { AdminItemCategoryService } from '../../shared/api/services/AdminItemCategoryService';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
 interface StoreListProps {
@@ -95,7 +95,7 @@ export function StoreList({ universityId }: StoreListProps) {
         const jibunAddr = data.jibunAddress;
 
         try {
-            const response = await AdminService.getGeocode(roadAddr);
+            const response = await AdminStoreService.getGeocode(roadAddr);
             const coords = (response.data ?? (response as unknown as GeocodeResult)) as GeocodeResult;
             setEditForm((prev) => ({
                 ...prev,
@@ -122,14 +122,15 @@ export function StoreList({ universityId }: StoreListProps) {
                     undefined;
 
         try {
-            const response = await StoreService.getStores(
-                { page, size: pageSize, sort: ['id,asc'] },
+            const response = await AdminStoreService.getStores1(
                 debouncedSearchTerm || undefined,
-                undefined,
-                undefined,
+                undefined, // categories
                 universityId,
-                hasPartnership,
                 statusFilter || undefined,
+                hasPartnership,
+                page,
+                pageSize,
+                ['id,asc']
             );
 
             if (response.data) {
@@ -212,7 +213,7 @@ export function StoreList({ universityId }: StoreListProps) {
         if (!window.confirm(`선택한 ${count}개의 상점을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
         setBulkDeleting(true);
         const ids = Array.from(selectedIds);
-        const results = await Promise.allSettled(ids.map(id => StoreService.deleteStore(id)));
+        const results = await Promise.allSettled(ids.map(id => AdminStoreService.deleteStore2(id)));
         const failed = results.filter(r => r.status === 'rejected').length;
         setBulkDeleting(false);
         setSelectedIds(new Set());
@@ -227,7 +228,7 @@ export function StoreList({ universityId }: StoreListProps) {
     // Modal Handlers
     const openModal = async (store: StoreResponse) => {
         try {
-            const detailedStore = await StoreService.getStore(store.id!);
+            const detailedStore = await AdminStoreService.getStore1(store.id!);
             setSelectedStore(detailedStore.data || store);
             setEditForm({});
             setIsEditMode(false);
@@ -239,8 +240,8 @@ export function StoreList({ universityId }: StoreListProps) {
 
             // Load menu categories and menu items in parallel.
             const [itemsResult, categoriesResult] = await Promise.allSettled([
-                ItemService.getItems(store.id!),
-                ItemCategoryService.getItemCategories(store.id!),
+                AdminItemService.getItems2(store.id!),
+                AdminItemCategoryService.getItemCategories2(store.id!),
             ]);
 
             const loadedCategories: MenuCategoryState[] = [];
@@ -369,7 +370,7 @@ export function StoreList({ universityId }: StoreListProps) {
             if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = undefined;
             if (typeof requestData.longitude !== 'number' || isNaN(requestData.longitude)) requestData.longitude = undefined;
 
-            await StoreService.updateStore(selectedStore.id, requestData);
+            await AdminStoreService.updateStore2(selectedStore.id, requestData);
 
             let failureCount = 0;
             const categoryIdMap = new Map<string, number>();
@@ -383,7 +384,7 @@ export function StoreList({ universityId }: StoreListProps) {
             const deleteItemResults = await Promise.allSettled(
                 menuItems
                     .filter((item) => item.isDeleted && item.id)
-                    .map((item) => ItemService.deleteItem(item.id!)),
+                    .map((item) => AdminItemService.deleteItem2(item.id!)),
             );
             failureCount += deleteItemResults.filter((result) => result.status === 'rejected').length;
 
@@ -394,11 +395,11 @@ export function StoreList({ universityId }: StoreListProps) {
                         const trimmedName = category.name.trim();
 
                         if (category.id) {
-                            await ItemCategoryService.updateItemCategory(selectedStore.id!, category.id, { name: trimmedName });
+                            await AdminItemCategoryService.updateItemCategory2(selectedStore.id!, category.id, { name: trimmedName });
                             return;
                         }
 
-                        const createdCategory = await ItemCategoryService.createItemCategory(selectedStore.id!, { name: trimmedName });
+                        const createdCategory = await AdminItemCategoryService.createItemCategory2(selectedStore.id!, { name: trimmedName });
                         if (typeof createdCategory.data !== 'number') {
                             throw new Error('Category ID was not returned from createItemCategory.');
                         }
@@ -443,7 +444,7 @@ export function StoreList({ universityId }: StoreListProps) {
                             imageUrl,
                         } satisfies Omit<UpdateItemRequest, 'itemCategoryId'> & { itemCategoryId?: number | null };
 
-                        return ItemService.updateItem(item.id, updateReq as UpdateItemRequest);
+                        return AdminItemService.updateItem2(item.id, updateReq as UpdateItemRequest);
                     }
 
                     let imageUrl: string | undefined;
@@ -460,7 +461,7 @@ export function StoreList({ universityId }: StoreListProps) {
                         itemCategoryId: categoryId,
                         imageUrl,
                     };
-                    return ItemService.createItem(selectedStore.id!, createReq);
+                    return AdminItemService.createItem2(selectedStore.id!, createReq);
                 }),
             );
             failureCount += itemResults.filter((result) => result.status === 'rejected').length;
@@ -468,7 +469,7 @@ export function StoreList({ universityId }: StoreListProps) {
             const deleteCategoryResults = await Promise.allSettled(
                 menuCategories
                     .filter((category) => category.isDeleted && category.id)
-                    .map((category) => ItemCategoryService.deleteItemCategory(selectedStore.id!, category.id!)),
+                    .map((category) => AdminItemCategoryService.deleteItemCategory2(selectedStore.id!, category.id!)),
             );
             failureCount += deleteCategoryResults.filter((result) => result.status === 'rejected').length;
 
@@ -495,7 +496,7 @@ export function StoreList({ universityId }: StoreListProps) {
     const handleDelete = async () => {
         if (!selectedStore?.id) return;
         try {
-            await StoreService.deleteStore(selectedStore.id);
+            await AdminStoreService.deleteStore2(selectedStore.id);
             alert('상점이 삭제되었습니다.');
             closeModal();
             void fetchStores();

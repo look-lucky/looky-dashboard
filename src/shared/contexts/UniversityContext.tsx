@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { UniversityResponse } from '../api/models/UniversityResponse';
-import { UniversityService } from '../api/services/UniversityService';
+import { PublicUniversityService } from '../api/services/PublicUniversityService';
 
 interface UniversityContextType {
     universities: UniversityResponse[];
@@ -23,7 +23,7 @@ export function UniversityProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         async function fetchUniversities() {
             try {
-                const response = await UniversityService.getUniversities();
+                const response = await PublicUniversityService.getUniversities();
                 if (response.data) {
                     setUniversities(response.data);
                     // If no selection or invalid selection, select first one

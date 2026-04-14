@@ -1,10 +1,10 @@
 import { ArrowUpRight, TrendingUp, Users, Store, Loader2, Clock, type LucideIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { StoreClaimService } from '../shared/api/services/StoreClaimService';
-import { StoreService } from '../shared/api/services/StoreService';
-import { UniversityService } from '../shared/api/services/UniversityService';
-import type { StoreClaimResponse } from '../shared/api/models/StoreClaimResponse';
+import { AdminStoreClaimService } from '../shared/api/services/AdminStoreClaimService';
+import { AdminStoreService } from '../shared/api/services/AdminStoreService';
+import { PublicUniversityService } from '../shared/api/services/PublicUniversityService';
+import type { AdminStoreClaimResponse } from '../shared/api/models/AdminStoreClaimResponse';
 
 export function HomePage() {
     const [stats, setStats] = useState({
@@ -12,7 +12,7 @@ export function HomePage() {
         totalStores: 0,
         totalUniversities: 0,
     });
-    const [recentClaims, setRecentClaims] = useState<StoreClaimResponse[]>([]);
+    const [recentClaims, setRecentClaims] = useState<AdminStoreClaimResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -20,14 +20,14 @@ export function HomePage() {
             try {
                 // Parallel fetching of stats
                 const [claimsRes, storesRes, uniRes, recentClaimsRes] = await Promise.all([
-                    // 1. Pending Claims Count (Page 0, Size 1 is enough to get totalElements)
-                    StoreClaimService.getStoreClaims({ page: 0, size: 1 }, 'PENDING'),
+                    // 1. Pending Claims Count
+                    AdminStoreClaimService.getStoreClaims({ page: 0, size: 1 }, 'PENDING'),
                     // 2. Total Stores Count
-                    StoreService.getStores({ page: 0, size: 1 }),
+                    AdminStoreService.getStores1(undefined, undefined, undefined, undefined, undefined, 0, 1),
                     // 3. Total Universities
-                    UniversityService.getUniversities(),
+                    PublicUniversityService.getUniversities(),
                     // 4. Recent Pending Claims (for list)
-                    StoreClaimService.getStoreClaims({ page: 0, size: 5, sort: ['createdAt,desc'] }, 'PENDING')
+                    AdminStoreClaimService.getStoreClaims({ page: 0, size: 5, sort: ['createdAt,desc'] }, 'PENDING')
                 ]);
 
                 setStats({

@@ -1,7 +1,7 @@
 import { Upload, FileSpreadsheet, Loader2, AlertCircle, Download, Users } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
-import { OrganizationService } from '../../shared/api/services/OrganizationService';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { useAuthStore } from '../../shared/lib/auth/authStore';
 import { OpenAPI } from '../../shared/api/core/OpenAPI';
@@ -32,7 +32,7 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
 
             setLoadingOrgs(true);
             try {
-                const response = await OrganizationService.getOrganizations(universityId);
+                const response = await PublicOrganizationService.getOrganizations(universityId);
                 const rawOrgs = response.data || [];
                 // 카테고리별 가나다순, 동일 카테고리 내에서는 조직명 가나다순 정렬
                 const sortedOrgs = rawOrgs.sort((a, b) => {

@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * 만료 일시
+ * 발급 종료 일시
  */
 export type JsonNullableLocalDateTime = {
     present?: boolean;

@@ -5,5 +5,7 @@
 export type CreateUniversityRequest = {
     name: string;
     emailDomains: Array<string>;
+    latitude?: number;
+    longitude?: number;
 };
 

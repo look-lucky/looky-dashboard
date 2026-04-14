@@ -1,12 +1,11 @@
 import { Edit2, Trash2, Calendar, ExternalLink, Search, ArrowUpDown } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-    AdminAdvertisementService,
-    type AdminAdvertisementResponse,
-    type AdvertisementType,
-    type AdvertisementStatus,
-} from '../../shared/api/services/AdminAdvertisementService';
-import { OrganizationService } from '../../shared/api/services/OrganizationService';
+import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
+import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
+
+type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
+type AdvertisementStatus = 'SCHEDULED' | 'ACTIVE' | 'INACTIVE' | 'ENDED';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { AdvertisementOrderModal } from './AdvertisementOrderModal';
 
 interface AdvertisementListProps {
@@ -65,7 +64,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
     const [activeTab, setActiveTab] = useState<'' | AdvertisementType>('');
     const [statusFilter, setStatusFilter] = useState<'' | AdvertisementStatus>('');
     const [showOrderModal, setShowOrderModal] = useState(false);
-    // orgId → univId 매핑 (단과대를 대학별로 그루핑하기 위해)
+    // orgId 를 univId 와 매핑 (단과대/학과를 대학별로 그룹화하기 위함)
     const [orgUnivMap, setOrgUnivMap] = useState<Record<number, number>>({});
     const fetchedUnivIdsRef = useRef<Set<number>>(new Set());
 
@@ -77,8 +76,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
         setLoading(true);
         try {
             const response = await AdminAdvertisementService.getAdvertisements(
-                page,
-                10,
+                { page, size: 10 },
                 activeTab || undefined,
                 statusFilter || undefined,
             );
@@ -106,11 +104,11 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
     // ads가 바뀌면 targetUniversities 기준으로 org→univ 매핑 fetch
     useEffect(() => {
         const univIds = new Set<number>();
-        ads.forEach(ad => (ad.targetUniversities ?? []).forEach(u => univIds.add(u.id)));
+        ads.forEach(ad => (ad.targetUniversities ?? []).forEach(u => univIds.add(u.id!)));
         univIds.forEach(univId => {
             if (fetchedUnivIdsRef.current.has(univId)) return;
             fetchedUnivIdsRef.current.add(univId);
-            OrganizationService.getOrganizations(univId)
+            PublicOrganizationService.getOrganizations(univId)
                 .then(res => {
                     const orgs = res.data ?? [];
                     setOrgUnivMap(prev => {
@@ -252,13 +250,13 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                         )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${TYPE_COLORS[ad.advertisementType]}`}>
-                                            {TYPE_LABELS[ad.advertisementType]}
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${TYPE_COLORS[(ad.advertisementType as AdvertisementType) || 'POPUP']}`}>
+                                            {TYPE_LABELS[(ad.advertisementType as AdvertisementType) || 'POPUP']}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[ad.status]}`}>
-                                            {STATUS_LABELS[ad.status]}
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[(ad.status as AdvertisementStatus) || 'ACTIVE']}`}>
+                                            {STATUS_LABELS[(ad.status as AdvertisementStatus) || 'ACTIVE']}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -269,7 +267,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                             {ad.targetUniversities && ad.targetUniversities.length > 0 ? (
                                                 ad.targetUniversities.map(u => {
                                                     const univOrgs = (ad.targetOrganizations ?? []).filter(
-                                                        o => orgUnivMap[o.id] === u.id
+                                                        o => orgUnivMap[o.id!] === u.id
                                                     );
                                                     return (
                                                         <div key={u.id} className="flex flex-col gap-0.5">
@@ -288,7 +286,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                                 <span className="text-gray-300">전체 대학</span>
                                             )}
                                             <span className="text-xs text-gray-400 mt-0.5">
-                                                {ad.targetGender === 'MALE' ? '남성' : ad.targetGender === 'FEMALE' ? '여성' : '전체 성별'}
+                                                {ad.targetGender === ('MALE' as any) ? '남성' : ad.targetGender === ('FEMALE' as any) ? '여성' : '전체 성별'}
                                             </span>
                                         </div>
                                     </td>
@@ -296,8 +294,8 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                         <div className="flex items-center text-sm text-gray-500">
                                             <Calendar className="w-4 h-4 mr-2" />
                                             <div className="flex flex-col">
-                                                <span>{formatDate(ad.startAt)}</span>
-                                                <span className="text-xs">~ {formatDate(ad.endAt)}</span>
+                                                <span>{formatDate(ad.startAt || '')}</span>
+                                                <span className="text-xs">~ {formatDate(ad.endAt || '')}</span>
                                             </div>
                                         </div>
                                     </td>
@@ -309,7 +307,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                             <Edit2 className="w-4 h-4" />
                                         </button>
                                         <button
-                                            onClick={() => handleDelete(ad.id)}
+                                            onClick={() => handleDelete(ad.id!)}
                                             className="text-red-600 hover:text-red-900"
                                         >
                                             <Trash2 className="w-4 h-4" />

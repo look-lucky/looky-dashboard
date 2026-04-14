@@ -1,6 +1,7 @@
 import { Edit2, Trash2, Users, Search } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { OrganizationService } from '../../shared/api/services/OrganizationService';
+import { AdminOrganizationService } from '../../shared/api/services/AdminOrganizationService';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 
 interface OrganizationListProps {
@@ -56,7 +57,7 @@ export function OrganizationList({
         if (!confirm(`${selectedIds.size}개의 소속을 정말 삭제하시겠습니까?`)) return;
 
         try {
-            await Promise.all(Array.from(selectedIds).map(id => OrganizationService.deleteOrganization(id)));
+            await Promise.all(Array.from(selectedIds).map(id => AdminOrganizationService.deleteOrganization(id)));
             // Refresh logic
             if (universityId) {
             void fetchOrganizations();
@@ -85,7 +86,7 @@ export function OrganizationList({
     const fetchOrganizations = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await OrganizationService.getOrganizations(universityId);
+            const response = await PublicOrganizationService.getOrganizations(universityId);
             if (response.data) {
                 setOrganizations(response.data);
             }
@@ -107,7 +108,7 @@ export function OrganizationList({
         if (!confirm('정말 삭제하시겠습니까? 관련 데이터가 모두 삭제될 수 있습니다.')) return;
 
         try {
-            await OrganizationService.deleteOrganization(id);
+            await AdminOrganizationService.deleteOrganization(id);
             void fetchOrganizations();
         } catch (error) {
             console.error(error);
