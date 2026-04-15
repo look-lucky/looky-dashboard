@@ -114,7 +114,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
-                                        {(!event.targetUniversity?.id) && (
+                                        {(event.universityId == null) && (
                                             <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
                                                 모든 학교
                                             </span>

@@ -24,7 +24,7 @@ export class AdminOrganizationService {
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/admin/universities/{universityId}/organizations',
+            url: '/api/universities/{universityId}/organizations',
             path: {
                 'universityId': universityId,
             },
@@ -49,7 +49,7 @@ export class AdminOrganizationService {
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/admin/organizations/{organizationId}',
+            url: '/api/organizations/{organizationId}',
             path: {
                 'organizationId': organizationId,
             },
@@ -74,7 +74,7 @@ export class AdminOrganizationService {
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/admin/organizations/{organizationId}',
+            url: '/api/organizations/{organizationId}',
             path: {
                 'organizationId': organizationId,
             },

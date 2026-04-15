@@ -33,7 +33,7 @@ export class AdminEventService {
     ): CancelablePromise<CommonResponsePageResponseAdminEventResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/admin/events',
+            url: '/api/events',
             query: {
                 'keyword': keyword,
                 'eventTypes': eventTypes,
@@ -79,7 +79,7 @@ export class AdminEventService {
     ): CancelablePromise<CommonResponseAdminEventResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/admin/events/{eventId}',
+            url: '/api/events/{eventId}',
             path: {
                 'eventId': eventId,
             },

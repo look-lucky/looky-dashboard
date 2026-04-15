@@ -21,7 +21,7 @@ export class AdminItemCategoryService {
     ): CancelablePromise<CommonResponseListItemCategoryResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/admin/stores/{storeId}/item-categories',
+            url: '/api/stores/{storeId}/item-categories',
             path: {
                 'storeId': storeId,
             },
@@ -41,7 +41,7 @@ export class AdminItemCategoryService {
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/admin/stores/{storeId}/item-categories',
+            url: '/api/stores/{storeId}/item-categories',
             path: {
                 'storeId': storeId,
             },
@@ -67,7 +67,7 @@ export class AdminItemCategoryService {
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/admin/stores/{storeId}/item-categories/{categoryId}',
+            url: '/api/stores/{storeId}/item-categories/{categoryId}',
             path: {
                 'storeId': storeId,
                 'categoryId': categoryId,
@@ -93,7 +93,7 @@ export class AdminItemCategoryService {
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/admin/stores/{storeId}/item-categories/{categoryId}',
+            url: '/api/stores/{storeId}/item-categories/{categoryId}',
             path: {
                 'storeId': storeId,
                 'categoryId': categoryId,

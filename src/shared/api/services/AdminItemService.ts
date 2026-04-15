@@ -24,7 +24,7 @@ export class AdminItemService {
     ): CancelablePromise<CommonResponseListItemResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/admin/stores/{storeId}/items',
+            url: '/api/stores/{storeId}/items',
             path: {
                 'storeId': storeId,
             },
@@ -47,7 +47,7 @@ export class AdminItemService {
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/admin/stores/{storeId}/items',
+            url: '/api/stores/{storeId}/items',
             path: {
                 'storeId': storeId,
             },
@@ -72,7 +72,7 @@ export class AdminItemService {
     ): CancelablePromise<CommonResponseItemResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/admin/items/{itemId}',
+            url: '/api/items/{itemId}',
             path: {
                 'itemId': itemId,
             },
@@ -93,7 +93,7 @@ export class AdminItemService {
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/admin/items/{itemId}',
+            url: '/api/items/{itemId}',
             path: {
                 'itemId': itemId,
             },
@@ -117,7 +117,7 @@ export class AdminItemService {
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/admin/items/{itemId}',
+            url: '/api/items/{itemId}',
             path: {
                 'itemId': itemId,
             },

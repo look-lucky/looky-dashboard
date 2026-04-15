@@ -40,16 +40,18 @@ export class AdminStoreService {
     ): CancelablePromise<CommonResponsePageResponseAdminStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/admin/stores',
+            url: '/api/stores',
             query: {
                 'keyword': keyword,
                 'categories': categories,
                 'universityId': universityId,
                 'storeStatus': storeStatus,
                 'hasPartnership': hasPartnership,
-                'page': page,
-                'size': size,
-                'sort': sort,
+                'pageable': {
+                    page,
+                    size,
+                    sort,
+                },
             },
         });
     }
@@ -65,7 +67,7 @@ export class AdminStoreService {
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/admin/stores',
+            url: '/api/stores',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -113,7 +115,7 @@ export class AdminStoreService {
     ): CancelablePromise<CommonResponseAdminStoreResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/admin/stores/{storeId}',
+            url: '/api/stores/{storeId}',
             path: {
                 'storeId': storeId,
             },
@@ -134,7 +136,7 @@ export class AdminStoreService {
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/admin/stores/{storeId}',
+            url: '/api/stores/{storeId}',
             path: {
                 'storeId': storeId,
             },
@@ -158,7 +160,7 @@ export class AdminStoreService {
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/admin/stores/{storeId}',
+            url: '/api/stores/{storeId}',
             path: {
                 'storeId': storeId,
             },

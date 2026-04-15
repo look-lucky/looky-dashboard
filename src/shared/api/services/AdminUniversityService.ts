@@ -22,7 +22,7 @@ export class AdminUniversityService {
     ): CancelablePromise<CommonResponseLong> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/admin/universities',
+            url: '/api/universities',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -42,7 +42,7 @@ export class AdminUniversityService {
     ): CancelablePromise<void> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/admin/universities/{universityId}',
+            url: '/api/universities/{universityId}',
             path: {
                 'universityId': universityId,
             },
@@ -67,7 +67,7 @@ export class AdminUniversityService {
     ): CancelablePromise<CommonResponseVoid> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/admin/universities/{universityId}',
+            url: '/api/universities/{universityId}',
             path: {
                 'universityId': universityId,
             },

@@ -6,6 +6,7 @@ import type { TargetOrganizationInfo } from './TargetOrganizationInfo';
 import type { TargetUniversityInfo } from './TargetUniversityInfo';
 export type AdminEventResponse = {
     id?: number;
+    universityId?: number;
     title?: string;
     description?: string;
     subtitle?: string;
