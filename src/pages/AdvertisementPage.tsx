@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { AdvertisementList } from '../features/advertisements/AdvertisementList';
 import { AdvertisementModal } from '../features/advertisements/AdvertisementModal';
-import type { AdminAdvertisementResponse } from '../shared/api/services/AdminAdvertisementService';
+import type { AdminAdvertisementResponse } from '../shared/api/models/AdminAdvertisementResponse';
 
 export function AdvertisementPage() {
     const [showModal, setShowModal] = useState(false);

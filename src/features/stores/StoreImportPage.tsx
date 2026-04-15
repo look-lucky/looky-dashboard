@@ -5,7 +5,7 @@ import { AddressSearchFields } from '../../shared/components/AddressSearchFields
 import * as XLSX from 'xlsx';
 import axios from 'axios';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
-import { AdminService } from '../../shared/api/services/AdminService';
+import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 
@@ -116,7 +116,7 @@ export function StoreImportPage() {
 
         try {
             // Auto-geocode via API
-            const response = await AdminService.getGeocode(roadAddr);
+            const response = await AdminStoreService.getGeocode(roadAddr);
             const coords = (response.data ?? (response as unknown as GeocodeResult)) as GeocodeResult; // Handle both direct object and CommonResponse
             if (coords && coords.latitude && coords.longitude) {
                 setSearchCoords({ lat: coords.latitude, lng: coords.longitude });

@@ -1,6 +1,7 @@
 import { Edit2, Trash2, School } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { AdminUniversityService } from '../../shared/api/services/AdminUniversityService';
+import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 
 interface UniversityListProps {
@@ -21,7 +22,7 @@ export function UniversityList({ refreshTrigger, onEdit, onSelect, selectedId }:
     const fetchUniversities = async () => {
         setLoading(true);
         try {
-            const response = await AdminUniversityService.getUniversities_Admin();
+            const response = await PublicUniversityService.getUniversities();
             if (response.data) {
                 setUniversities(response.data);
                 // Auto-select first one if none selected and onSelect provided? 

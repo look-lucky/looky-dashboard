@@ -9,7 +9,7 @@ import { ImageCropper } from '../../shared/components/ImageCropper';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuCategoryState, type MenuItemState } from './StoreMenuEditor';
 import { AdminItemService } from '../../shared/api/services/AdminItemService';
-import type { CreateStoreRequest } from '../../shared/api/models/CreateStoreRequest';
+import type { StoreCreateRequest as CreateStoreRequest } from '../../shared/api/models/StoreCreateRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
@@ -321,7 +321,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                                 name: item.name,
                                 price: item.price,
                                 description: item.description,
-                                badge: item.badge,
+                                badge: item.badge as CreateItemRequest.badge | undefined,
                                 itemOrder: item.itemOrder,
                                 itemCategoryId: categoryId,
                                 imageUrl,

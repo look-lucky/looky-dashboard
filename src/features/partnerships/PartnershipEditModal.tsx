@@ -1,7 +1,7 @@
 import { X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
-import type { PartnershipResponse } from '../../shared/api/models/PartnershipResponse';
+import type { AdminPartnershipResponse as PartnershipResponse } from '../../shared/api/models/AdminPartnershipResponse';
 import type { UpdatePartnershipRequest } from '../../shared/api/models/UpdatePartnershipRequest';
 
 interface PartnershipEditModalProps {

@@ -1,7 +1,7 @@
 import { Trash2, Search, Pencil } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
-import type { PartnershipResponse } from '../../shared/api/models/PartnershipResponse';
+import type { AdminPartnershipResponse as PartnershipResponse } from '../../shared/api/models/AdminPartnershipResponse';
 import { PartnershipEditModal } from './PartnershipEditModal';
 
 interface PartnershipListProps {

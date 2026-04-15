@@ -16,7 +16,11 @@ export async function uploadImage(file: File): Promise<string> {
     });
 
     // API 응답 구조가 { isSuccess, data: { presignedUrl, fileUrl } } 임을 확인
-    const { presignedUrl, fileUrl } = response.data;
+    const { presignedUrl, fileUrl } = response.data ?? {};
+
+    if (!presignedUrl || !fileUrl) {
+        throw new Error('Failed to receive a valid presigned upload URL.');
+    }
 
     // 2. S3에 직접 업로드
     // axios 등의 라이브러리가 자동으로 추가하는 헤더(Authorization, Accept 등)를 완전히 배제하기 위해 순수 fetch 사용

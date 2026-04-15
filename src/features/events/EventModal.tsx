@@ -7,7 +7,6 @@ import type { AdminEventResponse } from '../../shared/api/models/AdminEventRespo
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
-import type { UpdateEventRequest } from '../../shared/api/models/UpdateEventRequest';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 
@@ -72,6 +71,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setStartDateTime(formatDateForInput(initialData.startDateTime || ''));
             setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
             const existingBanner = initialData.bannerImageUrl || null;
+            const existingImgs = initialData.imageUrls || [];
             setExistingBannerUrl(existingBanner);
             setExistingImageUrls(existingImgs);
             setPreviewUrls(existingImgs);

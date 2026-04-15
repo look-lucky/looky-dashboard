@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { StoreService } from '../../shared/api/services/StoreService';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
@@ -7,9 +6,10 @@ import { AddressSearchFields } from '../../shared/components/AddressSearchFields
 import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuCategoryState, type MenuItemState, getMenuCategoryLocalId, getMenuItemLocalId, sortMenuItemsByOrder } from './StoreMenuEditor';
-import { AdminItemService, type UpdateItemRequest } from '../../shared/api/services/AdminItemService';
+import { AdminItemService } from '../../shared/api/services/AdminItemService';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
-import type { UpdateStoreRequest } from '../../shared/api/models/UpdateStoreRequest';
+import type { StoreUpdateRequest as UpdateStoreRequest } from '../../shared/api/models/StoreUpdateRequest';
+import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
@@ -32,9 +32,23 @@ const CATEGORY_MAP: Record<StoreCategory, string> = {
 
 const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as StoreCategory[];
 
-type StoreCategory = NonNullable<UpdateStoreRequest['storeCategories']>[number];
+type StoreCategory = NonNullable<StoreResponse['storeCategories']>[number];
 type StoreStatusFilter = '' | 'UNCLAIMED' | 'ACTIVE' | 'BANNED';
 type PartnershipFilter = 'all' | 'yes' | 'no';
+
+interface EditStoreForm {
+    name?: string;
+    branch?: string;
+    roadAddress?: string;
+    jibunAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    phone?: string;
+    introduction?: string;
+    operatingHours?: string;
+    storeCategories?: StoreCategory[];
+    profileImageUrl?: string;
+}
 
 interface PendingStoreImageCrop {
     fileName: string;
@@ -70,7 +84,7 @@ export function StoreList({ universityId }: StoreListProps) {
     // Modal State
     const [selectedStore, setSelectedStore] = useState<StoreResponse | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
-    const [editForm, setEditForm] = useState<UpdateStoreRequest>({});
+    const [editForm, setEditForm] = useState<EditStoreForm>({});
     const [deleteConfirm, setDeleteConfirm] = useState(false);
 
     // Menu Items State
@@ -362,7 +376,7 @@ export function StoreList({ universityId }: StoreListProps) {
             const newImageUrls = images.length > 0 ? await uploadImages(images) : [];
             const allImageUrls = [...existingUrls, ...newImageUrls];
 
-            const requestData: UpdateStoreRequest = {
+            const requestData = {
                 ...editForm,
                 profileImageUrl: uploadedProfileImageUrl ?? allImageUrls[0],
                 imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
@@ -370,7 +384,7 @@ export function StoreList({ universityId }: StoreListProps) {
             if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = undefined;
             if (typeof requestData.longitude !== 'number' || isNaN(requestData.longitude)) requestData.longitude = undefined;
 
-            await AdminStoreService.updateStore2(selectedStore.id, requestData);
+            await AdminStoreService.updateStore2(selectedStore.id, requestData as unknown as UpdateStoreRequest);
 
             let failureCount = 0;
             const categoryIdMap = new Map<string, number>();
@@ -442,9 +456,9 @@ export function StoreList({ universityId }: StoreListProps) {
                             itemOrder: item.itemOrder,
                             itemCategoryId: categoryId ?? null,
                             imageUrl,
-                        } satisfies Omit<UpdateItemRequest, 'itemCategoryId'> & { itemCategoryId?: number | null };
+                        } as unknown as UpdateItemRequest;
 
-                        return AdminItemService.updateItem2(item.id, updateReq as UpdateItemRequest);
+                        return AdminItemService.updateItem2(item.id, updateReq);
                     }
 
                     let imageUrl: string | undefined;
@@ -456,7 +470,7 @@ export function StoreList({ universityId }: StoreListProps) {
                         name: item.name,
                         price: item.price,
                         description: item.description,
-                        badge: item.badge,
+                        badge: item.badge as CreateItemRequest.badge | undefined,
                         itemOrder: item.itemOrder,
                         itemCategoryId: categoryId,
                         imageUrl,
@@ -507,7 +521,7 @@ export function StoreList({ universityId }: StoreListProps) {
     };
 
     const handleInputChange = (
-        field: keyof UpdateStoreRequest,
+        field: keyof EditStoreForm,
         value: string | number | undefined | StoreCategory[]
     ) => {
         setEditForm((prev) => {
@@ -522,7 +536,7 @@ export function StoreList({ universityId }: StoreListProps) {
                 return { ...prev, phone: formatKoreanPhoneNumber(String(value ?? '')) };
             }
 
-            return { ...prev, [field]: value } as UpdateStoreRequest;
+            return { ...prev, [field]: value };
         });
     };
 
@@ -780,7 +794,7 @@ export function StoreList({ universityId }: StoreListProps) {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {currentStores.length > 0 ? (
                             currentStores.map((store) => {
-                                const isActive = store.storeStatus === 'ACTIVE';
+                                const isDeleteDisabled = store.storeStatus === 'ACTIVE';
                                 const isChecked = selectedIds.has(store.id!);
                                 return (
                                     <tr
@@ -793,7 +807,7 @@ export function StoreList({ universityId }: StoreListProps) {
                                                 type="checkbox"
                                                 checked={isChecked}
                                                 onChange={() => handleCheckboxChange(store.id!)}
-                                                disabled={isActive}
+                                                disabled={isDeleteDisabled}
                                                 className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                                             />
                                         </td>
@@ -1216,8 +1230,18 @@ export function StoreList({ universityId }: StoreListProps) {
                                         </>
                                     ) : (
                                         <>
+                                            {selectedStore.storeStatus === 'ACTIVE' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleEditClick}
+                                                    className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-indigo-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                                >
+                                                    <Edit2 className="w-4 h-4 mr-2" />
+                                                    ?섏젙
+                                                </button>
+                                            )}
                                             {selectedStore.storeStatus === 'ACTIVE' ? (
-                                                <div className="w-full py-2 text-center text-sm text-gray-500 sm:text-right">
+                                                <div className="hidden">
                                                     * 입점된 상점은 수정/삭제할 수 없습니다.
                                                 </div>
                                             ) : (
