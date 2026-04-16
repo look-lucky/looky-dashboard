@@ -327,6 +327,7 @@ export function StoreList({ universityId }: StoreListProps) {
 
     const handleEditClick = () => {
         if (!selectedStore) return;
+
         setEditForm({
             name: selectedStore.name,
             branch: selectedStore.branch || '',
@@ -1230,30 +1231,20 @@ export function StoreList({ universityId }: StoreListProps) {
                                         </>
                                     ) : (
                                         <>
-                                            {selectedStore.storeStatus === 'ACTIVE' && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleEditClick}
-                                                    className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-indigo-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
-                                                >
-                                                    <Edit2 className="w-4 h-4 mr-2" />
-                                                    ?섏젙
-                                                </button>
-                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={handleEditClick}
+                                                className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-indigo-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                            >
+                                                <Edit2 className="w-4 h-4 mr-2" />
+                                                수정
+                                            </button>
                                             {selectedStore.storeStatus === 'ACTIVE' ? (
-                                                <div className="hidden">
-                                                    * 입점된 상점은 수정/삭제할 수 없습니다.
+                                                <div className="w-full text-sm text-gray-500 sm:mr-auto sm:w-auto">
+                                                    * 입점된 상점은 삭제할 수 없습니다.
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleEditClick}
-                                                        className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-indigo-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
-                                                    >
-                                                        <Edit2 className="w-4 h-4 mr-2" />
-                                                        수정
-                                                    </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setDeleteConfirm(true)}
