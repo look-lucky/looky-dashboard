@@ -325,7 +325,9 @@ export function StoreList({ universityId }: StoreListProps) {
         setCropQueue([]);
     };
 
-    const handleEditClick = () => {
+    const handleEditClick = (e?: React.MouseEvent<HTMLButtonElement>) => {
+        e?.preventDefault();
+        e?.stopPropagation();
         if (!selectedStore) return;
 
         setEditForm({
@@ -1214,8 +1216,8 @@ export function StoreList({ universityId }: StoreListProps) {
                                     {isEditMode ? (
                                         <>
                                             <button
-                                                type="submit"
-                                                form="store-edit-form"
+                                                type="button"
+                                                onClick={() => void handleSave()}
                                                 className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
                                             >
                                                 <Save className="w-4 h-4 mr-2" />
