@@ -16,6 +16,8 @@ import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 import { AdminItemCategoryService } from '../../shared/api/services/AdminItemCategoryService';
 import { ImageCropper } from '../../shared/components/ImageCropper';
+import { OwnerItemService } from '../../shared/api/services/OwnerItemService';
+import { OwnerItemCategoryService } from '../../shared/api/services/OwnerItemCategoryService';
 
 interface StoreListProps {
     universityId: number;
@@ -242,6 +244,7 @@ export function StoreList({ universityId }: StoreListProps) {
     // Modal Handlers
     const openModal = async (store: StoreResponse) => {
         try {
+            const useOwnerMenuApi = store.storeStatus === 'ACTIVE';
             const detailedStore = await AdminStoreService.getStore1(store.id!);
             setSelectedStore(detailedStore.data || store);
             setEditForm({});
@@ -254,8 +257,8 @@ export function StoreList({ universityId }: StoreListProps) {
 
             // Load menu categories and menu items in parallel.
             const [itemsResult, categoriesResult] = await Promise.allSettled([
-                AdminItemService.getItems2(store.id!),
-                AdminItemCategoryService.getItemCategories2(store.id!),
+                useOwnerMenuApi ? OwnerItemService.getItems1(store.id!) : AdminItemService.getItems2(store.id!),
+                useOwnerMenuApi ? OwnerItemCategoryService.getItemCategories1(store.id!) : AdminItemCategoryService.getItemCategories2(store.id!),
             ]);
 
             const loadedCategories: MenuCategoryState[] = [];
@@ -357,6 +360,7 @@ export function StoreList({ universityId }: StoreListProps) {
     const handleSave = async (e?: React.FormEvent<HTMLFormElement>) => {
         e?.preventDefault();
         if (!selectedStore?.id || !editForm) return;
+        const useOwnerMenuApi = selectedStore.storeStatus === 'ACTIVE';
 
         const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
         if (invalidMenuCategory) {
@@ -401,7 +405,11 @@ export function StoreList({ universityId }: StoreListProps) {
             const deleteItemResults = await Promise.allSettled(
                 menuItems
                     .filter((item) => item.isDeleted && item.id)
-                    .map((item) => AdminItemService.deleteItem2(item.id!)),
+                    .map((item) => (
+                        useOwnerMenuApi
+                            ? OwnerItemService.deleteItem(item.id!)
+                            : AdminItemService.deleteItem2(item.id!)
+                    )),
             );
             failureCount += deleteItemResults.filter((result) => result.status === 'rejected').length;
 
@@ -412,11 +420,17 @@ export function StoreList({ universityId }: StoreListProps) {
                         const trimmedName = category.name.trim();
 
                         if (category.id) {
-                            await AdminItemCategoryService.updateItemCategory2(selectedStore.id!, category.id, { name: trimmedName });
+                            if (useOwnerMenuApi) {
+                                await OwnerItemCategoryService.updateItemCategory1(selectedStore.id!, category.id, { name: trimmedName });
+                            } else {
+                                await AdminItemCategoryService.updateItemCategory2(selectedStore.id!, category.id, { name: trimmedName });
+                            }
                             return;
                         }
 
-                        const createdCategory = await AdminItemCategoryService.createItemCategory2(selectedStore.id!, { name: trimmedName });
+                        const createdCategory = useOwnerMenuApi
+                            ? await OwnerItemCategoryService.createItemCategory1(selectedStore.id!, { name: trimmedName })
+                            : await AdminItemCategoryService.createItemCategory2(selectedStore.id!, { name: trimmedName });
                         if (typeof createdCategory.data !== 'number') {
                             throw new Error('Category ID was not returned from createItemCategory.');
                         }
@@ -461,7 +475,9 @@ export function StoreList({ universityId }: StoreListProps) {
                             imageUrl,
                         } as unknown as UpdateItemRequest;
 
-                        return AdminItemService.updateItem2(item.id, updateReq);
+                        return useOwnerMenuApi
+                            ? OwnerItemService.updateItem(item.id, updateReq)
+                            : AdminItemService.updateItem2(item.id, updateReq);
                     }
 
                     let imageUrl: string | undefined;
@@ -478,7 +494,9 @@ export function StoreList({ universityId }: StoreListProps) {
                         itemCategoryId: categoryId,
                         imageUrl,
                     };
-                    return AdminItemService.createItem2(selectedStore.id!, createReq);
+                    return useOwnerMenuApi
+                        ? OwnerItemService.createItem1(selectedStore.id!, createReq)
+                        : AdminItemService.createItem2(selectedStore.id!, createReq);
                 }),
             );
             failureCount += itemResults.filter((result) => result.status === 'rejected').length;
@@ -486,7 +504,11 @@ export function StoreList({ universityId }: StoreListProps) {
             const deleteCategoryResults = await Promise.allSettled(
                 menuCategories
                     .filter((category) => category.isDeleted && category.id)
-                    .map((category) => AdminItemCategoryService.deleteItemCategory2(selectedStore.id!, category.id!)),
+                    .map((category) => (
+                        useOwnerMenuApi
+                            ? OwnerItemCategoryService.deleteItemCategory1(selectedStore.id!, category.id!)
+                            : AdminItemCategoryService.deleteItemCategory2(selectedStore.id!, category.id!)
+                    )),
             );
             failureCount += deleteCategoryResults.filter((result) => result.status === 'rejected').length;
 
