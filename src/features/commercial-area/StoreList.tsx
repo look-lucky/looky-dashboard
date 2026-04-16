@@ -16,8 +16,6 @@ import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { getVisiblePageNumbers } from '../../shared/utils/pagination';
 import { AdminItemCategoryService } from '../../shared/api/services/AdminItemCategoryService';
 import { ImageCropper } from '../../shared/components/ImageCropper';
-import { OwnerItemService } from '../../shared/api/services/OwnerItemService';
-import { OwnerItemCategoryService } from '../../shared/api/services/OwnerItemCategoryService';
 
 interface StoreListProps {
     universityId: number;
@@ -244,7 +242,6 @@ export function StoreList({ universityId }: StoreListProps) {
     // Modal Handlers
     const openModal = async (store: StoreResponse) => {
         try {
-            const useOwnerMenuApi = store.storeStatus === 'ACTIVE';
             const detailedStore = await AdminStoreService.getStore1(store.id!);
             setSelectedStore(detailedStore.data || store);
             setEditForm({});
@@ -257,8 +254,8 @@ export function StoreList({ universityId }: StoreListProps) {
 
             // Load menu categories and menu items in parallel.
             const [itemsResult, categoriesResult] = await Promise.allSettled([
-                useOwnerMenuApi ? OwnerItemService.getItems1(store.id!) : AdminItemService.getItems2(store.id!),
-                useOwnerMenuApi ? OwnerItemCategoryService.getItemCategories1(store.id!) : AdminItemCategoryService.getItemCategories2(store.id!),
+                AdminItemService.getItems2(store.id!),
+                AdminItemCategoryService.getItemCategories2(store.id!),
             ]);
 
             const loadedCategories: MenuCategoryState[] = [];
@@ -360,9 +357,11 @@ export function StoreList({ universityId }: StoreListProps) {
     const handleSave = async (e?: React.FormEvent<HTMLFormElement>) => {
         e?.preventDefault();
         if (!selectedStore?.id || !editForm) return;
-        const useOwnerMenuApi = selectedStore.storeStatus === 'ACTIVE';
+        const canEditMenu = selectedStore.storeStatus !== 'ACTIVE';
 
-        const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
+        const invalidMenuCategory = canEditMenu
+            ? menuCategories.find((category) => !category.isDeleted && category.name.trim() === '')
+            : undefined;
         if (invalidMenuCategory) {
             alert('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
             return;
@@ -396,132 +395,118 @@ export function StoreList({ universityId }: StoreListProps) {
             let failureCount = 0;
             const categoryIdMap = new Map<string, number>();
 
-            for (const category of menuCategories) {
-                if (!category.isDeleted && category.id) {
-                    categoryIdMap.set(category.localId, category.id);
+            if (canEditMenu) {
+                for (const category of menuCategories) {
+                    if (!category.isDeleted && category.id) {
+                        categoryIdMap.set(category.localId, category.id);
+                    }
                 }
-            }
 
-            const deleteItemResults = await Promise.allSettled(
-                menuItems
-                    .filter((item) => item.isDeleted && item.id)
-                    .map((item) => (
-                        useOwnerMenuApi
-                            ? OwnerItemService.deleteItem(item.id!)
-                            : AdminItemService.deleteItem2(item.id!)
-                    )),
-            );
-            failureCount += deleteItemResults.filter((result) => result.status === 'rejected').length;
+                const deleteItemResults = await Promise.allSettled(
+                    menuItems
+                        .filter((item) => item.isDeleted && item.id)
+                        .map((item) => AdminItemService.deleteItem2(item.id!)),
+                );
+                failureCount += deleteItemResults.filter((result) => result.status === 'rejected').length;
 
-            const categoryUpsertResults = await Promise.allSettled(
-                menuCategories
-                    .filter((category) => !category.isDeleted)
-                    .map(async (category) => {
-                        const trimmedName = category.name.trim();
+                const categoryUpsertResults = await Promise.allSettled(
+                    menuCategories
+                        .filter((category) => !category.isDeleted)
+                        .map(async (category) => {
+                            const trimmedName = category.name.trim();
 
-                        if (category.id) {
-                            if (useOwnerMenuApi) {
-                                await OwnerItemCategoryService.updateItemCategory1(selectedStore.id!, category.id, { name: trimmedName });
-                            } else {
+                            if (category.id) {
                                 await AdminItemCategoryService.updateItemCategory2(selectedStore.id!, category.id, { name: trimmedName });
+                                return;
                             }
+
+                            const createdCategory = await AdminItemCategoryService.createItemCategory2(selectedStore.id!, { name: trimmedName });
+                            if (typeof createdCategory.data !== 'number') {
+                                throw new Error('Category ID was not returned from createItemCategory.');
+                            }
+
+                            categoryIdMap.set(category.localId, createdCategory.data);
+                        }),
+                );
+                failureCount += categoryUpsertResults.filter((result) => result.status === 'rejected').length;
+
+                const itemResults = await Promise.allSettled(
+                    menuItems.map(async (item) => {
+                        if (item.isDeleted) {
                             return;
                         }
 
-                        const createdCategory = useOwnerMenuApi
-                            ? await OwnerItemCategoryService.createItemCategory1(selectedStore.id!, { name: trimmedName })
-                            : await AdminItemCategoryService.createItemCategory2(selectedStore.id!, { name: trimmedName });
-                        if (typeof createdCategory.data !== 'number') {
-                            throw new Error('Category ID was not returned from createItemCategory.');
+                        const trimmedName = item.name.trim();
+                        if (!item.id && trimmedName === '') {
+                            return;
                         }
 
-                        categoryIdMap.set(category.localId, createdCategory.data);
-                    }),
-            );
-            failureCount += categoryUpsertResults.filter((result) => result.status === 'rejected').length;
+                        const categoryId = item.categoryLocalId
+                            ? categoryIdMap.get(item.categoryLocalId)
+                            : undefined;
 
-            const itemResults = await Promise.allSettled(
-                menuItems.map(async (item) => {
-                    if (item.isDeleted) {
-                        return;
-                    }
+                        if (item.categoryLocalId && !categoryId) {
+                            throw new Error(`Failed to resolve category for item "${item.name}".`);
+                        }
 
-                    const trimmedName = item.name.trim();
-                    if (!item.id && trimmedName === '') {
-                        return;
-                    }
+                        if (item.id) {
+                            let imageUrl: string | undefined = item.imageUrl;
+                            if (item.imageFile) {
+                                imageUrl = await uploadImage(item.imageFile);
+                            }
 
-                    const categoryId = item.categoryLocalId
-                        ? categoryIdMap.get(item.categoryLocalId)
-                        : undefined;
+                            const updateReq = {
+                                name: item.name,
+                                price: item.price,
+                                description: item.description,
+                                badge: item.badge,
+                                itemOrder: item.itemOrder,
+                                itemCategoryId: categoryId ?? null,
+                                imageUrl,
+                            } as unknown as UpdateItemRequest;
 
-                    if (item.categoryLocalId && !categoryId) {
-                        throw new Error(`Failed to resolve category for item "${item.name}".`);
-                    }
+                            return AdminItemService.updateItem2(item.id, updateReq);
+                        }
 
-                    if (item.id) {
-                        let imageUrl: string | undefined = item.imageUrl;
+                        let imageUrl: string | undefined;
                         if (item.imageFile) {
                             imageUrl = await uploadImage(item.imageFile);
                         }
 
-                        const updateReq = {
+                        const createReq: CreateItemRequest = {
                             name: item.name,
                             price: item.price,
                             description: item.description,
-                            badge: item.badge,
+                            badge: item.badge as CreateItemRequest.badge | undefined,
                             itemOrder: item.itemOrder,
-                            itemCategoryId: categoryId ?? null,
+                            itemCategoryId: categoryId,
                             imageUrl,
-                        } as unknown as UpdateItemRequest;
+                        };
+                        return AdminItemService.createItem2(selectedStore.id!, createReq);
+                    }),
+                );
+                failureCount += itemResults.filter((result) => result.status === 'rejected').length;
 
-                        return useOwnerMenuApi
-                            ? OwnerItemService.updateItem(item.id, updateReq)
-                            : AdminItemService.updateItem2(item.id, updateReq);
-                    }
+                const deleteCategoryResults = await Promise.allSettled(
+                    menuCategories
+                        .filter((category) => category.isDeleted && category.id)
+                        .map((category) => AdminItemCategoryService.deleteItemCategory2(selectedStore.id!, category.id!)),
+                );
+                failureCount += deleteCategoryResults.filter((result) => result.status === 'rejected').length;
 
-                    let imageUrl: string | undefined;
-                    if (item.imageFile) {
-                        imageUrl = await uploadImage(item.imageFile);
-                    }
-
-                    const createReq: CreateItemRequest = {
-                        name: item.name,
-                        price: item.price,
-                        description: item.description,
-                        badge: item.badge as CreateItemRequest.badge | undefined,
-                        itemOrder: item.itemOrder,
-                        itemCategoryId: categoryId,
-                        imageUrl,
-                    };
-                    return useOwnerMenuApi
-                        ? OwnerItemService.createItem1(selectedStore.id!, createReq)
-                        : AdminItemService.createItem2(selectedStore.id!, createReq);
-                }),
-            );
-            failureCount += itemResults.filter((result) => result.status === 'rejected').length;
-
-            const deleteCategoryResults = await Promise.allSettled(
-                menuCategories
-                    .filter((category) => category.isDeleted && category.id)
-                    .map((category) => (
-                        useOwnerMenuApi
-                            ? OwnerItemCategoryService.deleteItemCategory1(selectedStore.id!, category.id!)
-                            : AdminItemCategoryService.deleteItemCategory2(selectedStore.id!, category.id!)
-                    )),
-            );
-            failureCount += deleteCategoryResults.filter((result) => result.status === 'rejected').length;
-
-            if (failureCount > 0) {
-                console.error('Menu/category save failures', {
-                    deleteItemResults,
-                    categoryUpsertResults,
-                    itemResults,
-                    deleteCategoryResults,
-                });
-                alert(`상점 정보는 수정되었으나, 메뉴/카테고리 ${failureCount}건 처리에 실패했습니다.`);
+                if (failureCount > 0) {
+                    console.error('Menu/category save failures', {
+                        deleteItemResults,
+                        categoryUpsertResults,
+                        itemResults,
+                        deleteCategoryResults,
+                    });
+                    alert(`상점 정보는 수정되었으나, 메뉴/카테고리 ${failureCount}건 처리에 실패했습니다.`);
+                } else {
+                    alert('상점 정보가 수정되었습니다.');
+                }
             } else {
-                alert('상점 정보가 수정되었습니다.');
+                alert('상점 정보가 수정되었습니다. 현재 API 명세상 점유된 가게의 메뉴/카테고리 수정은 지원되지 않습니다.');
             }
 
             closeModal();
@@ -1185,12 +1170,19 @@ export function StoreList({ universityId }: StoreListProps) {
                                                             <h4 className="text-sm font-semibold text-gray-900">섹션 3: 메뉴 정보</h4>
                                                             <span className="text-xs text-gray-500">선택 사항</span>
                                                         </div>
-                                                        <StoreMenuEditor
-                                                            items={menuItems}
-                                                            onChange={setMenuItems}
-                                                            categories={menuCategories}
-                                                            onCategoriesChange={setMenuCategories}
-                                                        />
+                                                        {selectedStore?.storeStatus === 'ACTIVE' ? (
+                                                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                                                현재 `looky-api.json` 기준으로 점유된 가게의 메뉴/카테고리 수정 API는 정의되어 있지 않습니다.
+                                                                섹션 1, 2만 저장 가능하며 메뉴 정보는 읽기 전용으로 확인만 할 수 있습니다.
+                                                            </div>
+                                                        ) : (
+                                                            <StoreMenuEditor
+                                                                items={menuItems}
+                                                                onChange={setMenuItems}
+                                                                categories={menuCategories}
+                                                                onCategoriesChange={setMenuCategories}
+                                                            />
+                                                        )}
                                                     </div>
                                                 </div>
                                             </form>
