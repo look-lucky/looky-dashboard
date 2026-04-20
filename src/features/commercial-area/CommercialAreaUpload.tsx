@@ -54,7 +54,7 @@ export function CommercialAreaUpload({ onSuccess }: CommercialAreaUploadProps) {
         setError(null);
 
         try {
-            await AdminStoreService.uploadStoreData({ formData: { file } } as any);
+            await AdminStoreService.uploadStoreData({ file });
             setFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
