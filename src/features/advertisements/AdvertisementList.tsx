@@ -1,4 +1,5 @@
 import { Edit2, Trash2, Calendar, ExternalLink, ArrowUpDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
@@ -110,7 +111,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
             void refetch();
         } catch (error) {
             console.error(error);
-            alert('광고 삭제에 실패했습니다.');
+            toast.error('광고 삭제에 실패했습니다.');
         }
     };
 
@@ -254,7 +255,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                                 <span className="text-gray-300">전체 대학</span>
                                             )}
                                             <span className="text-xs text-gray-400 mt-0.5">
-                                                {ad.targetGender === ('MALE' as any) ? '남성' : ad.targetGender === ('FEMALE' as any) ? '여성' : '전체 성별'}
+                                                {String(ad.targetGender) === 'MALE' ? '남성' : String(ad.targetGender) === 'FEMALE' ? '여성' : '전체 성별'}
                                             </span>
                                         </div>
                                     </td>

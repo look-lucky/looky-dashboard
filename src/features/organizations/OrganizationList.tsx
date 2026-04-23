@@ -1,5 +1,6 @@
 import { Edit2, Trash2, Users, Search } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { AdminOrganizationService } from '../../shared/api/services/AdminOrganizationService';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
@@ -65,7 +66,7 @@ export function OrganizationList({
             setSelectedIds(new Set());
         } catch (error) {
             console.error(error);
-            alert('일부 소속 삭제에 실패했습니다.');
+            toast.error('일부 소속 삭제에 실패했습니다.');
         }
     };
 
@@ -112,7 +113,7 @@ export function OrganizationList({
             void fetchOrganizations();
         } catch (error) {
             console.error(error);
-            alert('소속 삭제에 실패했습니다.');
+            toast.error('소속 삭제에 실패했습니다.');
         }
     };
 

@@ -12,6 +12,7 @@ Looky 관리자 대시보드. 한국 대학교 주변 상점/이벤트/광고/�
 - **State**: Zustand (auth), React Context (university selection), useState (local)
 - **Styling**: Tailwind CSS 3.4 (utility-first, no custom theme)
 - **Icons**: Lucide React
+- **Toast**: Sonner (`toast.success()`, `toast.error()`)
 - **API Client**: OpenAPI-generated (axios 기반, `src/shared/api/` - **자동 생성 코드, 직접 수정 금지**)
 - **Auth**: JWT Bearer token, 자동 갱신, cross-tab 동기화
 - **Deploy**: Vercel
@@ -63,9 +64,21 @@ src/
 
 ### 코드 패턴
 - Props 인터페이스는 컴포넌트 파일 내 정의
-- 비동기 작업은 try/catch + console.error + alert()
+- 비동기 작업은 try/catch + `toast.error()` (alert 사용 금지)
 - localStorage로 상태 영속화 (auth, university 선택)
 - `clsx` + `tailwind-merge`로 클래스 조합
+- `as any` 사용 금지 — OpenAPI 타입 불일치 시 `as unknown as Type` 사용
+- `console.log` 사용 금지 (ESLint warn) — `console.error`/`console.warn`만 허용
+
+### 공용 컴포넌트 & 훅 (shared/)
+- **ModalWrapper / ModalFooter** — 모달 레이아웃. 모든 모달에서 사용 필수
+- **FormField / FormInput / FormTextarea / FormSelect** — 폼 입력 필드 (일관된 label+input 스타일)
+- **SearchInput** — 검색 아이콘 포함 검색바
+- **ImageDropZone** — 드래그 앤 드롭 이미지 업로드 영역
+- **Pagination** — 서버 사이드 페이지네이션 UI. 모든 리스트에서 사용 필수
+- **useDebounce(value, delay?)** — 디바운스 훅 (기본 500ms)
+- **usePaginatedQuery({ fetchFn, ... })** — 페이지네이션 데이터 페칭 훅
+- **formatDate / formatDateForInput** — `shared/utils/date.ts` 날짜 포맷 유틸
 
 ### API
 - `src/shared/api/`는 OpenAPI codegen으로 생성 - 직접 수정하지 않음

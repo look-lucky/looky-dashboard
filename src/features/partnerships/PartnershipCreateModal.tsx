@@ -1,4 +1,5 @@
 import { X, Search, Store as StoreIcon, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
@@ -85,7 +86,7 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
 
     const handleSubmit = async () => {
         if (!selectedStore || !selectedOrgId || !benefit || !startsAt || !endsAt) {
-            alert('모든 필드를 입력해주세요.');
+            toast.error('모든 필드를 입력해주세요.');
             return;
         }
 
@@ -102,11 +103,11 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
                     endsAt
                 }
             );
-            alert('제휴가 등록되었습니다.');
+            toast.success('제휴가 등록되었습니다.');
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('제휴 등록 실패');
+            toast.error('제휴 등록 실패');
         } finally {
             setLoading(false);
         }

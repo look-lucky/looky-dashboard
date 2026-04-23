@@ -1,7 +1,9 @@
 import { GripVertical, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
+import type { UpdateAdvertisementRequest } from '../../shared/api/models/UpdateAdvertisementRequest';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 
 type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
@@ -104,12 +106,12 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
 
             await Promise.all(
                 updates.map(({ ad, newOrder }) =>
-                    AdminAdvertisementService.updateAdvertisement(ad.id!, { displayOrder: newOrder } as any)
+                    AdminAdvertisementService.updateAdvertisement(ad.id!, { displayOrder: newOrder } as unknown as UpdateAdvertisementRequest)
                 )
             );
             onSuccess();
         } catch {
-            alert('순서 저장에 실패했습니다.');
+            toast.error('순서 저장에 실패했습니다.');
         } finally {
             setSaving(false);
         }

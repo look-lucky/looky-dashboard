@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { Search as SearchIcon, Download, Loader2, Store, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
@@ -121,17 +122,17 @@ export function StoreImportPage() {
             if (coords && coords.latitude && coords.longitude) {
                 setSearchCoords({ lat: coords.latitude, lng: coords.longitude });
             } else {
-                alert('위치 좌표를 찾을 수 없습니다. 다시 시도해주세요.');
+                toast.error('위치 좌표를 찾을 수 없습니다. 다시 시도해주세요.');
             }
         } catch (error) {
             console.error('Geocoding failed:', error);
-            alert('위치 좌표를 찾을 수 없습니다. (API 에러)');
+            toast.error('위치 좌표를 찾을 수 없습니다. (API 에러)');
         }
     };
 
     const handleSearch = async () => {
         if (!address || !searchCoords) {
-            alert('주소를 검색하여 위치를 설정해주세요.');
+            toast.error('주소를 검색하여 위치를 설정해주세요.');
             setIsAddressModalOpen(true);
             return;
         }
@@ -163,7 +164,7 @@ export function StoreImportPage() {
 
             // Check if API key is present
             if (!serviceKey) {
-                alert('API 키가 설정되지 않았습니다. Vercel 환경변수에 VITE_DATA_GO_KR_API_KEY를 추가하고 재배포해주세요.');
+                toast.error('API 키가 설정되지 않았습니다. Vercel 환경변수에 VITE_DATA_GO_KR_API_KEY를 추가하고 재배포해주세요.');
                 setIsLoading(false);
                 return;
             }
@@ -232,7 +233,7 @@ export function StoreImportPage() {
                 if (errorMsg) {
                     // If error on first page, show alert. If error on subsequent pages, stop and show partial results.
                     if (pageNo === 1) {
-                        alert(`API Error: ${errorMsg}`);
+                        toast.error(`API Error: ${errorMsg}`);
                         return;
                     } else {
                         console.warn(`Error fetching page ${pageNo}: ${errorMsg}`);
@@ -254,7 +255,7 @@ export function StoreImportPage() {
                 } else {
                     // No items returned or invalid format
                     if (pageNo === 1 && (!items || items.length === 0)) {
-                        alert('조회된 데이터가 없거나 API 응답 형식이 올바르지 않습니다. (결과 없음)\n\n개발자 도구(F12) > Console 탭에서 "API Raw Response"를 확인해주세요.');
+                        toast.error('조회된 데이터가 없거나 API 응답 형식이 올바르지 않습니다. (결과 없음)\n\n개발자 도구(F12) > Console 탭에서 "API Raw Response"를 확인해주세요.');
                         return;
                     }
                     break;
@@ -268,7 +269,7 @@ export function StoreImportPage() {
 
         } catch (error) {
             console.error('Error fetching data:', error);
-            alert('데이터를 불러오는 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
+            toast.error('데이터를 불러오는 중 오류가 발생했습니다. 콘솔을 확인해주세요.');
         } finally {
             setIsLoading(false);
             setLoadingMessage('');
@@ -277,7 +278,7 @@ export function StoreImportPage() {
 
     const handleExport = () => {
         if (selectedItems.size === 0) {
-            alert('내보낼 항목을 선택해주세요.');
+            toast.error('내보낼 항목을 선택해주세요.');
             return;
         }
 

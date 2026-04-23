@@ -1,10 +1,12 @@
 import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
+import type { UpdateEventRequest } from '../../shared/api/models/UpdateEventRequest';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
@@ -142,7 +144,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title || !description || !place || selectedTypes.length === 0 || !startDateTime || !endDateTime) {
-            alert('필수 정보를 모두 입력해주세요.');
+            toast.error('필수 정보를 모두 입력해주세요.');
             return;
         }
 
@@ -150,7 +152,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         const start = new Date(startDateTime);
         const end = new Date(endDateTime);
         if (end <= start) {
-            alert('종료 일시는 시작 일시보다 이후여야 합니다.');
+            toast.error('종료 일시는 시작 일시보다 이후여야 합니다.');
             return;
         }
 
@@ -180,9 +182,9 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
-                } as any;
+                } as unknown as UpdateEventRequest;
                 await AdminEventService.updateEvent(initialData.id, requestData);
-                alert('이벤트가 수정되었습니다.');
+                toast.success('이벤트가 수정되었습니다.');
             } else {
                 const requestData: CreateEventRequest = {
                     title,
@@ -199,12 +201,12 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
                 };
                 await AdminEventService.createEvent(requestData);
-                alert('이벤트가 등록되었습니다.');
+                toast.success('이벤트가 등록되었습니다.');
             }
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('처리 중 오류가 발생했습니다.');
+            toast.error('처리 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }

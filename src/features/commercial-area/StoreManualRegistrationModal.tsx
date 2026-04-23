@@ -1,5 +1,6 @@
 import { Save, Upload, X } from 'lucide-react';
 import { useState, useRef } from 'react';
+import { toast } from 'sonner';
 import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
@@ -241,13 +242,13 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!formData.name || !formData.address) {
-            alert('필수 정보를 입력해주세요.');
+            toast.error('필수 정보를 입력해주세요.');
             return;
         }
 
         const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
         if (invalidMenuCategory) {
-            alert('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
+            toast.error('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
             return;
         }
 
@@ -335,17 +336,17 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
 
                 if (categoryFailureCount > 0 || itemFailureCount > 0) {
                     console.error('Menu/category create failures', { categoryResults, menuItemResults });
-                    alert(`상점은 등록되었으나, 메뉴/카테고리 ${categoryFailureCount + itemFailureCount}건 처리에 실패했습니다.`);
+                    toast.error(`상점은 등록되었으나, 메뉴/카테고리 ${categoryFailureCount + itemFailureCount}건 처리에 실패했습니다.`);
                     onClose();
                     return;
                 }
             }
 
-            alert('상점이 성공적으로 등록되었습니다.');
+            toast.success('상점이 성공적으로 등록되었습니다.');
             onClose();
         } catch (error) {
             console.error(error);
-            alert('상점 등록에 실패했습니다. (API 확인 필요)');
+            toast.error('상점 등록에 실패했습니다. (API 확인 필요)');
         } finally {
             setLoading(false);
         }

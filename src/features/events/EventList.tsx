@@ -1,4 +1,5 @@
 import { Edit2, Trash2, Calendar, MapPin, Tag } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useCallback } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
@@ -41,7 +42,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
             void refetch();
         } catch (error) {
             console.error(error);
-            alert('이벤트 삭제에 실패했습니다.');
+            toast.error('이벤트 삭제에 실패했습니다.');
         }
     };
 

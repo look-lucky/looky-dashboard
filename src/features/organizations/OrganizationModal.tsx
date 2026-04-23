@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { AdminOrganizationService } from '../../shared/api/services/AdminOrganizationService';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { CreateOrganizationRequest } from '../../shared/api/models/CreateOrganizationRequest';
@@ -77,24 +78,24 @@ export function OrganizationModal({
         if (e) e.preventDefault();
 
         if (category === '') {
-            alert('유형을 선택해주세요.');
+            toast.error('유형을 선택해주세요.');
             return;
         }
 
         if (isBulk) {
             if (!bulkNames.trim()) {
-                alert('등록할 이름을 입력해주세요.');
+                toast.error('등록할 이름을 입력해주세요.');
                 return;
             }
         } else {
             if (!name) {
-                alert('이름을 입력해주세요.');
+                toast.error('이름을 입력해주세요.');
                 return;
             }
         }
 
         if (category === CreateOrganizationRequest.category.DEPARTMENT && !parentId) {
-            alert('소속될 단과대학을 선택해주세요.');
+            toast.error('소속될 단과대학을 선택해주세요.');
             return;
         }
 
@@ -103,7 +104,7 @@ export function OrganizationModal({
             if (isBulk) {
                 const names = bulkNames.split('\n').map(n => n.trim()).filter(n => n.length > 0);
                 if (names.length === 0) {
-                    alert('유효한 이름이 없습니다.');
+                    toast.error('유효한 이름이 없습니다.');
                     setLoading(false);
                     return;
                 }
@@ -118,7 +119,7 @@ export function OrganizationModal({
                 });
 
                 await Promise.all(promises);
-                alert(`${names.length}건이 등록되었습니다.`);
+                toast.success(`${names.length}건이 등록되었습니다.`);
             } else {
                 const payload = {
                     category: category as CreateOrganizationRequest.category,
@@ -128,16 +129,16 @@ export function OrganizationModal({
 
                 if (initialData && initialData.id) {
                     await AdminOrganizationService.updateOrganization1(initialData.id, payload as unknown as UpdateOrganizationRequest);
-                    alert('수정되었습니다.');
+                    toast.success('수정되었습니다.');
                 } else {
                     await AdminOrganizationService.createOrganization1(universityId, payload);
-                    alert('등록되었습니다.');
+                    toast.success('등록되었습니다.');
                 }
             }
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('처리 중 오류가 발생했습니다.');
+            toast.error('처리 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import { Store as StoreIcon, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import { Pagination } from '../../shared/components/Pagination';
 import { SearchInput } from '../../shared/components/SearchInput';
@@ -148,9 +149,9 @@ export function StoreList({ universityId }: StoreListProps) {
         setBulkDeleting(false);
         setSelectedIds(new Set());
         if (failed > 0) {
-            alert(`${count - failed}개 삭제 완료, ${failed}개 삭제 실패`);
+            toast.error(`${count - failed}개 삭제 완료, ${failed}개 삭제 실패`);
         } else {
-            alert(`${count}개 삭제 완료`);
+            toast.success(`${count}개 삭제 완료`);
         }
         void fetchStores();
     };

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import Cropper, { type Area } from 'react-easy-crop';
 import { X, Check } from 'lucide-react';
 import { getCroppedImg } from '../utils/cropImage';
@@ -30,11 +31,11 @@ export function ImageCropper({ imageSrc, aspectRatio = 2.2933, onCropComplete, o
                 const objectUrl = URL.createObjectURL(croppedBlob);
                 onCropComplete(objectUrl, croppedBlob);
             } else {
-                alert('이미지 편집에 실패했습니다.');
+                toast.error('이미지 편집에 실패했습니다.');
             }
         } catch (e) {
             console.error(e);
-            alert('이미지 편집 중 오류가 발생했습니다.');
+            toast.error('이미지 편집 중 오류가 발생했습니다.');
         } finally {
             setIsProcessing(false);
         }

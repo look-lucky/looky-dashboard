@@ -1,4 +1,5 @@
 import { Plus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { AdminUniversityService } from '../../shared/api/services/AdminUniversityService';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
@@ -50,7 +51,7 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
         const domains = emailDomains.map((domain) => domain.trim()).filter((domain) => domain.length > 0);
 
         if (!name || domains.length === 0) {
-            alert('모든 필드를 입력해주세요.');
+            toast.error('모든 필드를 입력해주세요.');
             return;
         }
 
@@ -62,19 +63,19 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
                     emailDomains: domains,
                 } as unknown as UpdateUniversityRequest;
                 await AdminUniversityService.updateUniversity2(initialData.id, payload);
-                alert('수정되었습니다.');
+                toast.success('수정되었습니다.');
             } else {
                 await AdminUniversityService.createUniversity({
                     name,
                     emailDomains: domains,
                 });
-                alert('등록되었습니다.');
+                toast.success('등록되었습니다.');
             }
 
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('처리 중 오류가 발생했습니다.');
+            toast.error('처리 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }

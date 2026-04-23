@@ -1,7 +1,10 @@
 import { X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
+import type { UpdateAdvertisementRequest } from '../../shared/api/models/UpdateAdvertisementRequest';
+import type { CreateAdvertisementRequest } from '../../shared/api/models/CreateAdvertisementRequest';
 import type { TargetUniversityInfo } from '../../shared/api/models/TargetUniversityInfo';
 import type { TargetOrganizationInfo } from '../../shared/api/models/TargetOrganizationInfo';
 
@@ -180,19 +183,19 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
         e.preventDefault();
 
         if (!title || !startAt || !endAt) {
-            alert('필수 정보를 모두 입력해주세요.');
+            toast.error('필수 정보를 모두 입력해주세요.');
             return;
         }
 
         if (!imageFile && !existingImageUrl) {
-            alert('이미지를 등록해주세요.');
+            toast.error('이미지를 등록해주세요.');
             return;
         }
 
         const start = new Date(startAt);
         const end = new Date(endAt);
         if (end <= start) {
-            alert('종료 일시는 시작 일시보다 이후여야 합니다.');
+            toast.error('종료 일시는 시작 일시보다 이후여야 합니다.');
             return;
         }
 
@@ -223,9 +226,9 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     ...(univChanged ? { targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null } : {}),
                     ...(orgChanged ? { targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null } : {}),
                     targetGender,
-                } as any; // Bypass JsonNullable OpenApi generator bug
+                } as unknown as UpdateAdvertisementRequest;
                 await AdminAdvertisementService.updateAdvertisement(initialData.id, requestData);
-                alert('광고가 수정되었습니다.');
+                toast.success('광고가 수정되었습니다.');
             } else {
                 const requestData = {
                     title,
@@ -238,14 +241,14 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
                     targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                     targetGender,
-                } as any;
+                } as unknown as CreateAdvertisementRequest;
                 await AdminAdvertisementService.createAdvertisement(requestData);
-                alert('광고가 등록되었습니다.');
+                toast.success('광고가 등록되었습니다.');
             }
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('처리 중 오류가 발생했습니다.');
+            toast.error('처리 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }

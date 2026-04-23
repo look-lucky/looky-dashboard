@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { AdminPartnershipResponse as PartnershipResponse } from '../../shared/api/models/AdminPartnershipResponse';
 import type { UpdatePartnershipRequest } from '../../shared/api/models/UpdatePartnershipRequest';
@@ -19,7 +20,7 @@ export function PartnershipEditModal({ partnership, onClose, onSuccess }: Partne
 
     const handleSubmit = async () => {
         if (!benefit) {
-            alert('혜택 내용을 입력해주세요.');
+            toast.error('혜택 내용을 입력해주세요.');
             return;
         }
 
@@ -32,11 +33,11 @@ export function PartnershipEditModal({ partnership, onClose, onSuccess }: Partne
             } as unknown as UpdatePartnershipRequest;
 
             await AdminPartnershipService.updatePartnershipBenefit(partnership.id!, payload);
-            alert('제휴 혜택이 수정되었습니다.');
+            toast.success('제휴 혜택이 수정되었습니다.');
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('수정에 실패했습니다.');
+            toast.error('수정에 실패했습니다.');
         } finally {
             setLoading(false);
         }

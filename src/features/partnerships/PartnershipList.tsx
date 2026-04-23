@@ -1,4 +1,5 @@
 import { Trash2, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { AdminPartnershipResponse as PartnershipResponse } from '../../shared/api/models/AdminPartnershipResponse';
@@ -73,7 +74,7 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
                 void fetchPartnerships();
             } catch (error) {
                 console.error('Failed to delete partnership:', error);
-                alert('삭제에 실패했습니다.');
+                toast.error('삭제에 실패했습니다.');
             }
         }
     };

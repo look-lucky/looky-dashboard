@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import { EventList } from '../features/events/EventList';
 import { EventModal } from '../features/events/EventModal';
@@ -21,7 +22,7 @@ export function EventPage() {
 
     const handleCreate = () => {
         if (!selectedUniversityId) {
-            alert('대학을 먼저 선택해주세요.');
+            toast.error('대학을 먼저 선택해주세요.');
             return;
         }
         setSelectedEvent(null);

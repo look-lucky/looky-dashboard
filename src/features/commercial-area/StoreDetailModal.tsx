@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
 import { X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
@@ -206,7 +207,7 @@ export function StoreDetailModal({ store: initialStore, onClose, onSaved }: Stor
 
         const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
         if (invalidMenuCategory) {
-            alert('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
+            toast.error('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
             return;
         }
 
@@ -338,16 +339,16 @@ export function StoreDetailModal({ store: initialStore, onClose, onSaved }: Stor
                     itemResults,
                     deleteCategoryResults,
                 });
-                alert(`상점 정보는 수정되었으나, 메뉴/카테고리 ${failureCount}건 처리에 실패했습니다.`);
+                toast.error(`상점 정보는 수정되었으나, 메뉴/카테고리 ${failureCount}건 처리에 실패했습니다.`);
             } else {
-                alert('상점 정보가 수정되었습니다.');
+                toast.success('상점 정보가 수정되었습니다.');
             }
 
             handleClose();
             onSaved();
         } catch (e) {
             console.error(e);
-            alert('수정에 실패했습니다.');
+            toast.error('수정에 실패했습니다.');
         }
     };
 
@@ -355,12 +356,12 @@ export function StoreDetailModal({ store: initialStore, onClose, onSaved }: Stor
         if (!store.id) return;
         try {
             await AdminStoreService.deleteStore2(store.id);
-            alert('상점이 삭제되었습니다.');
+            toast.success('상점이 삭제되었습니다.');
             handleClose();
             onSaved();
         } catch (e) {
             console.error(e);
-            alert('삭제에 실패했습니다. (본인 소유 상점이 아닐 수 있습니다)');
+            toast.error('삭제에 실패했습니다. (본인 소유 상점이 아닐 수 있습니다)');
         }
     };
 

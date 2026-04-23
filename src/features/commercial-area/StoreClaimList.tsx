@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { AdminStoreClaimService } from '../../shared/api/services/AdminStoreClaimService';
 import type { AdminStoreClaimResponse } from '../../shared/api/models/AdminStoreClaimResponse';
 import { Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
 import { Pagination } from '../../shared/components/Pagination';
 import { ModalWrapper } from '../../shared/components/ModalWrapper';
@@ -94,30 +95,30 @@ export function StoreClaimList() {
 
         try {
             await AdminStoreClaimService.approve(selectedClaim.id);
-            alert('승인되었습니다.');
+            toast.success('승인되었습니다.');
             closeModal();
             void fetchClaims();
         } catch (e) {
             console.error(e);
-            alert('승인에 실패했습니다.');
+            toast.error('승인에 실패했습니다.');
         }
     };
 
     const handleReject = async () => {
         if (!selectedClaim?.id) return;
         if (!rejectReason.trim()) {
-            alert('반려 사유를 입력해주세요.');
+            toast.error('반려 사유를 입력해주세요.');
             return;
         }
 
         try {
             await AdminStoreClaimService.reject(selectedClaim.id, { reason: rejectReason });
-            alert('반려되었습니다.');
+            toast.success('반려되었습니다.');
             closeModal();
             void fetchClaims();
         } catch (e) {
             console.error(e);
-            alert('반려에 실패했습니다.');
+            toast.error('반려에 실패했습니다.');
         }
     };
 
