@@ -1,8 +1,9 @@
 import { Trash2, Search, Pencil } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { AdminPartnershipResponse as PartnershipResponse } from '../../shared/api/models/AdminPartnershipResponse';
 import { PartnershipEditModal } from './PartnershipEditModal';
+import { Pagination } from '../../shared/components/Pagination';
 
 interface PartnershipListProps {
     universityId: number;
@@ -16,8 +17,10 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingPartnership, setEditingPartnership] = useState<PartnershipResponse | null>(null);
+    const [page, setPage] = useState(0);
+    const pageSize = 10;
 
-    const filteredPartnerships = partnerships.filter(p => {
+    const filteredPartnerships = useMemo(() => partnerships.filter(p => {
         const matchesSearchTerm = 
             Boolean(p.organizationName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
             Boolean(p.storeName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -27,7 +30,10 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
         const matchesCategory = categoryId && !organizationId ? p.category === categoryId : true;
         
         return matchesSearchTerm && matchesCategory;
-    });
+    }), [categoryId, organizationId, partnerships, searchTerm]);
+    const totalElements = filteredPartnerships.length;
+    const totalPages = Math.ceil(totalElements / pageSize);
+    const visiblePartnerships = filteredPartnerships.slice(page * pageSize, (page + 1) * pageSize);
 
     const fetchPartnerships = useCallback(async () => {
         setIsLoading(true);
@@ -54,6 +60,10 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
             void fetchPartnerships();
         }
     }, [universityId, organizationId, refreshTrigger, fetchPartnerships]);
+
+    useEffect(() => {
+        setPage(0);
+    }, [categoryId, organizationId, refreshTrigger, searchTerm, universityId]);
 
     const handleDelete = async (id: number) => {
         if (confirm('정말 삭제하시겠습니까?')) {
@@ -115,7 +125,7 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
                                 </td>
                             </tr>
                         ) : (
-                            filteredPartnerships.map((partnership) => (
+                            visiblePartnerships.map((partnership) => (
                                 <tr key={partnership.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                         {partnership.organizationName}
@@ -156,6 +166,13 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
                     </tbody>
                 </table>
             </div>
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalElements={totalElements}
+                onPageChange={setPage}
+            />
         </div>
         </>
     );

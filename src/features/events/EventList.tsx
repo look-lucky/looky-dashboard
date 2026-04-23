@@ -4,6 +4,7 @@ import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 
 import { useUniversity } from '../../shared/contexts/UniversityContext';
+import { Pagination } from '../../shared/components/Pagination';
 
 interface EventListProps {
     refreshTrigger: number;
@@ -16,35 +17,48 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const pageSize = 10;
 
-    const filteredEvents = events.filter(event =>
-        event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500);
+
+        return () => window.clearTimeout(timer);
+    }, [searchTerm]);
 
     const fetchEvents = useCallback(async () => {
         if (!selectedUniversityId) return;
         setLoading(true);
         try {
-            const response = await AdminEventService.getEvents({ page, size: 10 }, undefined, undefined, undefined, selectedUniversityId);
+            const response = await AdminEventService.getEvents({ page, size: pageSize }, debouncedSearchTerm || undefined, undefined, undefined, selectedUniversityId);
             if (response.data) {
                 setEvents(response.data.content || []);
                 setTotalPages(response.data.totalPages || 0);
+                setTotalElements(response.data.totalElements || 0);
             }
         } catch (error) {
             console.error('Failed to fetch events', error);
             setEvents([]);
+            setTotalPages(0);
+            setTotalElements(0);
         } finally {
             setLoading(false);
         }
-    }, [page, selectedUniversityId]);
+    }, [debouncedSearchTerm, page, pageSize, selectedUniversityId]);
 
     useEffect(() => {
         if (selectedUniversityId) {
             void fetchEvents();
         }
     }, [refreshTrigger, selectedUniversityId, fetchEvents]);
+
+    useEffect(() => {
+        setPage(0);
+    }, [debouncedSearchTerm, selectedUniversityId]);
 
     const handleDelete = async (id: number) => {
         if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -92,7 +106,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredEvents.map((event) => (
+                        {events.map((event) => (
                             <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     {event.imageUrls && event.imageUrls.length > 0 ? (
@@ -155,28 +169,14 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                 </table>
             </div>
 
-            {/* Simple Pagination */}
-            {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                    <button
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        이전
-                    </button>
-                    <span className="px-3 py-1">
-                        {page + 1} / {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={page === totalPages - 1}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        다음
-                    </button>
-                </div>
-            )}
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalElements={totalElements}
+                onPageChange={setPage}
+            />
+
         </div>
     );
 }
