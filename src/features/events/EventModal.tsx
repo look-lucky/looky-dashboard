@@ -1,5 +1,5 @@
-import { Upload, X } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
@@ -9,6 +9,7 @@ import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 import { formatDateForInput } from '../../shared/utils/date';
+import { ImageDropZone } from '../../shared/components/ImageDropZone';
 
 interface EventModalProps {
     onClose: () => void;
@@ -49,12 +50,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [existingBannerUrl, setExistingBannerUrl] = useState<string | null>(null);
     const [originalBannerSrc, setOriginalBannerSrc] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
-    const bannerInputRef = useRef<HTMLInputElement>(null);
 
     const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
     const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (initialData) {
@@ -87,16 +86,11 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         fetchUniversities();
     }, [initialData]);
 
-    const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const objectUrl = URL.createObjectURL(file);
+    const handleBannerFiles = (files: File[]) => {
+        if (files.length > 0) {
+            const objectUrl = URL.createObjectURL(files[0]);
             setOriginalBannerSrc(objectUrl);
             setShowCropper(true);
-        }
-        // clear input value so same file can trigger change again
-        if (e.target) {
-            e.target.value = '';
         }
     };
 
@@ -114,14 +108,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         setOriginalBannerSrc(null);
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
-            setNewImageFiles(prev => [...prev, ...newFiles]);
-
-            const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-            setPreviewUrls(prev => [...prev, ...newPreviews]);
-        }
+    const handleImageFiles = (files: File[]) => {
+        setNewImageFiles(prev => [...prev, ...files]);
+        const newPreviews = files.map(file => URL.createObjectURL(file));
+        setPreviewUrls(prev => [...prev, ...newPreviews]);
     };
 
     const handlePaste = (e: React.ClipboardEvent) => {
@@ -140,36 +130,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         }
     };
 
-    const handleBannerDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) {
-                const objectUrl = URL.createObjectURL(file);
-                setOriginalBannerSrc(objectUrl);
-                setShowCropper(true);
-            }
-        }
-    };
-
-    const handleImagesDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-            if (newFiles.length > 0) {
-                setNewImageFiles(prev => [...prev, ...newFiles]);
-                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-                setPreviewUrls(prev => [...prev, ...newPreviews]);
-            }
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
 
     const toggleType = (type: EventType) => {
         if (selectedTypes.includes(type)) {
@@ -405,7 +365,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                                 setBannerFile(null);
                                                 setExistingBannerUrl(null);
                                                 setBannerPreviewUrl(null);
-                                                if (bannerInputRef.current) bannerInputRef.current.value = '';
                                             }}
                                             className="absolute top-1 right-1 bg-white/80 rounded-full p-1 hover:bg-white text-gray-600"
                                         >
@@ -414,24 +373,9 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                     </div>
                                 )}
                                 {!bannerPreviewUrl && (
-                                    <div
-                                        onClick={() => bannerInputRef.current?.click()}
-                                        onDrop={handleBannerDrop}
-                                        onDragOver={handleDragOver}
-                                        className="cursor-pointer w-40 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
-                                    >
-                                        <Upload className="w-6 h-6 mb-1" />
-                                        <span className="text-xs">배너 추가</span>
-                                    </div>
+                                    <ImageDropZone onFiles={handleBannerFiles} label="배너 추가" />
                                 )}
                             </div>
-                            <input
-                                type="file"
-                                ref={bannerInputRef}
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleBannerChange}
-                            />
                         </div>
 
                         <div>
@@ -461,24 +405,13 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                         </button>
                                     </div>
                                 ))}
-                                <div
-                                    onClick={() => fileInputRef.current?.click()}
-                                    onDrop={handleImagesDrop}
-                                    onDragOver={handleDragOver}
-                                    className="cursor-pointer w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
-                                >
-                                    <Upload className="w-6 h-6 mb-1" />
-                                    <span className="text-xs">이미지 추가</span>
-                                </div>
+                                <ImageDropZone
+                                    onFiles={handleImageFiles}
+                                    label="이미지 추가"
+                                    className="w-20 h-20"
+                                    multiple
+                                />
                             </div>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                multiple
-                                accept="image/*"
-                                onChange={handleImageChange}
-                            />
                         </div>
                     </div>
                     <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">

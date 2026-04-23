@@ -5,6 +5,7 @@ import { CreateOrganizationRequest } from '../../shared/api/models/CreateOrganiz
 import type { UpdateOrganizationRequest } from '../../shared/api/models/UpdateOrganizationRequest';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { FormField } from '../../shared/components/FormField';
 
 interface OrganizationModalProps {
     universityId: number;
@@ -145,8 +146,7 @@ export function OrganizationModal({
     return (
         <ModalWrapper title={initialData ? '소속 정보 수정' : '소속 등록'} onClose={onClose}>
                 <div className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">유형</label>
+                    <FormField label="유형">
                         <select
                             value={category}
                             onChange={(e) => {
@@ -165,11 +165,10 @@ export function OrganizationModal({
                             <option value={CreateOrganizationRequest.category.DEPARTMENT}>학과</option>
                             <option value={CreateOrganizationRequest.category.CLUB_ASSOCIATION}>총동아리연합회</option>
                         </select>
-                    </div>
+                    </FormField>
 
                     {category === CreateOrganizationRequest.category.DEPARTMENT && (
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">소속 단과대학</label>
+                        <FormField label="소속 단과대학">
                             <select
                                 value={parentId}
                                 onChange={(e) => setParentId(e.target.value)}
@@ -187,7 +186,7 @@ export function OrganizationModal({
                             {colleges.length === 0 && (
                                 <p className="text-xs text-red-500 mt-1">등록된 단과대학이 없습니다. 단과대학을 먼저 등록해주세요.</p>
                             )}
-                        </div>
+                        </FormField>
                     )}
 
                     {!initialData && (
@@ -205,10 +204,7 @@ export function OrganizationModal({
                         </div>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {isBulk ? '이름 (줄바꿈으로 구분)' : '이름'}
-                        </label>
+                    <FormField label={isBulk ? '이름 (줄바꿈으로 구분)' : '이름'}>
                         {isBulk ? (
                             <textarea
                                 value={bulkNames}
@@ -232,7 +228,7 @@ export function OrganizationModal({
                                 한 줄에 하나의 이름을 입력해주세요.
                             </p>
                         )}
-                    </div>
+                    </FormField>
 
                     <div className="pt-4 flex justify-end gap-3">
                         <ModalFooter

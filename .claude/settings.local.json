@@ -10,7 +10,9 @@
       "Bash(grep -n \"pageSize = 10\\\\|pageSize: 10\\\\|size: 10\\\\|size = 10\" /c/Users/박도현/Desktop/looky-dashboard/src/features/**/*.tsx)",
       "Bash(npm run *)",
       "Bash(git stash *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

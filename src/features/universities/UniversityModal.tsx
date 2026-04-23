@@ -4,6 +4,7 @@ import { AdminUniversityService } from '../../shared/api/services/AdminUniversit
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import type { UpdateUniversityRequest } from '../../shared/api/models/UpdateUniversityRequest';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { FormInput } from '../../shared/components/FormField';
 
 interface UniversityModalProps {
     onClose: () => void;
@@ -82,17 +83,14 @@ export function UniversityModal({ onClose, onSuccess, initialData }: UniversityM
     return (
         <ModalWrapper title={initialData ? '대학 정보 수정' : '대학 등록'} onClose={onClose}>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">대학명 *</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        placeholder="예: 고려대학교"
-                        required
-                    />
-                </div>
+                <FormInput
+                    label="대학명 *"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="예: 고려대학교"
+                    required
+                />
 
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">이메일 도메인 *</label>

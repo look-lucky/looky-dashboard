@@ -1,4 +1,4 @@
-import { Upload, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
@@ -16,6 +16,7 @@ import { uploadImage } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 import { formatDateForInput } from '../../shared/utils/date';
+import { ImageDropZone } from '../../shared/components/ImageDropZone';
 
 interface AdvertisementModalProps {
     onClose: () => void;
@@ -58,7 +59,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
     const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
-    const imageInputRef = useRef<HTMLInputElement>(null);
 
     // 이미 fetch 요청을 보낸 대학 ID 추적 (중복 요청 방지)
     const fetchedUnivIds = useRef<Set<number>>(new Set());
@@ -145,15 +145,11 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
         }
     }, [initialData]);
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const objectUrl = URL.createObjectURL(file);
+    const handleImageFiles = (files: File[]) => {
+        if (files.length > 0) {
+            const objectUrl = URL.createObjectURL(files[0]);
             setOriginalImageSrc(objectUrl);
             setShowCropper(true);
-        }
-        if (e.target) {
-            e.target.value = '';
         }
     };
 
@@ -169,24 +165,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const handleCropCancel = () => {
         setShowCropper(false);
         setOriginalImageSrc(null);
-    };
-
-    const handleImageDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) {
-                const objectUrl = URL.createObjectURL(file);
-                setOriginalImageSrc(objectUrl);
-                setShowCropper(true);
-            }
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
     };
 
     const handlePaste = (e: React.ClipboardEvent) => {
@@ -377,7 +355,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                             setImageFile(null);
                                             setExistingImageUrl(null);
                                             setImagePreviewUrl(null);
-                                            if (imageInputRef.current) imageInputRef.current.value = '';
                                         }}
                                         className="absolute top-1 right-1 bg-white/80 rounded-full p-1 hover:bg-white text-gray-600"
                                     >
@@ -385,25 +362,13 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                     </button>
                                 </div>
                             ) : (
-                                <div
-                                    onClick={() => imageInputRef.current?.click()}
-                                    onDrop={handleImageDrop}
-                                    onDragOver={handleDragOver}
-                                    className="cursor-pointer w-40 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
-                                >
-                                    <Upload className="w-6 h-6 mb-1" />
-                                    <span className="text-xs">이미지 추가</span>
-                                    <span className="text-xs text-gray-300 mt-0.5">JPG, PNG, WebP</span>
-                                </div>
+                                <ImageDropZone
+                                    onFiles={handleImageFiles}
+                                    accept="image/jpeg,image/png,image/webp"
+                                    hint="JPG, PNG, WebP"
+                                />
                             )}
                         </div>
-                        <input
-                            type="file"
-                            ref={imageInputRef}
-                            className="hidden"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={handleImageChange}
-                        />
                     </div>
 
                     {/* 랜딩 URL */}

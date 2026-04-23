@@ -10,6 +10,7 @@ import { AdvertisementOrderModal } from './AdvertisementOrderModal';
 import { Pagination } from '../../shared/components/Pagination';
 import { SearchInput } from '../../shared/components/SearchInput';
 import { formatDate } from '../../shared/utils/date';
+import { usePaginatedQuery } from '../../shared/hooks/usePaginatedQuery';
 
 interface AdvertisementListProps {
     refreshTrigger: number;
@@ -59,53 +60,28 @@ const TABS: { value: '' | AdvertisementType; label: string }[] = [
 ];
 
 export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListProps) {
-    const [ads, setAds] = useState<AdminAdvertisementResponse[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
-    const pageSize = 10;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'' | AdvertisementType>('');
     const [statusFilter, setStatusFilter] = useState<'' | AdvertisementStatus>('');
     const [showOrderModal, setShowOrderModal] = useState(false);
-    // orgId 를 univId 와 매핑 (단과대/학과를 대학별로 그룹화하기 위함)
     const [orgUnivMap, setOrgUnivMap] = useState<Record<number, number>>({});
     const fetchedUnivIdsRef = useRef<Set<number>>(new Set());
+
+    const fetchAds = useCallback(
+        (page: number, size: number) =>
+            AdminAdvertisementService.getAdvertisements({ page, size }, activeTab || undefined, statusFilter || undefined),
+        [activeTab, statusFilter],
+    );
+
+    const { items: ads, loading, page, setPage, totalPages, totalElements, pageSize, refetch } = usePaginatedQuery<AdminAdvertisementResponse>({
+        fetchFn: fetchAds,
+        refreshTrigger,
+        resetDeps: [activeTab, statusFilter],
+    });
 
     const filteredAds = ads.filter(ad =>
         ad.title?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    const fetchAds = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await AdminAdvertisementService.getAdvertisements(
-                { page, size: pageSize },
-                activeTab || undefined,
-                statusFilter || undefined,
-            );
-            if (response.data) {
-                setAds(response.data.content || []);
-                setTotalPages(response.data.totalPages || 0);
-                setTotalElements(response.data.totalElements || 0);
-            }
-        } catch (error) {
-            console.error('Failed to fetch advertisements', error);
-            setAds([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [page, activeTab, statusFilter]);
-
-    useEffect(() => {
-        void fetchAds();
-    }, [refreshTrigger, fetchAds]);
-
-    // 탭/필터 변경 시 첫 페이지로 이동
-    useEffect(() => {
-        setPage(0);
-    }, [activeTab, statusFilter]);
 
     // ads가 바뀌면 targetUniversities 기준으로 org→univ 매핑 fetch
     useEffect(() => {
@@ -131,7 +107,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
         if (!confirm('정말 삭제하시겠습니까?')) return;
         try {
             await AdminAdvertisementService.deleteAdvertisement(id);
-            void fetchAds();
+            void refetch();
         } catch (error) {
             console.error(error);
             alert('광고 삭제에 실패했습니다.');
@@ -318,7 +294,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                     onClose={() => setShowOrderModal(false)}
                     onSuccess={() => {
                         setShowOrderModal(false);
-                        void fetchAds();
+                        void refetch();
                     }}
                 />
             )}

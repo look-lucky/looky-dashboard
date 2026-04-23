@@ -1,5 +1,5 @@
 import { Edit2, Trash2, Calendar, MapPin, Tag } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 
@@ -7,6 +7,7 @@ import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { Pagination } from '../../shared/components/Pagination';
 import { SearchInput } from '../../shared/components/SearchInput';
 import { useDebounce } from '../../shared/hooks/useDebounce';
+import { usePaginatedQuery } from '../../shared/hooks/usePaginatedQuery';
 
 interface EventListProps {
     refreshTrigger: number;
@@ -15,44 +16,21 @@ interface EventListProps {
 
 export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     const { selectedUniversityId } = useUniversity();
-    const [events, setEvents] = useState<AdminEventResponse[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearchTerm = useDebounce(searchTerm);
-    const pageSize = 10;
 
-    const fetchEvents = useCallback(async () => {
-        if (!selectedUniversityId) return;
-        setLoading(true);
-        try {
-            const response = await AdminEventService.getEvents({ page, size: pageSize }, debouncedSearchTerm || undefined, undefined, undefined, selectedUniversityId);
-            if (response.data) {
-                setEvents(response.data.content || []);
-                setTotalPages(response.data.totalPages || 0);
-                setTotalElements(response.data.totalElements || 0);
-            }
-        } catch (error) {
-            console.error('Failed to fetch events', error);
-            setEvents([]);
-            setTotalPages(0);
-            setTotalElements(0);
-        } finally {
-            setLoading(false);
-        }
-    }, [debouncedSearchTerm, page, pageSize, selectedUniversityId]);
+    const fetchEvents = useCallback(
+        (page: number, size: number) =>
+            AdminEventService.getEvents({ page, size }, debouncedSearchTerm || undefined, undefined, undefined, selectedUniversityId!),
+        [debouncedSearchTerm, selectedUniversityId],
+    );
 
-    useEffect(() => {
-        if (selectedUniversityId) {
-            void fetchEvents();
-        }
-    }, [refreshTrigger, selectedUniversityId, fetchEvents]);
-
-    useEffect(() => {
-        setPage(0);
-    }, [debouncedSearchTerm, selectedUniversityId]);
+    const { items: events, loading, page, setPage, totalPages, totalElements, pageSize, refetch } = usePaginatedQuery<AdminEventResponse>({
+        fetchFn: fetchEvents,
+        enabled: !!selectedUniversityId,
+        refreshTrigger,
+        resetDeps: [debouncedSearchTerm, selectedUniversityId],
+    });
 
     const handleDelete = async (id: number) => {
         if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -60,7 +38,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         try {
             await AdminEventService.deleteEvent(id);
             // Refresh list
-            void fetchEvents();
+            void refetch();
         } catch (error) {
             console.error(error);
             alert('이벤트 삭제에 실패했습니다.');

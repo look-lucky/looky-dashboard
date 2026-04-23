@@ -3,6 +3,7 @@ import { AdminPartnershipService } from '../../shared/api/services/AdminPartners
 import type { AdminPartnershipResponse as PartnershipResponse } from '../../shared/api/models/AdminPartnershipResponse';
 import type { UpdatePartnershipRequest } from '../../shared/api/models/UpdatePartnershipRequest';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { FormTextarea, FormInput } from '../../shared/components/FormField';
 
 interface PartnershipEditModalProps {
     partnership: PartnershipResponse;
@@ -55,38 +56,17 @@ export function PartnershipEditModal({ partnership, onClose, onSuccess }: Partne
                     <div><span className="font-medium text-gray-700">조직:</span> {partnership.organizationName}</div>
                 </div>
 
-                {/* Benefit */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">혜택 내용</label>
-                    <textarea
-                        rows={3}
-                        value={benefit}
-                        onChange={(e) => setBenefit(e.target.value)}
-                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        placeholder="예: 모든 메뉴 10% 할인"
-                    />
-                </div>
+                <FormTextarea
+                    label="혜택 내용"
+                    rows={3}
+                    value={benefit}
+                    onChange={(e) => setBenefit(e.target.value)}
+                    placeholder="예: 모든 메뉴 10% 할인"
+                />
 
-                {/* Date Range */}
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
-                        <input
-                            type="date"
-                            value={startsAt}
-                            onChange={(e) => setStartsAt(e.target.value)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
-                        <input
-                            type="date"
-                            value={endsAt}
-                            onChange={(e) => setEndsAt(e.target.value)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        />
-                    </div>
+                    <FormInput label="시작일" type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+                    <FormInput label="종료일" type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
                 </div>
             </div>
         </ModalWrapper>
