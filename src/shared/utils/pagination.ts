@@ -3,28 +3,14 @@ export const getVisiblePageNumbers = (
     totalPages: number,
     maxVisiblePages = 5
 ): number[] => {
-    const pages: number[] = [];
-    const visiblePages = Math.min(maxVisiblePages, totalPages);
-    const leftWindow = Math.floor(maxVisiblePages / 2);
-    const tailThreshold = totalPages - (maxVisiblePages - leftWindow);
+    if (totalPages <= 0) return [];
 
-    for (let index = 0; index < visiblePages; index += 1) {
-        let pageNumber = currentPage - leftWindow + index;
+    const visibleCount = Math.min(maxVisiblePages, totalPages);
+    const leftWindow = Math.floor(visibleCount / 2);
 
-        if (currentPage < leftWindow) {
-            pageNumber = index;
-        }
+    let start = currentPage - leftWindow;
+    if (start < 0) start = 0;
+    if (start + visibleCount > totalPages) start = totalPages - visibleCount;
 
-        if (currentPage > tailThreshold) {
-            pageNumber = totalPages - maxVisiblePages + index;
-        }
-
-        if (pageNumber < 0 || pageNumber >= totalPages) {
-            continue;
-        }
-
-        pages.push(pageNumber);
-    }
-
-    return pages;
+    return Array.from({ length: visibleCount }, (_, i) => start + i);
 };
