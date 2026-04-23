@@ -89,11 +89,13 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
             }
             toast.success('업로드가 완료되었습니다.');
             onSuccess();
-        } catch (err: any) {
+        } catch (err) {
             console.error('Upload Error:', err);
-            
+
             // API에서 발생한 상세 에러 메시지 추출
-            const responseData = err.body || err.response?.data;
+            type ApiErrorBody = { data?: { message?: string }; message?: string };
+            const apiErr = err as { body?: ApiErrorBody; response?: { data?: ApiErrorBody } };
+            const responseData = apiErr.body || apiErr.response?.data;
             const apiMessage = responseData?.data?.message || responseData?.message;
             
             if (apiMessage) {

@@ -54,6 +54,7 @@ src/
 - `npm run dev:op` - prod API 연결 개발
 - `npm run build` - 프로덕션 빌드 (`tsc -b && vite build --mode prod`)
 - `npm run lint` - ESLint 실행
+- `npm run api:sync` - 최신 Swagger JSON 다운로드 + API 클라이언트 재생성
 
 ## Key Conventions
 
@@ -81,7 +82,9 @@ src/
 - **formatDate / formatDateForInput** — `shared/utils/date.ts` 날짜 포맷 유틸
 
 ### API
-- `src/shared/api/`는 OpenAPI codegen으로 생성 - 직접 수정하지 않음
+- `src/shared/api/`는 OpenAPI codegen으로 생성 - 직접 수정하지 않음 (`setupInterceptors.ts`만 수동 관리)
+- API 관련 기능 구현 전 `npm run api:sync` 실행하여 최신 스펙 반영 권장
+- Swagger JSON: `https://api.looky.kr/v3/api-docs` (인증 불필요)
 - API 호출은 서비스 클래스 사용: `AdminStoreService.xxx()`
 - 인증: Bearer token, 401 시 자동 리프레시 (setupInterceptors.ts)
 - 이미지 업로드: presigned URL → S3 직접 업로드
