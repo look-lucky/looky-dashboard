@@ -97,6 +97,11 @@ src/
 - `VITE_DATA_GO_KR_API_KEY` - 공공데이터 API 키 (선택)
 - 환경별 파일: `.env.dev`, `.env.local`, `.env.prod`
 
+### API 타입 우회
+- OpenAPI codegen이 `JsonNullable*` 래퍼 타입을 생성하여 Update 요청 타입이 실제 API와 불일치
+- 해결: 평문 객체를 만들고 `as unknown as UpdateXxxRequest`로 캐스팅
+- `src/shared/api/` 코드는 절대 수정하지 않음
+
 ## Notes
 
 - 테스트 미구성 (테스트 프레임워크 없음)
