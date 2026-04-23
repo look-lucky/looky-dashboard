@@ -1,4 +1,4 @@
-import { Edit2, Trash2, Calendar, ExternalLink, Search, ArrowUpDown } from 'lucide-react';
+import { Edit2, Trash2, Calendar, ExternalLink, ArrowUpDown } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
@@ -7,6 +7,9 @@ type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
 type AdvertisementStatus = 'SCHEDULED' | 'ACTIVE' | 'INACTIVE' | 'ENDED';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { AdvertisementOrderModal } from './AdvertisementOrderModal';
+import { Pagination } from '../../shared/components/Pagination';
+import { SearchInput } from '../../shared/components/SearchInput';
+import { formatDate } from '../../shared/utils/date';
 
 interface AdvertisementListProps {
     refreshTrigger: number;
@@ -60,6 +63,8 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const pageSize = 10;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'' | AdvertisementType>('');
     const [statusFilter, setStatusFilter] = useState<'' | AdvertisementStatus>('');
@@ -76,13 +81,14 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
         setLoading(true);
         try {
             const response = await AdminAdvertisementService.getAdvertisements(
-                { page, size: 10 },
+                { page, size: pageSize },
                 activeTab || undefined,
                 statusFilter || undefined,
             );
             if (response.data) {
                 setAds(response.data.content || []);
                 setTotalPages(response.data.totalPages || 0);
+                setTotalElements(response.data.totalElements || 0);
             }
         } catch (error) {
             console.error('Failed to fetch advertisements', error);
@@ -132,15 +138,6 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
         }
     };
 
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        });
-    };
-
     if (loading && ads.length === 0) {
         return <div className="p-8 text-center text-gray-500">로딩 중...</div>;
     }
@@ -175,16 +172,11 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
 
             {/* 검색 및 필터 */}
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <div className="relative flex-1">
-                    <input
-                        type="text"
-                        placeholder="광고 제목 검색..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                    />
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                </div>
+                <SearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="광고 제목 검색..."
+                />
                 <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as '' | AdvertisementStatus)}
@@ -331,28 +323,13 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                 />
             )}
 
-            {/* 페이지네이션 */}
-            {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                    <button
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        이전
-                    </button>
-                    <span className="px-3 py-1">
-                        {page + 1} / {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={page === totalPages - 1}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        다음
-                    </button>
-                </div>
-            )}
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalElements={totalElements}
+                onPageChange={setPage}
+            />
         </div>
     );
 }

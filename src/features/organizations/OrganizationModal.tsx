@@ -1,10 +1,10 @@
-import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { AdminOrganizationService } from '../../shared/api/services/AdminOrganizationService';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { CreateOrganizationRequest } from '../../shared/api/models/CreateOrganizationRequest';
 import type { UpdateOrganizationRequest } from '../../shared/api/models/UpdateOrganizationRequest';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 
 interface OrganizationModalProps {
     universityId: number;
@@ -143,17 +143,7 @@ export function OrganizationModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">
-                        {initialData ? '소속 정보 수정' : '소속 등록'}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
+        <ModalWrapper title={initialData ? '소속 정보 수정' : '소속 등록'} onClose={onClose}>
                 <div className="p-6 space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">유형</label>
@@ -245,24 +235,14 @@ export function OrganizationModal({
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleSubmit()}
-                            disabled={loading}
-                            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
-                        >
-                            {loading ? '처리중...' : (initialData ? '수정하기' : '등록하기')}
-                        </button>
+                        <ModalFooter
+                            onClose={onClose}
+                            onSubmit={() => handleSubmit()}
+                            loading={loading}
+                            submitText={initialData ? '수정하기' : '등록하기'}
+                        />
                     </div>
                 </div>
-            </div>
-        </div>
+        </ModalWrapper>
     );
 }

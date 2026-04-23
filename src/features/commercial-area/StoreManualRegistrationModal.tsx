@@ -1,10 +1,9 @@
-import { X, Save, Upload } from 'lucide-react';
+import { Save, Upload, X } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
-// Removed AdminService
 import { ImageCropper } from '../../shared/components/ImageCropper';
 import { OperatingHoursEditor } from './OperatingHoursEditor';
 import { StoreMenuEditor, type MenuCategoryState, type MenuItemState } from './StoreMenuEditor';
@@ -13,6 +12,7 @@ import type { StoreCreateRequest as CreateStoreRequest } from '../../shared/api/
 import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
 import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { AdminItemCategoryService } from '../../shared/api/services/AdminItemCategoryService';
 
@@ -401,17 +401,22 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        <ModalWrapper
+            title="가게 개별 등록"
+            onClose={onClose}
+            maxWidth="max-w-4xl"
             onPaste={handlePaste}
+            footer={
+                <ModalFooter
+                    onClose={onClose}
+                    loading={loading}
+                    submitType="submit"
+                    submitFormId="manual-store-form"
+                    submitText="등록하기"
+                    submitIcon={<Save className="w-4 h-4" />}
+                />
+            }
         >
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">가게 개별 등록</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
 
                 <form id="manual-store-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1">
                     {/* University Selection */}
@@ -672,32 +677,6 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                     </div>
                 </form>
 
-                <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 mt-auto">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                        disabled={loading}
-                    >
-                        취소
-                    </button>
-                    <button
-                        type="submit"
-                        form="manual-store-form"
-                        className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <>Processing...</>
-                        ) : (
-                            <>
-                                <Save className="w-4 h-4 mr-2" />
-                                등록하기
-                            </>
-                        )}
-                    </button>
-                </div>
-
                 <AddressSearchModal
                     isOpen={isAddressModalOpen}
                     onClose={() => setIsAddressModalOpen(false)}
@@ -712,8 +691,7 @@ export function StoreManualRegistrationModal({ onClose }: StoreManualRegistratio
                         onCancel={handleCropCancel}
                     />
                 )}
-            </div>
-        </div>
+        </ModalWrapper>
     );
 }
 

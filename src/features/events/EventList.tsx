@@ -1,10 +1,12 @@
-import { Edit2, Trash2, Calendar, MapPin, Tag, Search } from 'lucide-react';
+import { Edit2, Trash2, Calendar, MapPin, Tag } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 
 import { useUniversity } from '../../shared/contexts/UniversityContext';
 import { Pagination } from '../../shared/components/Pagination';
+import { SearchInput } from '../../shared/components/SearchInput';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 
 interface EventListProps {
     refreshTrigger: number;
@@ -19,16 +21,8 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm);
     const pageSize = 10;
-
-    useEffect(() => {
-        const timer = window.setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-        }, 500);
-
-        return () => window.clearTimeout(timer);
-    }, [searchTerm]);
 
     const fetchEvents = useCallback(async () => {
         if (!selectedUniversityId) return;
@@ -83,16 +77,11 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
 
     return (
         <div className="space-y-4">
-            <div className="relative">
-                <input
-                    type="text"
-                    placeholder="이벤트 제목 또는 설명 검색..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-            </div>
+            <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="이벤트 제목 또는 설명 검색..."
+            />
 
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">

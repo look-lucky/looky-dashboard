@@ -1,7 +1,8 @@
-import { X, GripVertical, Loader2 } from 'lucide-react';
+import { GripVertical, Loader2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 
 type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
 
@@ -115,18 +116,20 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[80vh]">
-                {/* 헤더 */}
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">광고 노출 순서 관리</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+        <ModalWrapper
+            title="광고 노출 순서 관리"
+            onClose={onClose}
+            maxHeight="max-h-[80vh]"
+            footer={
+                <ModalFooter
+                    onClose={onClose}
+                    onSubmit={handleSave}
+                    loading={saving}
+                    disabled={!isDirty}
+                    submitText={saving ? '저장 중...' : '순서 저장'}
+                />
+            }
+        >
 
                 {/* 타입 탭 */}
                 <div className="flex gap-1 px-6 pt-4">
@@ -202,26 +205,6 @@ export function AdvertisementOrderModal({ initialType, onClose, onSuccess }: Adv
                     )}
                 </div>
 
-                {/* 푸터 */}
-                <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                    >
-                        취소
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleSave}
-                        disabled={saving || !isDirty}
-                        className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {saving ? '저장 중...' : '순서 저장'}
-                    </button>
-                </div>
-            </div>
-        </div>
+        </ModalWrapper>
     );
 }

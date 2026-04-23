@@ -1,9 +1,10 @@
-import { Trash2, Search, Pencil } from 'lucide-react';
+import { Trash2, Pencil } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import type { AdminPartnershipResponse as PartnershipResponse } from '../../shared/api/models/AdminPartnershipResponse';
 import { PartnershipEditModal } from './PartnershipEditModal';
 import { Pagination } from '../../shared/components/Pagination';
+import { SearchInput } from '../../shared/components/SearchInput';
 
 interface PartnershipListProps {
     universityId: number;
@@ -94,16 +95,11 @@ export function PartnershipList({ universityId, organizationId, categoryId, refr
             />
         )}
         <div className="space-y-4">
-            <div className="relative">
-                <input
-                    type="text"
-                    placeholder="상점명, 조직명, 분류 또는 혜택 내용 검색..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-            </div>
+            <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="상점명, 조직명, 분류 또는 혜택 내용 검색..."
+            />
 
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">

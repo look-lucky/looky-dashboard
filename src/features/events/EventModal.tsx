@@ -1,4 +1,4 @@
-import { X, Upload } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
@@ -7,6 +7,8 @@ import type { UniversityResponse } from '../../shared/api/models/UniversityRespo
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { formatDateForInput } from '../../shared/utils/date';
 
 interface EventModalProps {
     onClose: () => void;
@@ -84,12 +86,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
         fetchUniversities();
     }, [initialData]);
-
-    const formatDateForInput = (dateString: string) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toISOString().slice(0, 16);
-    };
 
     const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -255,19 +251,12 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        <ModalWrapper
+            title={initialData ? '이벤트 수정' : '이벤트 등록'}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
             onPaste={handlePaste}
         >
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">
-                        {initialData ? '이벤트 수정' : '이벤트 등록'}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
                     <div>
@@ -493,23 +482,14 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                         </div>
                     </div>
                     <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
-                        >
-                            {loading ? '처리중...' : (initialData ? '수정하기' : '등록하기')}
-                        </button>
+                        <ModalFooter
+                            onClose={onClose}
+                            loading={loading}
+                            submitType="submit"
+                            submitText={initialData ? '수정하기' : '등록하기'}
+                        />
                     </div>
                 </form>
-            </div>
 
             {showCropper && originalBannerSrc && (
                 <ImageCropper
@@ -519,6 +499,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     onCancel={handleCropCancel}
                 />
             )}
-        </div>
+        </ModalWrapper>
     );
 }

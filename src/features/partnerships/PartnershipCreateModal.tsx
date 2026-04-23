@@ -5,6 +5,7 @@ import { PublicOrganizationService } from '../../shared/api/services/PublicOrgan
 import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 
 interface PartnershipCreateModalProps {
     universityId: number;
@@ -111,15 +112,12 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">제휴 등록</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
+        <ModalWrapper
+            title="제휴 등록"
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            footer={<ModalFooter onClose={onClose} onSubmit={handleSubmit} loading={loading} submitText="등록하기" />}
+        >
                 <div className="p-6 space-y-5 overflow-y-auto">
                     {/* Store Search */}
                     <div>
@@ -231,23 +229,6 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                    >
-                        취소
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        {loading ? '처리중...' : '등록하기'}
-                    </button>
-                </div>
-            </div>
-        </div>
+        </ModalWrapper>
     );
 }

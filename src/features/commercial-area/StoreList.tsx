@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
-import { Search, Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
+import { Store as StoreIcon, X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
 import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
 import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
 import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
@@ -16,6 +16,8 @@ import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { AdminItemCategoryService } from '../../shared/api/services/AdminItemCategoryService';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 import { Pagination } from '../../shared/components/Pagination';
+import { SearchInput } from '../../shared/components/SearchInput';
+import { useDebounce } from '../../shared/hooks/useDebounce';
 
 interface StoreListProps {
     universityId: number;
@@ -63,18 +65,11 @@ export function StoreList({ universityId }: StoreListProps) {
     const [totalElements, setTotalElements] = useState(0);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm);
     const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('');
     const [partnershipFilter, setPartnershipFilter] = useState<PartnershipFilter>('all');
     const [page, setPage] = useState(0);
     const pageSize = 10;
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-        }, 500);
-        return () => clearTimeout(timer);
-    }, [searchTerm]);
 
     // 체크박스 선택 state
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -710,18 +705,12 @@ export function StoreList({ universityId }: StoreListProps) {
                         )}
                     </div>
 
-                    <div className="relative w-full sm:w-64">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
-                        </div>
-                        <input
-                            type="text"
-                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                            placeholder="상점명, 지점명, 주소 검색"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
+                    <SearchInput
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        placeholder="상점명, 지점명, 주소 검색"
+                        className="w-full sm:w-64 sm:flex-none"
+                    />
                 </div>
 
                 <div className="flex flex-wrap gap-2 items-center">

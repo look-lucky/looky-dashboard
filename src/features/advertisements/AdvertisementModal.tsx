@@ -1,4 +1,4 @@
-import { X, Upload } from 'lucide-react';
+import { Upload, X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
@@ -14,6 +14,8 @@ import type { UniversityResponse } from '../../shared/api/models/UniversityRespo
 import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { uploadImage } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { formatDateForInput } from '../../shared/utils/date';
 
 interface AdvertisementModalProps {
     onClose: () => void;
@@ -126,11 +128,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     useEffect(() => {
         setTargetOrganizationIds((prev) => syncOrganizationTargets(prev, organizationsByUniv, targetUniversityIds));
     }, [organizationsByUniv, targetUniversityIds]);
-
-    const formatDateForInput = (dateString: string) => {
-        if (!dateString) return '';
-        return new Date(dateString).toISOString().slice(0, 16);
-    };
 
     useEffect(() => {
         if (initialData) {
@@ -277,20 +274,12 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        <ModalWrapper
+            title={initialData ? '광고 수정' : '광고 등록'}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
             onPaste={handlePaste}
         >
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">
-                        {initialData ? '광고 수정' : '광고 등록'}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
                     {/* 제목 */}
                     <div>
@@ -653,23 +642,14 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
-                        >
-                            {loading ? '처리중...' : (initialData ? '수정하기' : '등록하기')}
-                        </button>
+                        <ModalFooter
+                            onClose={onClose}
+                            loading={loading}
+                            submitType="submit"
+                            submitText={initialData ? '수정하기' : '등록하기'}
+                        />
                     </div>
                 </form>
-            </div>
 
             {showCropper && originalImageSrc && (
                 <ImageCropper
@@ -679,6 +659,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     onCancel={handleCropCancel}
                 />
             )}
-        </div>
+        </ModalWrapper>
     );
 }
