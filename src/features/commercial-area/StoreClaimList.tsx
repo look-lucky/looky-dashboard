@@ -307,58 +307,60 @@ export function StoreClaimList() {
                     <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full flex flex-col max-h-[90vh]">
 
-                            <div className="absolute top-0 right-0 pt-4 pr-4">
+                            <div className="absolute top-0 right-0 pt-4 pr-4 z-10">
                                 <button type="button" onClick={closeModal} className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
                                     <span className="sr-only">Close</span>
                                     <X className="h-6 w-6" />
                                 </button>
                             </div>
 
-                            <div className="sm:flex sm:items-start">
-                                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                    <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                        점유 심사 상세 정보
-                                    </h3>
-                                    <div className="mt-4 border-t border-gray-200 pt-4 space-y-3">
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <span className="text-sm font-medium text-gray-500">상점명</span>
-                                            <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storeName}</span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <span className="text-sm font-medium text-gray-500">신청자</span>
-                                            <span className="text-sm text-gray-900 col-span-2">{selectedClaim.representativeName}</span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <span className="text-sm font-medium text-gray-500">사업자번호</span>
-                                            <span className="text-sm text-gray-900 col-span-2">{selectedClaim.bizRegNo}</span>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <span className="text-sm font-medium text-gray-500">전화번호</span>
-                                            <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storePhone ? formatKoreanPhoneNumber(selectedClaim.storePhone) : '-'}</span>
-                                        </div>
-                                        {selectedClaim.licenseImageUrl && (
-                                            <div className="mt-4">
-                                                <span className="block text-sm font-medium text-gray-500 mb-2">사업자등록증</span>
-                                                <img src={selectedClaim.licenseImageUrl} alt="Business License" className="max-w-full h-auto rounded border border-gray-200" />
+                            <div className="overflow-y-auto px-4 pt-5 pb-4 sm:p-6 flex-1">
+                                <div className="sm:flex sm:items-start">
+                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                            점유 심사 상세 정보
+                                        </h3>
+                                        <div className="mt-4 border-t border-gray-200 pt-4 space-y-3">
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <span className="text-sm font-medium text-gray-500">상점명</span>
+                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storeName}</span>
                                             </div>
-                                        )}
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <span className="text-sm font-medium text-gray-500">신청자</span>
+                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.representativeName}</span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <span className="text-sm font-medium text-gray-500">사업자번호</span>
+                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.bizRegNo}</span>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <span className="text-sm font-medium text-gray-500">전화번호</span>
+                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storePhone ? formatKoreanPhoneNumber(selectedClaim.storePhone) : '-'}</span>
+                                            </div>
+                                            {selectedClaim.licenseImageUrl && (
+                                                <div className="mt-4">
+                                                    <span className="block text-sm font-medium text-gray-500 mb-2">사업자등록증</span>
+                                                    <img src={selectedClaim.licenseImageUrl} alt="Business License" className="max-w-full h-auto rounded border border-gray-200" />
+                                                </div>
+                                            )}
 
-                                        {/* Show Reject Reason if Rejected */}
-                                        {selectedClaim.status === 'REJECTED' && selectedClaim.adminMemo && (
-                                            <div className="mt-4 p-3 bg-red-50 rounded-md">
-                                                <span className="block text-sm font-bold text-red-800 mb-1">반려 사유</span>
-                                                <p className="text-sm text-red-700">{selectedClaim.adminMemo}</p>
-                                            </div>
-                                        )}
+                                            {/* Show Reject Reason if Rejected */}
+                                            {selectedClaim.status === 'REJECTED' && selectedClaim.adminMemo && (
+                                                <div className="mt-4 p-3 bg-red-50 rounded-md">
+                                                    <span className="block text-sm font-bold text-red-800 mb-1">반려 사유</span>
+                                                    <p className="text-sm text-red-700">{selectedClaim.adminMemo}</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Actions ONLY for PENDING status */}
                             {currentTab === 'PENDING' && (
-                                <div className="mt-5 sm:mt-4">
+                                <div className="flex-shrink-0 border-t border-gray-200 px-4 py-4 sm:px-6 bg-white">
                                     {isRejecting ? (
                                         <div className="bg-gray-50 p-4 rounded-md">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">반려 사유를 입력하세요</label>
