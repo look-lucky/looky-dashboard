@@ -13,10 +13,12 @@ import { AuthSessionManager } from '../widgets/auth/AuthSessionManager';
 import { UniversityProvider } from '../shared/contexts/UniversityContext';
 import { UniversityLayout } from '../widgets/layout/UniversityLayout';
 import { AdvertisementPage } from '../pages/AdvertisementPage';
-//
+import { Toaster } from 'sonner';
+
 function App() {
     return (
         <BrowserRouter>
+            <Toaster position="top-center" richColors closeButton />
             <AuthSessionManager />
             <Routes>
                 <Route path="/login" element={<LoginPage />} />

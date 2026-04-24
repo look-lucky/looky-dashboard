@@ -1,10 +1,13 @@
 import { X, Search, Store as StoreIcon, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
 import type { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import type { StoreResponse } from '../../shared/api/models/StoreResponse';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { FormField, FormTextarea, FormInput, FormSelect } from '../../shared/components/FormField';
 
 interface PartnershipCreateModalProps {
     universityId: number;
@@ -83,7 +86,7 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
 
     const handleSubmit = async () => {
         if (!selectedStore || !selectedOrgId || !benefit || !startsAt || !endsAt) {
-            alert('모든 필드를 입력해주세요.');
+            toast.error('모든 필드를 입력해주세요.');
             return;
         }
 
@@ -100,30 +103,26 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
                     endsAt
                 }
             );
-            alert('제휴가 등록되었습니다.');
+            toast.success('제휴가 등록되었습니다.');
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('제휴 등록 실패');
+            toast.error('제휴 등록 실패');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">제휴 등록</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
+        <ModalWrapper
+            title="제휴 등록"
+            onClose={onClose}
+            maxWidth="max-w-lg"
+            footer={<ModalFooter onClose={onClose} onSubmit={handleSubmit} loading={loading} submitText="등록하기" />}
+        >
                 <div className="p-6 space-y-5 overflow-y-auto">
                     {/* Store Search */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">상점 검색</label>
+                    <FormField label="상점 검색">
                         {!selectedStore ? (
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -177,77 +176,31 @@ export function PartnershipCreateModal({ universityId, onClose, onSuccess }: Par
                                 </button>
                             </div>
                         )}
-                    </div>
+                    </FormField>
 
-                    {/* Organization Selection */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">대상 조직</label>
-                        <select
-                            value={selectedOrgId}
-                            onChange={(e) => setSelectedOrgId(e.target.value)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                        >
-                            <option value="" disabled>조직을 선택하세요</option>
-                            {organizations.map(org => (
-                                <option key={org.id} value={org.id}>
-                                    {org.name} ({org.category})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <FormSelect label="대상 조직" value={selectedOrgId} onChange={(e) => setSelectedOrgId(e.target.value)}>
+                        <option value="" disabled>조직을 선택하세요</option>
+                        {organizations.map(org => (
+                            <option key={org.id} value={org.id}>
+                                {org.name} ({org.category})
+                            </option>
+                        ))}
+                    </FormSelect>
 
-                    {/* Benefit */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">혜택 내용</label>
-                        <textarea
-                            rows={3}
-                            value={benefit}
-                            onChange={(e) => setBenefit(e.target.value)}
-                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            placeholder="예: 모든 메뉴 10% 할인"
-                        />
-                    </div>
+                    <FormTextarea
+                        label="혜택 내용"
+                        rows={3}
+                        value={benefit}
+                        onChange={(e) => setBenefit(e.target.value)}
+                        placeholder="예: 모든 메뉴 10% 할인"
+                    />
 
-                    {/* Date Range */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
-                            <input
-                                type="date"
-                                value={startsAt}
-                                onChange={(e) => setStartsAt(e.target.value)}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
-                            <input
-                                type="date"
-                                value={endsAt}
-                                onChange={(e) => setEndsAt(e.target.value)}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                            />
-                        </div>
+                        <FormInput label="시작일" type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+                        <FormInput label="종료일" type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                    >
-                        취소
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        {loading ? '처리중...' : '등록하기'}
-                    </button>
-                </div>
-            </div>
-        </div>
+        </ModalWrapper>
     );
 }

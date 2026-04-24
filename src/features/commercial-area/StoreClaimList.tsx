@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AdminStoreClaimService } from '../../shared/api/services/AdminStoreClaimService';
 import type { AdminStoreClaimResponse } from '../../shared/api/models/AdminStoreClaimResponse';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check, X } from 'lucide-react';
-import { getVisiblePageNumbers } from '../../shared/utils/pagination';
+import { Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
+import { Pagination } from '../../shared/components/Pagination';
+import { ModalWrapper } from '../../shared/components/ModalWrapper';
 
 export function StoreClaimList() {
     const [currentTab, setCurrentTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
@@ -93,30 +95,30 @@ export function StoreClaimList() {
 
         try {
             await AdminStoreClaimService.approve(selectedClaim.id);
-            alert('승인되었습니다.');
+            toast.success('승인되었습니다.');
             closeModal();
             void fetchClaims();
         } catch (e) {
             console.error(e);
-            alert('승인에 실패했습니다.');
+            toast.error('승인에 실패했습니다.');
         }
     };
 
     const handleReject = async () => {
         if (!selectedClaim?.id) return;
         if (!rejectReason.trim()) {
-            alert('반려 사유를 입력해주세요.');
+            toast.error('반려 사유를 입력해주세요.');
             return;
         }
 
         try {
             await AdminStoreClaimService.reject(selectedClaim.id, { reason: rejectReason });
-            alert('반려되었습니다.');
+            toast.success('반려되었습니다.');
             closeModal();
             void fetchClaims();
         } catch (e) {
             console.error(e);
-            alert('반려에 실패했습니다.');
+            toast.error('반려에 실패했습니다.');
         }
     };
 
@@ -224,193 +226,101 @@ export function StoreClaimList() {
                 </div>
             )}
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-                <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                    <div className="flex-1 flex justify-between sm:hidden">
-                        <button
-                            onClick={() => setPage(Math.max(0, page - 1))}
-                            disabled={page === 0}
-                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                        >
-                            이전
-                        </button>
-                        <button
-                            onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                            disabled={page === totalPages - 1}
-                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                        >
-                            다음
-                        </button>
-                    </div>
-                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p className="text-sm text-gray-700">
-                                <span className="font-medium">{page * pageSize + 1}</span> - <span className="font-medium">{Math.min((page + 1) * pageSize, totalElements)}</span> / <span className="font-medium">{totalElements}</span>
-                            </p>
-                        </div>
-                        <div>
-                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                                <button
-                                    onClick={() => setPage(0)}
-                                    disabled={page === 0}
-                                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                                >
-                                    <span className="sr-only">First</span>
-                                    <ChevronsLeft className="h-5 w-5" aria-hidden="true" />
-                                </button>
-                                <button
-                                    onClick={() => setPage(Math.max(0, page - 1))}
-                                    disabled={page === 0}
-                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                                >
-                                    <span className="sr-only">Previous</span>
-                                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                                </button>
-                                {getVisiblePageNumbers(page, totalPages).map((p) => (
-                                    <button
-                                        key={p}
-                                        onClick={() => setPage(p)}
-                                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${page === p
-                                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        {p + 1}
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                                    disabled={page === totalPages - 1}
-                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                                >
-                                    <span className="sr-only">Next</span>
-                                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                                </button>
-                                <button
-                                    onClick={() => setPage(totalPages - 1)}
-                                    disabled={page === totalPages - 1}
-                                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                                >
-                                    <span className="sr-only">Last</span>
-                                    <ChevronsRight className="h-5 w-5" aria-hidden="true" />
-                                </button>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalElements={totalElements}
+                onPageChange={setPage}
+            />
 
             {/* Modal */}
             {selectedClaim && (
-                <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={closeModal}></div>
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full flex flex-col max-h-[90vh]">
-
-                            <div className="absolute top-0 right-0 pt-4 pr-4 z-10">
-                                <button type="button" onClick={closeModal} className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none">
-                                    <span className="sr-only">Close</span>
-                                    <X className="h-6 w-6" />
-                                </button>
+                <ModalWrapper title="점유 심사 상세 정보" onClose={closeModal} maxWidth="max-w-lg">
+                    <div className="flex-1 overflow-y-auto p-6 min-h-0">
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-3 gap-4">
+                                <span className="text-sm font-medium text-gray-500">상점명</span>
+                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storeName}</span>
                             </div>
-
-                            <div className="overflow-y-auto px-4 pt-5 pb-4 sm:p-6 flex-1">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                            점유 심사 상세 정보
-                                        </h3>
-                                        <div className="mt-4 border-t border-gray-200 pt-4 space-y-3">
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <span className="text-sm font-medium text-gray-500">상점명</span>
-                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storeName}</span>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <span className="text-sm font-medium text-gray-500">신청자</span>
-                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.representativeName}</span>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <span className="text-sm font-medium text-gray-500">사업자번호</span>
-                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.bizRegNo}</span>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-4">
-                                                <span className="text-sm font-medium text-gray-500">전화번호</span>
-                                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storePhone ? formatKoreanPhoneNumber(selectedClaim.storePhone) : '-'}</span>
-                                            </div>
-                                            {selectedClaim.licenseImageUrl && (
-                                                <div className="mt-4">
-                                                    <span className="block text-sm font-medium text-gray-500 mb-2">사업자등록증</span>
-                                                    <img src={selectedClaim.licenseImageUrl} alt="Business License" className="max-w-full h-auto rounded border border-gray-200" />
-                                                </div>
-                                            )}
-
-                                            {/* Show Reject Reason if Rejected */}
-                                            {selectedClaim.status === 'REJECTED' && selectedClaim.adminMemo && (
-                                                <div className="mt-4 p-3 bg-red-50 rounded-md">
-                                                    <span className="block text-sm font-bold text-red-800 mb-1">반려 사유</span>
-                                                    <p className="text-sm text-red-700">{selectedClaim.adminMemo}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <span className="text-sm font-medium text-gray-500">신청자</span>
+                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.representativeName}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <span className="text-sm font-medium text-gray-500">사업자번호</span>
+                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.bizRegNo}</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <span className="text-sm font-medium text-gray-500">전화번호</span>
+                                <span className="text-sm text-gray-900 col-span-2">{selectedClaim.storePhone ? formatKoreanPhoneNumber(selectedClaim.storePhone) : '-'}</span>
+                            </div>
+                            {selectedClaim.licenseImageUrl && (
+                                <div className="mt-4">
+                                    <span className="block text-sm font-medium text-gray-500 mb-2">사업자등록증</span>
+                                    <img src={selectedClaim.licenseImageUrl} alt="Business License" className="max-w-full h-auto rounded border border-gray-200" />
                                 </div>
-                            </div>
+                            )}
 
-                            {/* Actions ONLY for PENDING status */}
-                            {currentTab === 'PENDING' && (
-                                <div className="flex-shrink-0 border-t border-gray-200 px-4 py-4 sm:px-6 bg-white">
-                                    {isRejecting ? (
-                                        <div className="bg-gray-50 p-4 rounded-md">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">반려 사유를 입력하세요</label>
-                                            <textarea
-                                                className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                                                rows={3}
-                                                value={rejectReason}
-                                                onChange={(e) => setRejectReason(e.target.value)}
-                                                placeholder="예: 사업자등록증 식별 불가"
-                                            />
-                                            <div className="mt-3 flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => setIsRejecting(false)}
-                                                    className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                                >
-                                                    취소
-                                                </button>
-                                                <button
-                                                    onClick={handleReject}
-                                                    className="px-3 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700"
-                                                >
-                                                    반려 확정
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-row-reverse gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={handleApprove}
-                                                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
-                                            >
-                                                <Check className="w-4 h-4 mr-2" />
-                                                승인
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsRejecting(true)}
-                                                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-red-700 hover:bg-red-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
-                                            >
-                                                <X className="w-4 h-4 mr-2" />
-                                                반려
-                                            </button>
-                                        </div>
-                                    )}
+                            {selectedClaim.status === 'REJECTED' && selectedClaim.adminMemo && (
+                                <div className="mt-4 p-3 bg-red-50 rounded-md">
+                                    <span className="block text-sm font-bold text-red-800 mb-1">반려 사유</span>
+                                    <p className="text-sm text-red-700">{selectedClaim.adminMemo}</p>
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
+
+                    {currentTab === 'PENDING' && (
+                        <div className="flex-shrink-0 p-6 border-t border-gray-100 bg-gray-50">
+                            {isRejecting ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">반려 사유를 입력하세요</label>
+                                    <textarea
+                                        className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                        rows={3}
+                                        value={rejectReason}
+                                        onChange={(e) => setRejectReason(e.target.value)}
+                                        placeholder="예: 사업자등록증 식별 불가"
+                                    />
+                                    <div className="mt-3 flex justify-end gap-2">
+                                        <button
+                                            onClick={() => setIsRejecting(false)}
+                                            className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={handleReject}
+                                            className="px-3 py-2 bg-red-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-red-700"
+                                        >
+                                            반려 확정
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-row-reverse gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleApprove}
+                                        className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                    >
+                                        <Check className="w-4 h-4 mr-2" />
+                                        승인
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsRejecting(true)}
+                                        className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-red-700 hover:bg-red-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm"
+                                    >
+                                        <X className="w-4 h-4 mr-2" />
+                                        반려
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </ModalWrapper>
             )}
         </div>
     );

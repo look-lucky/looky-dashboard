@@ -1,12 +1,17 @@
-import { X, Upload } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
+import type { UpdateEventRequest } from '../../shared/api/models/UpdateEventRequest';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { formatDateForInput } from '../../shared/utils/date';
+import { ImageDropZone } from '../../shared/components/ImageDropZone';
 
 interface EventModalProps {
     onClose: () => void;
@@ -47,12 +52,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [existingBannerUrl, setExistingBannerUrl] = useState<string | null>(null);
     const [originalBannerSrc, setOriginalBannerSrc] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
-    const bannerInputRef = useRef<HTMLInputElement>(null);
 
     const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
     const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (initialData) {
@@ -85,22 +88,11 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         fetchUniversities();
     }, [initialData]);
 
-    const formatDateForInput = (dateString: string) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toISOString().slice(0, 16);
-    };
-
-    const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const objectUrl = URL.createObjectURL(file);
+    const handleBannerFiles = (files: File[]) => {
+        if (files.length > 0) {
+            const objectUrl = URL.createObjectURL(files[0]);
             setOriginalBannerSrc(objectUrl);
             setShowCropper(true);
-        }
-        // clear input value so same file can trigger change again
-        if (e.target) {
-            e.target.value = '';
         }
     };
 
@@ -118,14 +110,10 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         setOriginalBannerSrc(null);
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
-            setNewImageFiles(prev => [...prev, ...newFiles]);
-
-            const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-            setPreviewUrls(prev => [...prev, ...newPreviews]);
-        }
+    const handleImageFiles = (files: File[]) => {
+        setNewImageFiles(prev => [...prev, ...files]);
+        const newPreviews = files.map(file => URL.createObjectURL(file));
+        setPreviewUrls(prev => [...prev, ...newPreviews]);
     };
 
     const handlePaste = (e: React.ClipboardEvent) => {
@@ -144,36 +132,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         }
     };
 
-    const handleBannerDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) {
-                const objectUrl = URL.createObjectURL(file);
-                setOriginalBannerSrc(objectUrl);
-                setShowCropper(true);
-            }
-        }
-    };
-
-    const handleImagesDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-            if (newFiles.length > 0) {
-                setNewImageFiles(prev => [...prev, ...newFiles]);
-                const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-                setPreviewUrls(prev => [...prev, ...newPreviews]);
-            }
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
 
     const toggleType = (type: EventType) => {
         if (selectedTypes.includes(type)) {
@@ -186,7 +144,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title || !description || !place || selectedTypes.length === 0 || !startDateTime || !endDateTime) {
-            alert('필수 정보를 모두 입력해주세요.');
+            toast.error('필수 정보를 모두 입력해주세요.');
             return;
         }
 
@@ -194,7 +152,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         const start = new Date(startDateTime);
         const end = new Date(endDateTime);
         if (end <= start) {
-            alert('종료 일시는 시작 일시보다 이후여야 합니다.');
+            toast.error('종료 일시는 시작 일시보다 이후여야 합니다.');
             return;
         }
 
@@ -224,9 +182,9 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
-                } as any;
+                } as unknown as UpdateEventRequest;
                 await AdminEventService.updateEvent(initialData.id, requestData);
-                alert('이벤트가 수정되었습니다.');
+                toast.success('이벤트가 수정되었습니다.');
             } else {
                 const requestData: CreateEventRequest = {
                     title,
@@ -243,31 +201,24 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
                 };
                 await AdminEventService.createEvent(requestData);
-                alert('이벤트가 등록되었습니다.');
+                toast.success('이벤트가 등록되었습니다.');
             }
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('처리 중 오류가 발생했습니다.');
+            toast.error('처리 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        <ModalWrapper
+            title={initialData ? '이벤트 수정' : '이벤트 등록'}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
             onPaste={handlePaste}
         >
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">
-                        {initialData ? '이벤트 수정' : '이벤트 등록'}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
                     <div>
@@ -416,7 +367,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                                 setBannerFile(null);
                                                 setExistingBannerUrl(null);
                                                 setBannerPreviewUrl(null);
-                                                if (bannerInputRef.current) bannerInputRef.current.value = '';
                                             }}
                                             className="absolute top-1 right-1 bg-white/80 rounded-full p-1 hover:bg-white text-gray-600"
                                         >
@@ -425,24 +375,9 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                     </div>
                                 )}
                                 {!bannerPreviewUrl && (
-                                    <div
-                                        onClick={() => bannerInputRef.current?.click()}
-                                        onDrop={handleBannerDrop}
-                                        onDragOver={handleDragOver}
-                                        className="cursor-pointer w-40 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
-                                    >
-                                        <Upload className="w-6 h-6 mb-1" />
-                                        <span className="text-xs">배너 추가</span>
-                                    </div>
+                                    <ImageDropZone onFiles={handleBannerFiles} label="배너 추가" />
                                 )}
                             </div>
-                            <input
-                                type="file"
-                                ref={bannerInputRef}
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleBannerChange}
-                            />
                         </div>
 
                         <div>
@@ -472,44 +407,24 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                         </button>
                                     </div>
                                 ))}
-                                <div
-                                    onClick={() => fileInputRef.current?.click()}
-                                    onDrop={handleImagesDrop}
-                                    onDragOver={handleDragOver}
-                                    className="cursor-pointer w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
-                                >
-                                    <Upload className="w-6 h-6 mb-1" />
-                                    <span className="text-xs">이미지 추가</span>
-                                </div>
+                                <ImageDropZone
+                                    onFiles={handleImageFiles}
+                                    label="이미지 추가"
+                                    className="w-20 h-20"
+                                    multiple
+                                />
                             </div>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                multiple
-                                accept="image/*"
-                                onChange={handleImageChange}
-                            />
                         </div>
                     </div>
                     <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
-                        >
-                            {loading ? '처리중...' : (initialData ? '수정하기' : '등록하기')}
-                        </button>
+                        <ModalFooter
+                            onClose={onClose}
+                            loading={loading}
+                            submitType="submit"
+                            submitText={initialData ? '수정하기' : '등록하기'}
+                        />
                     </div>
                 </form>
-            </div>
 
             {showCropper && originalBannerSrc && (
                 <ImageCropper
@@ -519,6 +434,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     onCancel={handleCropCancel}
                 />
             )}
-        </div>
+        </ModalWrapper>
     );
 }

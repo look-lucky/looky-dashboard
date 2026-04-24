@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { PartnershipList } from '../features/partnerships/PartnershipList';
 import { PartnershipUpload } from '../features/partnerships/PartnershipUpload';
 import { PartnershipCreateModal } from '../features/partnerships/PartnershipCreateModal';
@@ -48,7 +49,7 @@ export function PartnershipPage() {
 
     const handleCreateClick = () => {
         if (!selectedUniversityId) {
-            alert('대학을 먼저 선택해주세요.');
+            toast.error('대학을 먼저 선택해주세요.');
             return;
         }
         setShowCreateModal(true);

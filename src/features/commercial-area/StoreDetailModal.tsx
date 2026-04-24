@@ -1,0 +1,856 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
+import type { StoreResponse } from '../../shared/api/models/StoreResponse';
+import { X, Edit2, Trash2, Save, AlertTriangle, Upload } from 'lucide-react';
+import { AddressSearchModal } from '../../shared/components/AddressSearchModal';
+import { AddressSearchFields } from '../../shared/components/AddressSearchFields';
+import { AdminStoreService } from '../../shared/api/services/AdminStoreService';
+import { OperatingHoursEditor } from './OperatingHoursEditor';
+import { StoreMenuEditor, type MenuCategoryState, type MenuItemState } from './StoreMenuEditor';
+import { getMenuCategoryLocalId, getMenuItemLocalId, sortMenuItemsByOrder } from './storeMenuEditor.utils';
+import { AdminItemService } from '../../shared/api/services/AdminItemService';
+import type { CreateItemRequest } from '../../shared/api/models/CreateItemRequest';
+import type { StoreUpdateRequest as UpdateStoreRequest } from '../../shared/api/models/StoreUpdateRequest';
+import type { UpdateItemRequest } from '../../shared/api/models/UpdateItemRequest';
+import type { AddressSearchResultData, GeocodeResult } from '../../shared/types/address';
+import { formatKoreanPhoneNumber } from '../../shared/utils/phoneNumber';
+import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
+import { AdminItemCategoryService } from '../../shared/api/services/AdminItemCategoryService';
+import { ImageCropper } from '../../shared/components/ImageCropper';
+
+type StoreCategory = NonNullable<StoreResponse['storeCategories']>[number];
+
+const CATEGORY_MAP: Record<StoreCategory, string> = {
+    'BAR': '주점',
+    'CAFE': '카페',
+    'RESTAURANT': '식당',
+    'ENTERTAINMENT': '놀거리',
+    'BEAUTY_HEALTH': '뷰티•헬스',
+    'ETC': '기타'
+};
+
+const CATEGORY_KEYS = Object.keys(CATEGORY_MAP) as StoreCategory[];
+
+interface EditStoreForm {
+    name?: string;
+    branch?: string;
+    roadAddress?: string;
+    jibunAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    phone?: string;
+    introduction?: string;
+    operatingHours?: string;
+    storeCategories?: StoreCategory[];
+    profileImageUrl?: string;
+}
+
+interface PendingStoreImageCrop {
+    fileName: string;
+    fileType: string;
+    src: string;
+    aspectRatio: number;
+    type: 'profile' | 'normal';
+}
+
+interface StoreDetailModalProps {
+    store: StoreResponse;
+    onClose: () => void;
+    onSaved: () => void;
+}
+
+export function StoreDetailModal({ store: initialStore, onClose, onSaved }: StoreDetailModalProps) {
+    const [store, setStore] = useState<StoreResponse>(initialStore);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editForm, setEditForm] = useState<EditStoreForm>({});
+    const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+    // Menu Items State
+    const [menuItems, setMenuItems] = useState<MenuItemState[]>([]);
+    const [menuCategories, setMenuCategories] = useState<MenuCategoryState[]>([]);
+
+    // Images State
+    const [profileImage, setProfileImage] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+    const profileFileInputRef = useRef<HTMLInputElement>(null);
+
+    const [images, setImages] = useState<File[]>([]);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+    const [cropQueue, setCropQueue] = useState<PendingStoreImageCrop[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Address Search State
+    const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+
+    // Load detailed store data on mount
+    useEffect(() => {
+        const loadDetail = async () => {
+            try {
+                const detailedStore = await AdminStoreService.getStore1(initialStore.id!);
+                setStore(detailedStore.data || initialStore);
+
+                const [itemsResult, categoriesResult] = await Promise.allSettled([
+                    AdminItemService.getItems2(initialStore.id!),
+                    AdminItemCategoryService.getItemCategories2(initialStore.id!),
+                ]);
+
+                const loadedCategories: MenuCategoryState[] = [];
+
+                if (categoriesResult.status === 'fulfilled' && categoriesResult.value.data) {
+                    loadedCategories.push(
+                        ...categoriesResult.value.data.map((category) => ({
+                            id: category.id,
+                            localId: getMenuCategoryLocalId(category.id!),
+                            name: category.name || '',
+                        })),
+                    );
+                } else if (categoriesResult.status === 'rejected') {
+                    console.error('Failed to load menu categories', categoriesResult.reason);
+                }
+
+                if (itemsResult.status === 'fulfilled' && itemsResult.value.data) {
+                    const categoryIds = new Set(loadedCategories.map((category) => category.id));
+
+                    const loadedItems = sortMenuItemsByOrder(itemsResult.value.data.map((item) => {
+                        if (item.categoryId && !categoryIds.has(item.categoryId)) {
+                            loadedCategories.push({
+                                id: item.categoryId,
+                                localId: getMenuCategoryLocalId(item.categoryId),
+                                name: item.categoryName || `카테고리 ${item.categoryId}`,
+                            });
+                            categoryIds.add(item.categoryId);
+                        }
+
+                        return {
+                            localId: item.id ? getMenuItemLocalId(item.id) : `legacy-item-${item.name ?? 'menu'}`,
+                            id: item.id,
+                            name: item.name || '',
+                            price: item.price,
+                            description: item.description,
+                            badge: item.badge as MenuItemState['badge'],
+                            categoryLocalId: item.categoryId ? getMenuCategoryLocalId(item.categoryId) : undefined,
+                            itemOrder: item.itemOrder,
+                            imageUrl: item.imageUrl,
+                        };
+                    }));
+
+                    setMenuItems(loadedItems);
+                } else if (itemsResult.status === 'rejected') {
+                    console.error('Failed to load menus', itemsResult.reason);
+                }
+
+                setMenuCategories(loadedCategories);
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        void loadDetail();
+    }, [initialStore]);
+
+    const handleClose = () => {
+        cropQueue.forEach(({ src }) => URL.revokeObjectURL(src));
+        onClose();
+    };
+
+    const handleAddressComplete = async (data: AddressSearchResultData) => {
+        const roadAddr = data.roadAddress;
+        const jibunAddr = data.jibunAddress;
+
+        try {
+            const response = await AdminStoreService.getGeocode(roadAddr);
+            const coords = (response.data ?? (response as unknown as GeocodeResult)) as GeocodeResult;
+            setEditForm((prev) => ({
+                ...prev,
+                roadAddress: roadAddr,
+                jibunAddress: jibunAddr || coords.jibunAddress || prev.jibunAddress,
+                latitude: coords.latitude ?? prev.latitude,
+                longitude: coords.longitude ?? prev.longitude,
+            }));
+        } catch (error) {
+            console.error('Geocoding failed:', error);
+            setEditForm((prev) => ({
+                ...prev,
+                roadAddress: roadAddr,
+                jibunAddress: jibunAddr || prev.jibunAddress,
+            }));
+        }
+    };
+
+    const handleEditClick = () => {
+        setEditForm({
+            name: store.name,
+            branch: store.branch || '',
+            roadAddress: store.roadAddress,
+            jibunAddress: store.jibunAddress,
+            phone: formatKoreanPhoneNumber(store.phone || ''),
+            introduction: store.introduction || '',
+            storeCategories: store.storeCategories || [],
+            latitude: store.latitude,
+            longitude: store.longitude,
+            operatingHours: store.operatingHours || '',
+            profileImageUrl: store.profileImageUrl
+        });
+
+        setProfileImage(null);
+        setProfileImagePreview(store.profileImageUrl || null);
+
+        const existingImages = store.imageUrls || [];
+        setImagePreviews(existingImages);
+        setImages([]);
+
+        setIsEditMode(true);
+    };
+
+    const handleSave = async (e?: React.FormEvent<HTMLFormElement>) => {
+        e?.preventDefault();
+        if (!store.id || !editForm) return;
+
+        const invalidMenuCategory = menuCategories.find((category) => !category.isDeleted && category.name.trim() === '');
+        if (invalidMenuCategory) {
+            toast.error('메뉴 카테고리 이름을 입력하거나 삭제해주세요.');
+            return;
+        }
+
+        try {
+            let uploadedProfileImageUrl: string | undefined = editForm.profileImageUrl;
+            if (profileImage) {
+                uploadedProfileImageUrl = await uploadImage(profileImage);
+            } else if (profileImagePreview && !profileImagePreview.startsWith('blob:')) {
+                uploadedProfileImageUrl = profileImagePreview;
+            } else if (!profileImagePreview) {
+                uploadedProfileImageUrl = undefined;
+            }
+
+            const existingUrls = imagePreviews.filter(url => !url.startsWith('blob:'));
+            const newImageUrls = images.length > 0 ? await uploadImages(images) : [];
+            const allImageUrls = [...existingUrls, ...newImageUrls];
+
+            const requestData = {
+                ...editForm,
+                profileImageUrl: uploadedProfileImageUrl ?? allImageUrls[0],
+                imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+            };
+            if (typeof requestData.latitude !== 'number' || isNaN(requestData.latitude)) requestData.latitude = undefined;
+            if (typeof requestData.longitude !== 'number' || isNaN(requestData.longitude)) requestData.longitude = undefined;
+
+            await AdminStoreService.updateStore2(store.id, requestData as unknown as UpdateStoreRequest);
+
+            let failureCount = 0;
+            const categoryIdMap = new Map<string, number>();
+
+            for (const category of menuCategories) {
+                if (!category.isDeleted && category.id) {
+                    categoryIdMap.set(category.localId, category.id);
+                }
+            }
+
+            const deleteItemResults = await Promise.allSettled(
+                menuItems
+                    .filter((item) => item.isDeleted && item.id)
+                    .map((item) => AdminItemService.deleteItem2(item.id!)),
+            );
+            failureCount += deleteItemResults.filter((result) => result.status === 'rejected').length;
+
+            const categoryUpsertResults = await Promise.allSettled(
+                menuCategories
+                    .filter((category) => !category.isDeleted)
+                    .map(async (category) => {
+                        const trimmedName = category.name.trim();
+
+                        if (category.id) {
+                            await AdminItemCategoryService.updateItemCategory2(store.id!, category.id, { name: trimmedName });
+                            return;
+                        }
+
+                        const createdCategory = await AdminItemCategoryService.createItemCategory2(store.id!, { name: trimmedName });
+                        if (typeof createdCategory.data !== 'number') {
+                            throw new Error('Category ID was not returned from createItemCategory.');
+                        }
+
+                        categoryIdMap.set(category.localId, createdCategory.data);
+                    }),
+            );
+            failureCount += categoryUpsertResults.filter((result) => result.status === 'rejected').length;
+
+            const itemResults = await Promise.allSettled(
+                menuItems.map(async (item) => {
+                    if (item.isDeleted) return;
+
+                    const trimmedName = item.name.trim();
+                    if (!item.id && trimmedName === '') return;
+
+                    const categoryId = item.categoryLocalId
+                        ? categoryIdMap.get(item.categoryLocalId)
+                        : undefined;
+
+                    if (item.categoryLocalId && !categoryId) {
+                        throw new Error(`Failed to resolve category for item "${item.name}".`);
+                    }
+
+                    if (item.id) {
+                        let imageUrl: string | undefined = item.imageUrl;
+                        if (item.imageFile) {
+                            imageUrl = await uploadImage(item.imageFile);
+                        }
+
+                        const updateReq = {
+                            name: item.name,
+                            price: item.price,
+                            description: item.description,
+                            badge: item.badge,
+                            itemOrder: item.itemOrder,
+                            itemCategoryId: categoryId ?? null,
+                            imageUrl,
+                        } as unknown as UpdateItemRequest;
+
+                        return AdminItemService.updateItem2(item.id, updateReq);
+                    }
+
+                    let imageUrl: string | undefined;
+                    if (item.imageFile) {
+                        imageUrl = await uploadImage(item.imageFile);
+                    }
+
+                    const createReq: CreateItemRequest = {
+                        name: item.name,
+                        price: item.price,
+                        description: item.description,
+                        badge: item.badge as CreateItemRequest.badge | undefined,
+                        itemOrder: item.itemOrder,
+                        itemCategoryId: categoryId,
+                        imageUrl,
+                    };
+                    return AdminItemService.createItem2(store.id!, createReq);
+                }),
+            );
+            failureCount += itemResults.filter((result) => result.status === 'rejected').length;
+
+            const deleteCategoryResults = await Promise.allSettled(
+                menuCategories
+                    .filter((category) => category.isDeleted && category.id)
+                    .map((category) => AdminItemCategoryService.deleteItemCategory2(store.id!, category.id!)),
+            );
+            failureCount += deleteCategoryResults.filter((result) => result.status === 'rejected').length;
+
+            if (failureCount > 0) {
+                console.error('Menu/category save failures', {
+                    deleteItemResults,
+                    categoryUpsertResults,
+                    itemResults,
+                    deleteCategoryResults,
+                });
+                toast.error(`상점 정보는 수정되었으나, 메뉴/카테고리 ${failureCount}건 처리에 실패했습니다.`);
+            } else {
+                toast.success('상점 정보가 수정되었습니다.');
+            }
+
+            handleClose();
+            onSaved();
+        } catch (e) {
+            console.error(e);
+            toast.error('수정에 실패했습니다.');
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!store.id) return;
+        try {
+            await AdminStoreService.deleteStore2(store.id);
+            toast.success('상점이 삭제되었습니다.');
+            handleClose();
+            onSaved();
+        } catch (e) {
+            console.error(e);
+            toast.error('삭제에 실패했습니다. (본인 소유 상점이 아닐 수 있습니다)');
+        }
+    };
+
+    const handleInputChange = (
+        field: keyof EditStoreForm,
+        value: string | number | undefined | StoreCategory[]
+    ) => {
+        setEditForm((prev) => {
+            if (field === 'latitude' || field === 'longitude') {
+                const numericValue = String(value ?? '');
+                if (numericValue === '') return { ...prev, [field]: undefined };
+                const num = Number(numericValue);
+                return { ...prev, [field]: Number.isNaN(num) ? undefined : num };
+            }
+
+            if (field === 'phone') {
+                return { ...prev, phone: formatKoreanPhoneNumber(String(value ?? '')) };
+            }
+
+            return { ...prev, [field]: value };
+        });
+    };
+
+    const currentCrop = cropQueue[0] ?? null;
+
+    const enqueueImageCrops = useCallback((files: File[], type: 'profile' | 'normal') => {
+        const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+        if (imageFiles.length === 0) return;
+
+        setCropQueue((prev) => [
+            ...prev,
+            ...imageFiles.map((file) => ({
+                fileName: file.name,
+                fileType: file.type,
+                src: URL.createObjectURL(file),
+                aspectRatio: type === 'profile' ? 1 : 4 / 3,
+                type,
+            })),
+        ]);
+    }, []);
+
+    const closeCurrentCrop = () => {
+        if (!currentCrop) return;
+        URL.revokeObjectURL(currentCrop.src);
+        setCropQueue((prev) => prev.slice(1));
+    };
+
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            enqueueImageCrops([e.target.files[0]], 'profile');
+        }
+        if (e.target) e.target.value = '';
+    };
+
+    const handleNormalImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            enqueueImageCrops(Array.from(e.target.files), 'normal');
+        }
+        if (e.target) e.target.value = '';
+    };
+
+    const removeProfileImage = () => {
+        setProfileImage(null);
+        if (profileImagePreview) {
+            URL.revokeObjectURL(profileImagePreview);
+            setProfileImagePreview(null);
+        }
+    };
+
+    const removeImage = (index: number) => {
+        const existingCount = imagePreviews.length - images.length;
+
+        setImagePreviews(prev => {
+            const newPreviews = [...prev];
+            if (index >= existingCount) {
+                URL.revokeObjectURL(newPreviews[index]);
+            }
+            newPreviews.splice(index, 1);
+            return newPreviews;
+        });
+
+        if (index >= existingCount) {
+            setImages(prev => {
+                const newFiles = [...prev];
+                newFiles.splice(index - existingCount, 1);
+                return newFiles;
+            });
+        }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        if (!isEditMode) return;
+        if (!e.clipboardData?.files.length) return;
+        const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
+        if (pastedFiles.length > 0) {
+            enqueueImageCrops(pastedFiles, 'normal');
+        }
+    };
+
+    const handleProfileImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isEditMode) return;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) enqueueImageCrops([newFiles[0]], 'profile');
+        }
+    };
+
+    const handleNormalImagesDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isEditMode) return;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            if (newFiles.length > 0) enqueueImageCrops(newFiles, 'normal');
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleCropComplete = (croppedImageUrl: string, blob: Blob) => {
+        if (!currentCrop) return;
+
+        const croppedFile = new File([blob], currentCrop.fileName, {
+            type: blob.type || currentCrop.fileType || 'image/jpeg',
+        });
+
+        if (currentCrop.type === 'profile') {
+            setProfileImage(croppedFile);
+            setProfileImagePreview(croppedImageUrl);
+        } else {
+            setImages((prev) => [...prev, croppedFile]);
+            setImagePreviews((prev) => [...prev, croppedImageUrl]);
+        }
+        closeCurrentCrop();
+    };
+
+    const handleCategoryToggle = (category: StoreCategory) => {
+        setEditForm((prev) => {
+            const currentCategories = prev.storeCategories || [];
+            if (currentCategories.includes(category)) {
+                return { ...prev, storeCategories: currentCategories.filter((c) => c !== category) };
+            }
+            return { ...prev, storeCategories: [...currentCategories, category] };
+        });
+    };
+
+    return (
+        <>
+            <div
+                className="fixed inset-0 z-50 p-4"
+                aria-labelledby="modal-title"
+                role="dialog"
+                aria-modal="true"
+                onPaste={handlePaste}
+            >
+                <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={handleClose}></div>
+                <div className="relative flex min-h-full items-center justify-center">
+                    <div className={`relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-white text-left shadow-xl ${isEditMode ? 'max-w-4xl' : 'max-w-lg'}`}>
+                        <div className="flex items-center justify-between border-b border-gray-200 p-6">
+                            <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                {isEditMode ? '상점 정보 수정' : store.name}
+                            </h3>
+                            <button type="button" onClick={handleClose} className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none">
+                                <span className="sr-only">Close</span>
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="w-full">
+                                <div className="border-t border-gray-200 pt-4">
+                                    {deleteConfirm ? (
+                                        <div className="text-center p-4 bg-red-50 rounded-lg">
+                                            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+                                            <h4 className="text-red-700 font-bold text-lg mb-2">정말 삭제하시겠습니까?</h4>
+                                            <p className="text-red-600 mb-4">
+                                                상점이 **완전히 삭제**되며, 이 작업은 되돌릴 수 없습니다.<br />
+                                                리뷰, 소식 등 모든 관련 데이터가 함께 사라질 수 있습니다.
+                                            </p>
+                                            <div className="flex justify-center gap-3">
+                                                <button onClick={() => setDeleteConfirm(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">취소</button>
+                                                <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">확인 (삭제)</button>
+                                            </div>
+                                        </div>
+                                    ) : isEditMode ? (
+                                        <form id="store-edit-form" onSubmit={handleSave}>
+                                            <div className="flex flex-col md:flex-row gap-6 text-left">
+                                                {/* Section 1: Basic Info */}
+                                                <div className="flex-1 space-y-4">
+                                                    <h4 className="text-sm font-semibold text-gray-900 border-b pb-2">섹션 1: 기본 정보</h4>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">상점명</label>
+                                                        <input type="text" value={editForm.name || ''} onChange={e => handleInputChange('name', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">지점명</label>
+                                                        <input type="text" value={editForm.branch || ''} onChange={e => handleInputChange('branch', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="예: 본점, 강남점" />
+                                                    </div>
+                                                    <AddressSearchFields
+                                                        label="매장 주소"
+                                                        placeholder="클릭해서 매장 주소를 검색하세요"
+                                                        roadAddress={editForm.roadAddress}
+                                                        jibunAddress={editForm.jibunAddress}
+                                                        onOpen={() => setIsAddressModalOpen(true)}
+                                                    />
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">위도</label>
+                                                            <input
+                                                                type="text"
+                                                                value={editForm.latitude ?? ''}
+                                                                onChange={e => handleInputChange('latitude', e.target.value)}
+                                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-sm font-medium text-gray-700">경도</label>
+                                                            <input
+                                                                type="text"
+                                                                value={editForm.longitude ?? ''}
+                                                                onChange={e => handleInputChange('longitude', e.target.value)}
+                                                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Divider */}
+                                                <div className="hidden md:block w-px bg-gray-200" />
+
+                                                {/* Section 2: Additional Info */}
+                                                <div className="flex-1 space-y-4">
+                                                    <h4 className="text-sm font-semibold text-gray-900 border-b pb-2">섹션 2: 추가 정보</h4>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">카테고리 (중복 선택 가능)</label>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            {CATEGORY_KEYS.map((key) => (
+                                                                <div key={key} className="flex items-center">
+                                                                    <input
+                                                                        id={`category-${key}`}
+                                                                        name="storeCategories"
+                                                                        type="checkbox"
+                                                                        checked={editForm.storeCategories?.includes(key)}
+                                                                        onChange={() => handleCategoryToggle(key)}
+                                                                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`category-${key}`} className="ml-2 block text-sm text-gray-900">
+                                                                        {CATEGORY_MAP[key]}
+                                                                    </label>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">전화번호</label>
+                                                        <input type="tel" value={editForm.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} inputMode="numeric" autoComplete="tel-national" maxLength={14} placeholder="010-1234-5678" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">영업 시간</label>
+                                                        <OperatingHoursEditor
+                                                            value={editForm.operatingHours || ''}
+                                                            onChange={val => handleInputChange('operatingHours', val)}
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700">소개</label>
+                                                        <textarea value={editForm.introduction || ''} onChange={e => handleInputChange('introduction', e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-none" rows={2} />
+                                                    </div>
+
+                                                    {/* Images Upload */}
+                                                    <div>
+                                                        <div className="mb-6">
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <label className="block text-sm font-medium text-gray-700">가게 프로필 이미지</label>
+                                                                <span className="text-xs text-gray-500">1:1 비율로 크롭됩니다.</span>
+                                                            </div>
+
+                                                            {!profileImagePreview ? (
+                                                                <div
+                                                                    onClick={() => profileFileInputRef.current?.click()}
+                                                                    onDrop={handleProfileImagesDrop}
+                                                                    onDragOver={handleDragOver}
+                                                                    className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors flex flex-col items-center justify-center aspect-square w-24"
+                                                                >
+                                                                    <Upload className="h-5 w-5 text-gray-400 mb-1" />
+                                                                    <p className="text-[10px] text-gray-600">클릭 또는 드래그</p>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="relative aspect-square w-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                                    <img src={profileImagePreview} alt="profile preview" className="w-full h-full object-cover" />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => { e.stopPropagation(); removeProfileImage(); }}
+                                                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                className="hidden"
+                                                                ref={profileFileInputRef}
+                                                                onChange={handleProfileImageChange}
+                                                            />
+                                                        </div>
+
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <label className="block text-sm font-medium text-gray-700">상점 이미지</label>
+                                                            <span className="text-xs text-gray-500">첫 번째 이미지가 배너가 되며, 4:3 비율로 크롭됩니다.</span>
+                                                        </div>
+
+                                                        <div
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            onDrop={handleNormalImagesDrop}
+                                                            onDragOver={handleDragOver}
+                                                            className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                                                        >
+                                                            <Upload className="mx-auto h-5 w-5 text-gray-400 mb-1" />
+                                                            <p className="text-xs text-gray-600">클릭하거나 일반 이미지를 드래그 앤 드롭해서 업로드하세요</p>
+                                                        </div>
+                                                        <input
+                                                            type="file"
+                                                            multiple
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            ref={fileInputRef}
+                                                            onChange={handleNormalImageChange}
+                                                        />
+
+                                                        {imagePreviews.length > 0 && (
+                                                            <div className="mt-3 grid grid-cols-4 gap-2">
+                                                                {imagePreviews.map((preview, idx) => (
+                                                                    <div key={idx} className="relative aspect-[4/3] rounded-md overflow-hidden bg-gray-100 border border-gray-200 group">
+                                                                        <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                                                                        <div className="absolute top-1 left-1">
+                                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${idx === 0 ? 'bg-indigo-600' : 'bg-gray-600/80'}`}>
+                                                                                {idx === 0 ? '배너' : '일반'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
+                                                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                        >
+                                                                            <X className="w-3 h-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Section 3: Menu Info */}
+                                            <div className="flex-col w-full text-left border-t border-gray-200 mt-6 pt-6 gap-6 text-left">
+                                                <div className="flex-1 space-y-4">
+                                                    <div className="flex justify-between items-center border-b pb-2">
+                                                        <h4 className="text-sm font-semibold text-gray-900">섹션 3: 메뉴 정보</h4>
+                                                        <span className="text-xs text-gray-500">선택 사항</span>
+                                                    </div>
+                                                    <StoreMenuEditor
+                                                        items={menuItems}
+                                                        onChange={setMenuItems}
+                                                        categories={menuCategories}
+                                                        onCategoriesChange={setMenuCategories}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </form>
+                                    ) : (
+                                        <dl className="space-y-4">
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <dt className="text-sm font-medium text-gray-500">ID</dt>
+                                                <dd className="text-sm text-gray-900 col-span-2">{store.id}</dd>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <dt className="text-sm font-medium text-gray-500">상점명</dt>
+                                                <dd className="text-sm text-gray-900 col-span-2">
+                                                    <div>{store.name}</div>
+                                                    {store.branch && <div className="text-gray-500 text-xs mt-0.5">{store.branch}</div>}
+                                                </dd>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <dt className="text-sm font-medium text-gray-500">카테고리</dt>
+                                                <dd className="text-sm text-gray-900 col-span-2">
+                                                    {store.storeCategories?.map(c => CATEGORY_MAP[c] || c).join(', ') || '-'}
+                                                </dd>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <dt className="text-sm font-medium text-gray-500">주소</dt>
+                                                <dd className="text-sm text-gray-900 col-span-2">
+                                                    {store.roadAddress}<br />
+                                                    <span className="text-gray-400 text-xs">{store.jibunAddress}</span>
+                                                </dd>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <dt className="text-sm font-medium text-gray-500">전화번호</dt>
+                                                <dd className="text-sm text-gray-900 col-span-2">{store.phone ? formatKoreanPhoneNumber(store.phone) : '-'}</dd>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <dt className="text-sm font-medium text-gray-500">소개</dt>
+                                                <dd className="text-sm text-gray-900 col-span-2">{store.introduction || '-'}</dd>
+                                            </div>
+                                        </dl>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        {!deleteConfirm && (
+                            <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50 p-6 sm:flex-row-reverse">
+                                {isEditMode ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleSave()}
+                                            className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                        >
+                                            <Save className="w-4 h-4 mr-2" />
+                                            저장
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditMode(false)}
+                                            className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm"
+                                        >
+                                            취소
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={handleEditClick}
+                                            className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-indigo-700 shadow-sm hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                        >
+                                            <Edit2 className="w-4 h-4 mr-2" />
+                                            수정
+                                        </button>
+                                        {store.storeStatus === 'ACTIVE' ? (
+                                            <div className="w-full text-sm text-gray-500 sm:mr-auto sm:w-auto">
+                                                * 입점된 상점은 삭제할 수 없습니다.
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => setDeleteConfirm(true)}
+                                                className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                삭제
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            <AddressSearchModal
+                isOpen={isAddressModalOpen}
+                onClose={() => setIsAddressModalOpen(false)}
+                onComplete={handleAddressComplete}
+            />
+
+            {currentCrop && (
+                <ImageCropper
+                    imageSrc={currentCrop.src}
+                    aspectRatio={currentCrop.aspectRatio}
+                    onCropComplete={handleCropComplete}
+                    onCancel={() => closeCurrentCrop()}
+                />
+            )}
+        </>
+    );
+}

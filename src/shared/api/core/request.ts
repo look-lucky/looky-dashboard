@@ -79,6 +79,13 @@ export const getQueryString = (params: Record<string, any>): string => {
     };
 
     Object.entries(params).forEach(([key, value]) => {
+        if (key === 'pageable' && isDefined(value) && typeof value === 'object' && !Array.isArray(value)) {
+            Object.entries(value).forEach(([pageableKey, pageableValue]) => {
+                process(pageableKey, pageableValue);
+            });
+            return;
+        }
+
         process(key, value);
     });
 

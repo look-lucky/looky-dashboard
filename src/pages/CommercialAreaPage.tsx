@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { CommercialAreaUpload } from '../features/commercial-area/CommercialAreaUpload';
 import { StoreManualRegistrationModal } from '../features/commercial-area/StoreManualRegistrationModal';
 import { StoreList } from '../features/commercial-area/StoreList';
@@ -11,7 +12,7 @@ export function CommercialAreaPage() {
     const [showManualModal, setShowManualModal] = useState(false);
 
     const handleUploadSuccess = () => {
-        alert('업로드가 성공적으로 완료되었습니다.');
+        toast.success('업로드가 성공적으로 완료되었습니다.');
     };
 
     if (!selectedUniversityId) {

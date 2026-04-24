@@ -1,9 +1,14 @@
-import { Edit2, Trash2, Calendar, MapPin, Tag, Search } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { Edit2, Trash2, Calendar, MapPin, Tag } from 'lucide-react';
+import { toast } from 'sonner';
+import { useState, useCallback } from 'react';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 
 import { useUniversity } from '../../shared/contexts/UniversityContext';
+import { Pagination } from '../../shared/components/Pagination';
+import { SearchInput } from '../../shared/components/SearchInput';
+import { useDebounce } from '../../shared/hooks/useDebounce';
+import { usePaginatedQuery } from '../../shared/hooks/usePaginatedQuery';
 
 interface EventListProps {
     refreshTrigger: number;
@@ -12,39 +17,21 @@ interface EventListProps {
 
 export function EventList({ refreshTrigger, onEdit }: EventListProps) {
     const { selectedUniversityId } = useUniversity();
-    const [events, setEvents] = useState<AdminEventResponse[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
+    const debouncedSearchTerm = useDebounce(searchTerm);
 
-    const filteredEvents = events.filter(event =>
-        event.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    const fetchEvents = useCallback(
+        (page: number, size: number) =>
+            AdminEventService.getEvents({ page, size }, debouncedSearchTerm || undefined, undefined, undefined, selectedUniversityId!),
+        [debouncedSearchTerm, selectedUniversityId],
     );
 
-    const fetchEvents = useCallback(async () => {
-        if (!selectedUniversityId) return;
-        setLoading(true);
-        try {
-            const response = await AdminEventService.getEvents({ page, size: 10 }, undefined, undefined, undefined, selectedUniversityId);
-            if (response.data) {
-                setEvents(response.data.content || []);
-                setTotalPages(response.data.totalPages || 0);
-            }
-        } catch (error) {
-            console.error('Failed to fetch events', error);
-            setEvents([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [page, selectedUniversityId]);
-
-    useEffect(() => {
-        if (selectedUniversityId) {
-            void fetchEvents();
-        }
-    }, [refreshTrigger, selectedUniversityId, fetchEvents]);
+    const { items: events, loading, page, setPage, totalPages, totalElements, pageSize, refetch } = usePaginatedQuery<AdminEventResponse>({
+        fetchFn: fetchEvents,
+        enabled: !!selectedUniversityId,
+        refreshTrigger,
+        resetDeps: [debouncedSearchTerm, selectedUniversityId],
+    });
 
     const handleDelete = async (id: number) => {
         if (!confirm('정말 삭제하시겠습니까?')) return;
@@ -52,10 +39,10 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         try {
             await AdminEventService.deleteEvent(id);
             // Refresh list
-            void fetchEvents();
+            void refetch();
         } catch (error) {
             console.error(error);
-            alert('이벤트 삭제에 실패했습니다.');
+            toast.error('이벤트 삭제에 실패했습니다.');
         }
     };
 
@@ -69,16 +56,11 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
 
     return (
         <div className="space-y-4">
-            <div className="relative">
-                <input
-                    type="text"
-                    placeholder="이벤트 제목 또는 설명 검색..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                />
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-            </div>
+            <SearchInput
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="이벤트 제목 또는 설명 검색..."
+            />
 
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -92,7 +74,7 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredEvents.map((event) => (
+                        {events.map((event) => (
                             <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     {event.imageUrls && event.imageUrls.length > 0 ? (
@@ -155,28 +137,14 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                 </table>
             </div>
 
-            {/* Simple Pagination */}
-            {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                    <button
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        이전
-                    </button>
-                    <span className="px-3 py-1">
-                        {page + 1} / {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={page === totalPages - 1}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        다음
-                    </button>
-                </div>
-            )}
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalElements={totalElements}
+                onPageChange={setPage}
+            />
+
         </div>
     );
 }

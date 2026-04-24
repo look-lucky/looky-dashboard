@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Plus, School } from 'lucide-react';
 import { OrganizationList } from '../features/organizations/OrganizationList';
 import { OrganizationModal } from '../features/organizations/OrganizationModal';
@@ -37,7 +38,7 @@ export function OrganizationPage() {
 
     const handleCreate = () => {
         if (!selectedUniversityId) {
-            alert('대학을 먼저 선택해주세요.');
+            toast.error('대학을 먼저 선택해주세요.');
             return;
         }
         setSelectedOrg(null);

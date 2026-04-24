@@ -1,7 +1,10 @@
-import { X, Upload } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
+import type { UpdateAdvertisementRequest } from '../../shared/api/models/UpdateAdvertisementRequest';
+import type { CreateAdvertisementRequest } from '../../shared/api/models/CreateAdvertisementRequest';
 import type { TargetUniversityInfo } from '../../shared/api/models/TargetUniversityInfo';
 import type { TargetOrganizationInfo } from '../../shared/api/models/TargetOrganizationInfo';
 
@@ -14,6 +17,9 @@ import type { UniversityResponse } from '../../shared/api/models/UniversityRespo
 import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { uploadImage } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
+import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
+import { formatDateForInput } from '../../shared/utils/date';
+import { ImageDropZone } from '../../shared/components/ImageDropZone';
 
 interface AdvertisementModalProps {
     onClose: () => void;
@@ -56,7 +62,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
     const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
     const [originalImageSrc, setOriginalImageSrc] = useState<string | null>(null);
     const [showCropper, setShowCropper] = useState(false);
-    const imageInputRef = useRef<HTMLInputElement>(null);
 
     // 이미 fetch 요청을 보낸 대학 ID 추적 (중복 요청 방지)
     const fetchedUnivIds = useRef<Set<number>>(new Set());
@@ -127,11 +132,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
         setTargetOrganizationIds((prev) => syncOrganizationTargets(prev, organizationsByUniv, targetUniversityIds));
     }, [organizationsByUniv, targetUniversityIds]);
 
-    const formatDateForInput = (dateString: string) => {
-        if (!dateString) return '';
-        return new Date(dateString).toISOString().slice(0, 16);
-    };
-
     useEffect(() => {
         if (initialData) {
             setTitle(initialData.title || '');
@@ -148,15 +148,11 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
         }
     }, [initialData]);
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const objectUrl = URL.createObjectURL(file);
+    const handleImageFiles = (files: File[]) => {
+        if (files.length > 0) {
+            const objectUrl = URL.createObjectURL(files[0]);
             setOriginalImageSrc(objectUrl);
             setShowCropper(true);
-        }
-        if (e.target) {
-            e.target.value = '';
         }
     };
 
@@ -174,24 +170,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
         setOriginalImageSrc(null);
     };
 
-    const handleImageDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) {
-                const objectUrl = URL.createObjectURL(file);
-                setOriginalImageSrc(objectUrl);
-                setShowCropper(true);
-            }
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
     const handlePaste = (e: React.ClipboardEvent) => {
         if (!e.clipboardData?.files.length) return;
         const pastedFiles = Array.from(e.clipboardData.files).filter(f => f.type.startsWith('image/'));
@@ -205,19 +183,19 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
         e.preventDefault();
 
         if (!title || !startAt || !endAt) {
-            alert('필수 정보를 모두 입력해주세요.');
+            toast.error('필수 정보를 모두 입력해주세요.');
             return;
         }
 
         if (!imageFile && !existingImageUrl) {
-            alert('이미지를 등록해주세요.');
+            toast.error('이미지를 등록해주세요.');
             return;
         }
 
         const start = new Date(startAt);
         const end = new Date(endAt);
         if (end <= start) {
-            alert('종료 일시는 시작 일시보다 이후여야 합니다.');
+            toast.error('종료 일시는 시작 일시보다 이후여야 합니다.');
             return;
         }
 
@@ -248,9 +226,9 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     ...(univChanged ? { targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null } : {}),
                     ...(orgChanged ? { targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null } : {}),
                     targetGender,
-                } as any; // Bypass JsonNullable OpenApi generator bug
+                } as unknown as UpdateAdvertisementRequest;
                 await AdminAdvertisementService.updateAdvertisement(initialData.id, requestData);
-                alert('광고가 수정되었습니다.');
+                toast.success('광고가 수정되었습니다.');
             } else {
                 const requestData = {
                     title,
@@ -263,34 +241,26 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
                     targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                     targetGender,
-                } as any;
+                } as unknown as CreateAdvertisementRequest;
                 await AdminAdvertisementService.createAdvertisement(requestData);
-                alert('광고가 등록되었습니다.');
+                toast.success('광고가 등록되었습니다.');
             }
             onSuccess();
         } catch (error) {
             console.error(error);
-            alert('처리 중 오류가 발생했습니다.');
+            toast.error('처리 중 오류가 발생했습니다.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+        <ModalWrapper
+            title={initialData ? '광고 수정' : '광고 등록'}
+            onClose={onClose}
+            maxWidth="max-w-2xl"
             onPaste={handlePaste}
         >
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-gray-900">
-                        {initialData ? '광고 수정' : '광고 등록'}
-                    </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors bg-gray-100/50 p-2 rounded-full hover:bg-gray-100">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
                     {/* 제목 */}
                     <div>
@@ -388,7 +358,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                             setImageFile(null);
                                             setExistingImageUrl(null);
                                             setImagePreviewUrl(null);
-                                            if (imageInputRef.current) imageInputRef.current.value = '';
                                         }}
                                         className="absolute top-1 right-1 bg-white/80 rounded-full p-1 hover:bg-white text-gray-600"
                                     >
@@ -396,25 +365,13 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                                     </button>
                                 </div>
                             ) : (
-                                <div
-                                    onClick={() => imageInputRef.current?.click()}
-                                    onDrop={handleImageDrop}
-                                    onDragOver={handleDragOver}
-                                    className="cursor-pointer w-40 h-20 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-400 hover:text-blue-500"
-                                >
-                                    <Upload className="w-6 h-6 mb-1" />
-                                    <span className="text-xs">이미지 추가</span>
-                                    <span className="text-xs text-gray-300 mt-0.5">JPG, PNG, WebP</span>
-                                </div>
+                                <ImageDropZone
+                                    onFiles={handleImageFiles}
+                                    accept="image/jpeg,image/png,image/webp"
+                                    hint="JPG, PNG, WebP"
+                                />
                             )}
                         </div>
-                        <input
-                            type="file"
-                            ref={imageInputRef}
-                            className="hidden"
-                            accept="image/jpeg,image/png,image/webp"
-                            onChange={handleImageChange}
-                        />
                     </div>
 
                     {/* 랜딩 URL */}
@@ -653,23 +610,14 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     </div>
 
                     <div className="pt-4 flex justify-end gap-3 border-t border-gray-100 mt-6">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-                        >
-                            취소
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors flex items-center"
-                        >
-                            {loading ? '처리중...' : (initialData ? '수정하기' : '등록하기')}
-                        </button>
+                        <ModalFooter
+                            onClose={onClose}
+                            loading={loading}
+                            submitType="submit"
+                            submitText={initialData ? '수정하기' : '등록하기'}
+                        />
                     </div>
                 </form>
-            </div>
 
             {showCropper && originalImageSrc && (
                 <ImageCropper
@@ -679,6 +627,6 @@ export function AdvertisementModal({ onClose, onSuccess, initialData }: Advertis
                     onCancel={handleCropCancel}
                 />
             )}
-        </div>
+        </ModalWrapper>
     );
 }

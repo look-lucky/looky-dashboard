@@ -1,4 +1,5 @@
 import { Upload, FileSpreadsheet, Loader2, AlertCircle, Download, Users } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useRef, useEffect } from 'react';
 import { AdminPartnershipService } from '../../shared/api/services/AdminPartnershipService';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
@@ -86,13 +87,15 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
-            alert('업로드가 완료되었습니다.');
+            toast.success('업로드가 완료되었습니다.');
             onSuccess();
-        } catch (err: any) {
+        } catch (err) {
             console.error('Upload Error:', err);
-            
+
             // API에서 발생한 상세 에러 메시지 추출
-            const responseData = err.body || err.response?.data;
+            type ApiErrorBody = { data?: { message?: string }; message?: string };
+            const apiErr = err as { body?: ApiErrorBody; response?: { data?: ApiErrorBody } };
+            const responseData = apiErr.body || apiErr.response?.data;
             const apiMessage = responseData?.data?.message || responseData?.message;
             
             if (apiMessage) {
@@ -107,7 +110,7 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
 
     const handleDownloadTemplate = async () => {
         if (!universityId) {
-            alert('대학을 선택해주세요.');
+            toast.error('대학을 선택해주세요.');
             return;
         }
 
@@ -131,7 +134,7 @@ export function PartnershipUpload({ universityId, onSuccess }: PartnershipUpload
             link.remove();
         } catch (err) {
             console.error('Failed to download template', err);
-            alert('템플릿 다운로드 실패');
+            toast.error('템플릿 다운로드 실패');
         } finally {
             setLoadingTemplate(false);
         }

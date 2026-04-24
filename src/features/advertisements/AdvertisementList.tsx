@@ -1,4 +1,5 @@
-import { Edit2, Trash2, Calendar, ExternalLink, Search, ArrowUpDown } from 'lucide-react';
+import { Edit2, Trash2, Calendar, ExternalLink, ArrowUpDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AdminAdvertisementService } from '../../shared/api/services/AdminAdvertisementService';
 import type { AdminAdvertisementResponse } from '../../shared/api/models/AdminAdvertisementResponse';
@@ -7,6 +8,10 @@ type AdvertisementType = 'POPUP' | 'BANNER' | 'FLOATING';
 type AdvertisementStatus = 'SCHEDULED' | 'ACTIVE' | 'INACTIVE' | 'ENDED';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import { AdvertisementOrderModal } from './AdvertisementOrderModal';
+import { Pagination } from '../../shared/components/Pagination';
+import { SearchInput } from '../../shared/components/SearchInput';
+import { formatDate } from '../../shared/utils/date';
+import { usePaginatedQuery } from '../../shared/hooks/usePaginatedQuery';
 
 interface AdvertisementListProps {
     refreshTrigger: number;
@@ -56,50 +61,28 @@ const TABS: { value: '' | AdvertisementType; label: string }[] = [
 ];
 
 export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListProps) {
-    const [ads, setAds] = useState<AdminAdvertisementResponse[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'' | AdvertisementType>('');
     const [statusFilter, setStatusFilter] = useState<'' | AdvertisementStatus>('');
     const [showOrderModal, setShowOrderModal] = useState(false);
-    // orgId 를 univId 와 매핑 (단과대/학과를 대학별로 그룹화하기 위함)
     const [orgUnivMap, setOrgUnivMap] = useState<Record<number, number>>({});
     const fetchedUnivIdsRef = useRef<Set<number>>(new Set());
+
+    const fetchAds = useCallback(
+        (page: number, size: number) =>
+            AdminAdvertisementService.getAdvertisements({ page, size }, activeTab || undefined, statusFilter || undefined),
+        [activeTab, statusFilter],
+    );
+
+    const { items: ads, loading, page, setPage, totalPages, totalElements, pageSize, refetch } = usePaginatedQuery<AdminAdvertisementResponse>({
+        fetchFn: fetchAds,
+        refreshTrigger,
+        resetDeps: [activeTab, statusFilter],
+    });
 
     const filteredAds = ads.filter(ad =>
         ad.title?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    const fetchAds = useCallback(async () => {
-        setLoading(true);
-        try {
-            const response = await AdminAdvertisementService.getAdvertisements(
-                { page, size: 10 },
-                activeTab || undefined,
-                statusFilter || undefined,
-            );
-            if (response.data) {
-                setAds(response.data.content || []);
-                setTotalPages(response.data.totalPages || 0);
-            }
-        } catch (error) {
-            console.error('Failed to fetch advertisements', error);
-            setAds([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [page, activeTab, statusFilter]);
-
-    useEffect(() => {
-        void fetchAds();
-    }, [refreshTrigger, fetchAds]);
-
-    // 탭/필터 변경 시 첫 페이지로 이동
-    useEffect(() => {
-        setPage(0);
-    }, [activeTab, statusFilter]);
 
     // ads가 바뀌면 targetUniversities 기준으로 org→univ 매핑 fetch
     useEffect(() => {
@@ -125,20 +108,11 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
         if (!confirm('정말 삭제하시겠습니까?')) return;
         try {
             await AdminAdvertisementService.deleteAdvertisement(id);
-            void fetchAds();
+            void refetch();
         } catch (error) {
             console.error(error);
-            alert('광고 삭제에 실패했습니다.');
+            toast.error('광고 삭제에 실패했습니다.');
         }
-    };
-
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-        });
     };
 
     if (loading && ads.length === 0) {
@@ -175,16 +149,11 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
 
             {/* 검색 및 필터 */}
             <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <div className="relative flex-1">
-                    <input
-                        type="text"
-                        placeholder="광고 제목 검색..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-                    />
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                </div>
+                <SearchInput
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="광고 제목 검색..."
+                />
                 <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as '' | AdvertisementStatus)}
@@ -286,7 +255,7 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                                                 <span className="text-gray-300">전체 대학</span>
                                             )}
                                             <span className="text-xs text-gray-400 mt-0.5">
-                                                {ad.targetGender === ('MALE' as any) ? '남성' : ad.targetGender === ('FEMALE' as any) ? '여성' : '전체 성별'}
+                                                {String(ad.targetGender) === 'MALE' ? '남성' : String(ad.targetGender) === 'FEMALE' ? '여성' : '전체 성별'}
                                             </span>
                                         </div>
                                     </td>
@@ -326,33 +295,18 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                     onClose={() => setShowOrderModal(false)}
                     onSuccess={() => {
                         setShowOrderModal(false);
-                        void fetchAds();
+                        void refetch();
                     }}
                 />
             )}
 
-            {/* 페이지네이션 */}
-            {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-4">
-                    <button
-                        onClick={() => setPage(p => Math.max(0, p - 1))}
-                        disabled={page === 0}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        이전
-                    </button>
-                    <span className="px-3 py-1">
-                        {page + 1} / {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                        disabled={page === totalPages - 1}
-                        className="px-3 py-1 border rounded disabled:opacity-50"
-                    >
-                        다음
-                    </button>
-                </div>
-            )}
+            <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalElements={totalElements}
+                onPageChange={setPage}
+            />
         </div>
     );
 }

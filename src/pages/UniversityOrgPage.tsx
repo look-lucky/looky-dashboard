@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
 import clsx from 'clsx';
 import { UniversityList } from '../features/universities/UniversityList';
@@ -58,7 +59,7 @@ export function UniversityOrgPage() {
 
     const handleOrgCreate = () => {
         if (!selectedUniversity?.id) {
-            alert('먼저 대학을 선택해주세요.');
+            toast.error('먼저 대학을 선택해주세요.');
             return;
         }
         setEditingOrg(null);

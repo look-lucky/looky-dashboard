@@ -1,4 +1,5 @@
 import { Edit2, Trash2, School } from 'lucide-react';
+import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { AdminUniversityService } from '../../shared/api/services/AdminUniversityService';
 import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
@@ -43,7 +44,7 @@ export function UniversityList({ refreshTrigger, onEdit, onSelect, selectedId }:
             fetchUniversities();
         } catch (error) {
             console.error(error);
-            alert('대학 삭제에 실패했습니다.');
+            toast.error('대학 삭제에 실패했습니다.');
         }
     };
 
