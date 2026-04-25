@@ -122,10 +122,11 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setSubtitle(initialData.subtitle || '');
             setDescription(initialData.description || '');
             setPlace(initialData.place || '');
-            const initialTargetUniversities = ((initialData as AdminEventResponse & { targetUniversities?: TargetUniversityInfo[] }).targetUniversities ?? []);
+            const legacyInitialData = initialData as AdminEventResponse & { universityId?: number; targetUniversity?: TargetUniversityInfo };
+            const initialTargetUniversities = initialData.targetUniversities ?? [];
             const initialUniversityIds = initialTargetUniversities.length > 0
                 ? initialTargetUniversities.map((u) => u.id!).filter((id) => id != null)
-                : [initialData.universityId ?? initialData.targetUniversity?.id].filter((id): id is number => id != null);
+                : [legacyInitialData.universityId ?? legacyInitialData.targetUniversity?.id].filter((id): id is number => id != null);
             setTargetUniversityIds(initialUniversityIds);
             setSelectedTypes(initialData.eventTypes as EventType[] || []);
             setLatitude(initialData.latitude || 37.5665);

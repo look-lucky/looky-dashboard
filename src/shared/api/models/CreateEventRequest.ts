@@ -43,9 +43,13 @@ export type CreateEventRequest = {
      */
     place: string;
     /**
-     * 대학교 ID (null이면 모든 학교 대상)
+     * 대상 대학 ID 목록 (null이면 모든 대학 대상)
      */
-    universityId?: number | null;
+    targetUniversityIds?: Array<number | null> | null;
+    /**
+     * 대상 조직 ID 목록 (COLLEGE / DEPARTMENT, 하위 조직은 상위 조직과 함께 지정해야 함)
+     */
+    targetOrganizationIds?: Array<number | null> | null;
     /**
      * 배너 이미지 URL
      */

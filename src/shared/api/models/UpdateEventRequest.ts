@@ -5,9 +5,9 @@
 import type { JsonNullableDouble } from './JsonNullableDouble';
 import type { JsonNullableEventStatus } from './JsonNullableEventStatus';
 import type { JsonNullableListEventType } from './JsonNullableListEventType';
+import type { JsonNullableListLong } from './JsonNullableListLong';
 import type { JsonNullableListString } from './JsonNullableListString';
 import type { JsonNullableLocalDateTime } from './JsonNullableLocalDateTime';
-import type { JsonNullableLong } from './JsonNullableLong';
 import type { JsonNullableString } from './JsonNullableString';
 /**
  * 이벤트 수정 요청
@@ -23,7 +23,8 @@ export type UpdateEventRequest = {
     startDateTime?: JsonNullableLocalDateTime;
     endDateTime?: JsonNullableLocalDateTime;
     status?: JsonNullableEventStatus;
-    universityId?: JsonNullableLong;
+    targetUniversityIds?: JsonNullableListLong;
+    targetOrganizationIds?: JsonNullableListLong;
     bannerImageUrl?: JsonNullableString;
     imageUrls?: JsonNullableListString;
 };

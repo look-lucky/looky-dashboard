@@ -2,9 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { TargetOrganizationInfo } from './TargetOrganizationInfo';
+import type { TargetUniversityInfo } from './TargetUniversityInfo';
 export type EventResponse = {
     id?: number;
-    universityId?: number;
     title?: string;
     description?: string;
     subtitle?: string;
@@ -18,6 +19,8 @@ export type EventResponse = {
     bannerImageUrl?: string;
     imageUrls?: Array<string>;
     createdAt?: string;
+    targetUniversities?: Array<TargetUniversityInfo>;
+    targetOrganizations?: Array<TargetOrganizationInfo>;
 };
 export namespace EventResponse {
     export enum status {

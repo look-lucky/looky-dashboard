@@ -96,11 +96,11 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex flex-wrap gap-1">
-                                        {(event.universityId == null) && (
-                                            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
-                                                모든 학교
+                                        {(event.targetUniversities || []).map((university) => (
+                                            <span key={university.id} className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
+                                                {university.name}
                                             </span>
-                                        )}
+                                        ))}
                                         {(event.eventTypes || []).map(type => (
                                             <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium flex items-center">
                                                 <Tag className="w-3 h-3 mr-1" /> {type}
