@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
 import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
@@ -8,6 +8,7 @@ import type { UniversityResponse } from '../../shared/api/models/UniversityRespo
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
 import type { UpdateEventRequest } from '../../shared/api/models/UpdateEventRequest';
 import type { TargetOrganizationInfo } from '../../shared/api/models/TargetOrganizationInfo';
+import type { TargetUniversityInfo } from '../../shared/api/models/TargetUniversityInfo';
 import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
@@ -24,6 +25,7 @@ interface EventModalProps {
 
 type EventType = 'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP';
 type EventTargetRequestFields = {
+    targetUniversityIds?: Array<number | null> | null;
     targetOrganizationIds?: Array<number | null> | null;
 };
 
@@ -45,10 +47,9 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [subtitle, setSubtitle] = useState('');
     const [description, setDescription] = useState('');
     const [place, setPlace] = useState('');
-    const [universityId, setUniversityId] = useState<number | null>(selectedUniversityId);
     const [universities, setUniversities] = useState<UniversityResponse[]>(contextUniversities);
-    const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
-    const [organizationsLoading, setOrganizationsLoading] = useState(false);
+    const [organizationsByUniv, setOrganizationsByUniv] = useState<Record<number, OrganizationResponse[]>>({});
+    const [targetUniversityIds, setTargetUniversityIds] = useState<number[]>(selectedUniversityId ? [selectedUniversityId] : []);
     const [targetOrganizationIds, setTargetOrganizationIds] = useState<number[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
     const [latitude, setLatitude] = useState<number>(37.5665);
@@ -67,12 +68,20 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
-    const syncOrganizationTargets = (nextIds: number[], orgs = organizations) => {
-        const orgById = new Map(
-            orgs
-                .filter((org) => org.id != null)
-                .map((org) => [org.id as number, org]),
-        );
+    const fetchedUnivIds = useRef<Set<number>>(new Set());
+
+    const syncOrganizationTargets = useCallback((
+        nextIds: number[],
+        orgsByUniv: Record<number, OrganizationResponse[]> = organizationsByUniv,
+        activeUniversityIds: number[] = targetUniversityIds,
+    ) => {
+        const activeUniversityIdSet = new Set(activeUniversityIds);
+        const allowedOrganizations = Object.entries(orgsByUniv)
+            .filter(([univId]) => activeUniversityIdSet.has(Number(univId)))
+            .flatMap(([, orgs]) => orgs)
+            .filter((org) => org.id != null);
+
+        const orgById = new Map(allowedOrganizations.map((org) => [org.id as number, org]));
         const normalizedIds = new Set(nextIds.filter((id) => orgById.has(id)));
 
         for (const id of [...normalizedIds]) {
@@ -87,11 +96,15 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
         }
 
         return [...normalizedIds];
-    };
+    }, [organizationsByUniv, targetUniversityIds]);
 
-    const updateOrganizationTargets = (updater: (prev: number[]) => number[]) => {
-        setTargetOrganizationIds((prev) => syncOrganizationTargets(updater(prev)));
-    };
+    const updateOrganizationTargets = useCallback((
+        updater: (prev: number[]) => number[],
+        universityIds = targetUniversityIds,
+        orgMap = organizationsByUniv,
+    ) => {
+        setTargetOrganizationIds((prev) => syncOrganizationTargets(updater(prev), orgMap, universityIds));
+    }, [organizationsByUniv, syncOrganizationTargets, targetUniversityIds]);
 
     useEffect(() => {
         setUniversities(contextUniversities);
@@ -99,7 +112,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
 
     useEffect(() => {
         if (!initialData && selectedUniversityId) {
-            setUniversityId(selectedUniversityId);
+            setTargetUniversityIds([selectedUniversityId]);
         }
     }, [initialData, selectedUniversityId]);
 
@@ -109,7 +122,11 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setSubtitle(initialData.subtitle || '');
             setDescription(initialData.description || '');
             setPlace(initialData.place || '');
-            setUniversityId(initialData.universityId ?? initialData.targetUniversity?.id ?? null);
+            const initialTargetUniversities = ((initialData as AdminEventResponse & { targetUniversities?: TargetUniversityInfo[] }).targetUniversities ?? []);
+            const initialUniversityIds = initialTargetUniversities.length > 0
+                ? initialTargetUniversities.map((u) => u.id!).filter((id) => id != null)
+                : [initialData.universityId ?? initialData.targetUniversity?.id].filter((id): id is number => id != null);
+            setTargetUniversityIds(initialUniversityIds);
             setSelectedTypes(initialData.eventTypes as EventType[] || []);
             setLatitude(initialData.latitude || 37.5665);
             setLongitude(initialData.longitude || 126.9780);
@@ -125,40 +142,31 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     }, [initialData]);
 
     useEffect(() => {
-        if (!universityId) {
-            setOrganizations([]);
-            setTargetOrganizationIds([]);
-            return;
-        }
+        targetUniversityIds.forEach((univId) => {
+            if (fetchedUnivIds.current.has(univId)) return;
+            fetchedUnivIds.current.add(univId);
+            PublicOrganizationService.getOrganizations(univId)
+                .then((response) => {
+                    const nextOrganizations = (response.data || []).filter((org) =>
+                        org.category === OrganizationResponse.category.COLLEGE ||
+                        org.category === OrganizationResponse.category.DEPARTMENT
+                    );
+                    setOrganizationsByUniv((prev) => ({
+                        ...prev,
+                        [univId]: nextOrganizations,
+                    }));
+                })
+                .catch((error) => {
+                    fetchedUnivIds.current.delete(univId);
+                    console.error('Failed to fetch organizations', error);
+                    toast.error('단과대/학과 정보를 불러오지 못했습니다.');
+                });
+        });
+    }, [targetUniversityIds]);
 
-        let active = true;
-        setOrganizationsLoading(true);
-        PublicOrganizationService.getOrganizations(universityId)
-            .then((response) => {
-                if (!active) return;
-                const nextOrganizations = (response.data || []).filter((org) =>
-                    org.category === OrganizationResponse.category.COLLEGE ||
-                    org.category === OrganizationResponse.category.DEPARTMENT
-                );
-                setOrganizations(nextOrganizations);
-                setTargetOrganizationIds((prev) => syncOrganizationTargets(prev, nextOrganizations));
-            })
-            .catch((error) => {
-                if (!active) return;
-                console.error('Failed to fetch organizations', error);
-                toast.error('단과대/학과 정보를 불러오지 못했습니다.');
-            })
-            .finally(() => {
-                if (active) {
-                    setOrganizationsLoading(false);
-                }
-            });
-
-        return () => {
-            active = false;
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [universityId]);
+    useEffect(() => {
+        setTargetOrganizationIds((prev) => syncOrganizationTargets(prev, organizationsByUniv, targetUniversityIds));
+    }, [organizationsByUniv, syncOrganizationTargets, targetUniversityIds]);
 
     const handleBannerFiles = (files: File[]) => {
         if (files.length > 0) {
@@ -246,7 +254,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     subtitle: subtitle || undefined,
                     description,
                     place,
-                    universityId,
                     eventTypes: selectedTypes,
                     latitude,
                     longitude,
@@ -254,6 +261,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+                    targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
                     targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                 } as unknown as UpdateEventRequest & EventTargetRequestFields;
                 await AdminEventService.updateEvent(initialData.id, requestData);
@@ -264,7 +272,6 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     subtitle: subtitle || undefined,
                     description,
                     place,
-                    universityId,
                     eventTypes: selectedTypes,
                     latitude,
                     longitude,
@@ -272,6 +279,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+                    targetUniversityIds: targetUniversityIds.length > 0 ? targetUniversityIds : null,
                     targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                 };
                 await AdminEventService.createEvent(requestData);
@@ -419,11 +427,11 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setUniversityId(null);
+                                        setTargetUniversityIds([]);
                                         setTargetOrganizationIds([]);
                                     }}
                                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                                        universityId == null
+                                        targetUniversityIds.length === 0
                                             ? 'bg-blue-600 text-white border-blue-600'
                                             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                                     }`}
@@ -432,14 +440,27 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                                 </button>
                                 {universities.filter((u) => u.id != null).map((uni) => {
                                     const uniId = uni.id as number;
-                                    const selected = universityId === uniId;
+                                    const selected = targetUniversityIds.includes(uniId);
                                     return (
                                         <button
                                             key={uniId}
                                             type="button"
                                             onClick={() => {
-                                                setUniversityId(selected ? null : uniId);
-                                                setTargetOrganizationIds([]);
+                                                if (selected) {
+                                                    const nextUniversityIds = targetUniversityIds.filter((id) => id !== uniId);
+                                                    setTargetUniversityIds(nextUniversityIds);
+                                                    updateOrganizationTargets(
+                                                        (prev) => {
+                                                            const orgIds = new Set((organizationsByUniv[uniId] || []).flatMap((org) => org.id != null ? [org.id] : []));
+                                                            return prev.filter((id) => !orgIds.has(id));
+                                                        },
+                                                        nextUniversityIds,
+                                                    );
+                                                } else {
+                                                    const nextUniversityIds = [...targetUniversityIds, uniId];
+                                                    setTargetUniversityIds(nextUniversityIds);
+                                                    updateOrganizationTargets((prev) => prev, nextUniversityIds);
+                                                }
                                             }}
                                             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
                                                 selected
@@ -455,105 +476,110 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             </div>
                         </div>
 
-                        {universityId != null && (
+                        {targetUniversityIds.length > 0 && (
                             <div className="space-y-2">
                                 <label className="block text-xs font-medium text-gray-600">단과대 / 학과</label>
-                                <div className="rounded-lg border border-gray-100 bg-white px-3 py-2">
-                                    <p className="text-xs text-gray-400 mb-1.5 font-medium">
-                                        {universities.find((uni) => uni.id === universityId)?.name ?? ''}
-                                    </p>
-                                    {organizationsLoading ? (
-                                        <span className="text-xs text-gray-300">로딩 중...</span>
-                                    ) : organizations.length === 0 ? (
-                                        <span className="text-xs text-gray-300">등록된 단과대/학과가 없습니다.</span>
-                                    ) : (
-                                        <div className="flex flex-wrap gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => setTargetOrganizationIds([])}
-                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                                                    targetOrganizationIds.length === 0
-                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                전체
-                                            </button>
-                                            <div className="flex flex-col gap-3">
-                                                {organizations
-                                                    .filter((org) => org.category === OrganizationResponse.category.COLLEGE)
-                                                    .map((college) => {
-                                                        const collegeId = college.id as number;
-                                                        const collegeSelected = targetOrganizationIds.includes(collegeId);
-                                                        const collegeDepartments = organizations.filter((department) =>
-                                                            department.category === OrganizationResponse.category.DEPARTMENT &&
-                                                            department.parentId === collegeId
-                                                        );
+                                {targetUniversityIds.map((univId) => {
+                                    const univName = universities.find((uni) => uni.id === univId)?.name ?? '';
+                                    const organizations = (organizationsByUniv[univId] || []).filter((org) => org.id != null);
+                                    const colleges = organizations.filter((org) => org.category === OrganizationResponse.category.COLLEGE);
+                                    const departments = organizations.filter((org) => org.category === OrganizationResponse.category.DEPARTMENT);
+                                    const selectedCollegeIds = colleges
+                                        .map((college) => college.id as number)
+                                        .filter((collegeId) => targetOrganizationIds.includes(collegeId));
+                                    const noneSelected = selectedCollegeIds.length === 0 && departments.every((department) => !targetOrganizationIds.includes(department.id as number));
+                                    const collegeIds = new Set(colleges.map((college) => college.id));
+                                    const hasUnlinkedDepartments = departments.some((department) => !department.parentId || !collegeIds.has(department.parentId));
 
-                                                        return (
-                                                            <div key={collegeId} className="flex flex-col gap-1.5 p-2 rounded-lg border border-gray-100 bg-gray-50/50">
-                                                                <div className="flex">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            if (collegeSelected) {
-                                                                                updateOrganizationTargets((prev) => prev.filter((id) => id !== collegeId && !collegeDepartments.some((department) => department.id === id)));
-                                                                            } else {
-                                                                                updateOrganizationTargets((prev) => [...prev, collegeId]);
-                                                                            }
-                                                                        }}
-                                                                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                                                                            collegeSelected
-                                                                                ? 'bg-blue-600 text-white border-blue-600'
-                                                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                                                        }`}
-                                                                    >
-                                                                        {college.name}
-                                                                    </button>
-                                                                </div>
-                                                                {collegeSelected && collegeDepartments.length > 0 && (
-                                                                    <div className="flex flex-wrap gap-1.5 ml-3 pl-3 border-l-2 border-gray-200 mt-1">
-                                                                        {collegeDepartments.map((department) => {
-                                                                            const departmentId = department.id as number;
-                                                                            const departmentSelected = targetOrganizationIds.includes(departmentId);
-                                                                            return (
-                                                                                <button
-                                                                                    key={departmentId}
-                                                                                    type="button"
-                                                                                    onClick={() => {
-                                                                                        if (departmentSelected) {
-                                                                                            updateOrganizationTargets((prev) => prev.filter((id) => id !== departmentId));
-                                                                                        } else {
-                                                                                            updateOrganizationTargets((prev) => [...prev, collegeId, departmentId]);
-                                                                                        }
-                                                                                    }}
-                                                                                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border ${
-                                                                                        departmentSelected
-                                                                                            ? 'bg-blue-500 text-white border-blue-500'
-                                                                                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                                                                                    }`}
-                                                                                >
-                                                                                    {department.name}
-                                                                                </button>
-                                                                            );
-                                                                        })}
+                                    return (
+                                        <div key={univId} className="rounded-lg border border-gray-100 bg-white px-3 py-2">
+                                            <p className="text-xs text-gray-400 mb-1.5 font-medium">{univName}</p>
+                                            {organizations.length === 0 ? (
+                                                <span className="text-xs text-gray-300">로딩 중...</span>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            updateOrganizationTargets((prev) => prev.filter((id) => !organizations.some((org) => org.id === id)));
+                                                        }}
+                                                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                            noneSelected
+                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        전체
+                                                    </button>
+                                                    <div className="flex flex-col gap-3">
+                                                        {colleges.map((college) => {
+                                                            const collegeId = college.id as number;
+                                                            const collegeSelected = targetOrganizationIds.includes(collegeId);
+                                                            const collegeDepartments = departments.filter((department) => department.parentId === collegeId);
+
+                                                            return (
+                                                                <div key={collegeId} className="flex flex-col gap-1.5 p-2 rounded-lg border border-gray-100 bg-gray-50/50">
+                                                                    <div className="flex">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                if (collegeSelected) {
+                                                                                    updateOrganizationTargets((prev) => prev.filter((id) => id !== collegeId && !collegeDepartments.some((department) => department.id === id)));
+                                                                                } else {
+                                                                                    updateOrganizationTargets((prev) => [...prev, collegeId]);
+                                                                                }
+                                                                            }}
+                                                                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                                                collegeSelected
+                                                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                                            }`}
+                                                                        >
+                                                                            {college.name}
+                                                                        </button>
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                {organizations.some((org) =>
-                                                    org.category === OrganizationResponse.category.DEPARTMENT &&
-                                                    !organizations.some((college) => college.id === org.parentId)
-                                                ) && (
-                                                    <p className="text-[11px] text-amber-600">
-                                                        연결된 단과대학이 없는 학과는 선택 대상에서 제외됩니다.
-                                                    </p>
-                                                )}
-                                            </div>
+                                                                    {collegeSelected && collegeDepartments.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1.5 ml-3 pl-3 border-l-2 border-gray-200 mt-1">
+                                                                            {collegeDepartments.map((department) => {
+                                                                                const departmentId = department.id as number;
+                                                                                const departmentSelected = targetOrganizationIds.includes(departmentId);
+                                                                                return (
+                                                                                    <button
+                                                                                        key={departmentId}
+                                                                                        type="button"
+                                                                                        onClick={() => {
+                                                                                            if (departmentSelected) {
+                                                                                                updateOrganizationTargets((prev) => prev.filter((id) => id !== departmentId));
+                                                                                            } else {
+                                                                                                updateOrganizationTargets((prev) => [...prev, collegeId, departmentId]);
+                                                                                            }
+                                                                                        }}
+                                                                                        className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border ${
+                                                                                            departmentSelected
+                                                                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                                                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                                                        }`}
+                                                                                    >
+                                                                                        {department.name}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        {hasUnlinkedDepartments && (
+                                                            <p className="text-[11px] text-amber-600">
+                                                                연결된 단과대학이 없는 학과는 선택 대상에서 제외됩니다.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
