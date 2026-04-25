@@ -2,16 +2,19 @@ import { X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { AdminEventService } from '../../shared/api/services/AdminEventService';
-import { PublicUniversityService } from '../../shared/api/services/PublicUniversityService';
+import { PublicOrganizationService } from '../../shared/api/services/PublicOrganizationService';
 import type { AdminEventResponse } from '../../shared/api/models/AdminEventResponse';
 import type { UniversityResponse } from '../../shared/api/models/UniversityResponse';
 import type { CreateEventRequest } from '../../shared/api/models/CreateEventRequest';
 import type { UpdateEventRequest } from '../../shared/api/models/UpdateEventRequest';
+import type { TargetOrganizationInfo } from '../../shared/api/models/TargetOrganizationInfo';
+import { OrganizationResponse } from '../../shared/api/models/OrganizationResponse';
 import { uploadImage, uploadImages } from '../../shared/utils/uploadImage';
 import { ImageCropper } from '../../shared/components/ImageCropper';
 import { ModalWrapper, ModalFooter } from '../../shared/components/ModalWrapper';
 import { formatDateForInput } from '../../shared/utils/date';
 import { ImageDropZone } from '../../shared/components/ImageDropZone';
+import { useUniversity } from '../../shared/contexts/UniversityContext';
 
 interface EventModalProps {
     onClose: () => void;
@@ -20,6 +23,9 @@ interface EventModalProps {
 }
 
 type EventType = 'SCHOOL_EVENT' | 'STUDENT_EVENT' | 'FOOD_EVENT' | 'FLEA_MARKET' | 'PERFORMANCE' | 'BRAND_POPUP';
+type EventTargetRequestFields = {
+    targetOrganizationIds?: Array<number | null> | null;
+};
 
 const EVENT_TYPES: { value: EventType; label: string }[] = [
     { value: 'SCHOOL_EVENT', label: '학교 주관 이벤트' },
@@ -31,6 +37,7 @@ const EVENT_TYPES: { value: EventType; label: string }[] = [
 ];
 
 export function EventModal({ onClose, onSuccess, initialData }: EventModalProps) {
+    const { selectedUniversityId, universities: contextUniversities } = useUniversity();
     const [loading, setLoading] = useState(false);
 
     // Form States
@@ -38,8 +45,11 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [subtitle, setSubtitle] = useState('');
     const [description, setDescription] = useState('');
     const [place, setPlace] = useState('');
-    const [universityId, setUniversityId] = useState<number | null>(null);
-    const [universities, setUniversities] = useState<UniversityResponse[]>([]);
+    const [universityId, setUniversityId] = useState<number | null>(selectedUniversityId);
+    const [universities, setUniversities] = useState<UniversityResponse[]>(contextUniversities);
+    const [organizations, setOrganizations] = useState<OrganizationResponse[]>([]);
+    const [organizationsLoading, setOrganizationsLoading] = useState(false);
+    const [targetOrganizationIds, setTargetOrganizationIds] = useState<number[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
     const [latitude, setLatitude] = useState<number>(37.5665);
     const [longitude, setLongitude] = useState<number>(126.9780);
@@ -57,6 +67,42 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
     const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
+    const syncOrganizationTargets = (nextIds: number[], orgs = organizations) => {
+        const orgById = new Map(
+            orgs
+                .filter((org) => org.id != null)
+                .map((org) => [org.id as number, org]),
+        );
+        const normalizedIds = new Set(nextIds.filter((id) => orgById.has(id)));
+
+        for (const id of [...normalizedIds]) {
+            const org = orgById.get(id);
+            if (!org || org.category !== OrganizationResponse.category.DEPARTMENT || !org.parentId) {
+                continue;
+            }
+
+            if (orgById.has(org.parentId)) {
+                normalizedIds.add(org.parentId);
+            }
+        }
+
+        return [...normalizedIds];
+    };
+
+    const updateOrganizationTargets = (updater: (prev: number[]) => number[]) => {
+        setTargetOrganizationIds((prev) => syncOrganizationTargets(updater(prev)));
+    };
+
+    useEffect(() => {
+        setUniversities(contextUniversities);
+    }, [contextUniversities]);
+
+    useEffect(() => {
+        if (!initialData && selectedUniversityId) {
+            setUniversityId(selectedUniversityId);
+        }
+    }, [initialData, selectedUniversityId]);
+
     useEffect(() => {
         if (initialData) {
             setTitle(initialData.title || '');
@@ -69,24 +115,50 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             setLongitude(initialData.longitude || 126.9780);
             setStartDateTime(formatDateForInput(initialData.startDateTime || ''));
             setEndDateTime(formatDateForInput(initialData.endDateTime || ''));
+            setTargetOrganizationIds((initialData.targetOrganizations ?? []).map((o: TargetOrganizationInfo) => o.id!).filter((id) => id != null));
             const existingBanner = initialData.bannerImageUrl || null;
             const existingImgs = initialData.imageUrls || [];
             setExistingBannerUrl(existingBanner);
             setExistingImageUrls(existingImgs);
             setPreviewUrls(existingImgs);
         }
-
-        const fetchUniversities = async () => {
-            try {
-                const response = await PublicUniversityService.getUniversities();
-                setUniversities(response.data || []);
-            } catch (error) {
-                console.error('Failed to fetch universities', error);
-            }
-        };
-
-        fetchUniversities();
     }, [initialData]);
+
+    useEffect(() => {
+        if (!universityId) {
+            setOrganizations([]);
+            setTargetOrganizationIds([]);
+            return;
+        }
+
+        let active = true;
+        setOrganizationsLoading(true);
+        PublicOrganizationService.getOrganizations(universityId)
+            .then((response) => {
+                if (!active) return;
+                const nextOrganizations = (response.data || []).filter((org) =>
+                    org.category === OrganizationResponse.category.COLLEGE ||
+                    org.category === OrganizationResponse.category.DEPARTMENT
+                );
+                setOrganizations(nextOrganizations);
+                setTargetOrganizationIds((prev) => syncOrganizationTargets(prev, nextOrganizations));
+            })
+            .catch((error) => {
+                if (!active) return;
+                console.error('Failed to fetch organizations', error);
+                toast.error('단과대/학과 정보를 불러오지 못했습니다.');
+            })
+            .finally(() => {
+                if (active) {
+                    setOrganizationsLoading(false);
+                }
+            });
+
+        return () => {
+            active = false;
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [universityId]);
 
     const handleBannerFiles = (files: File[]) => {
         if (files.length > 0) {
@@ -182,11 +254,12 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
-                } as unknown as UpdateEventRequest;
+                    targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
+                } as unknown as UpdateEventRequest & EventTargetRequestFields;
                 await AdminEventService.updateEvent(initialData.id, requestData);
                 toast.success('이벤트가 수정되었습니다.');
             } else {
-                const requestData: CreateEventRequest = {
+                const requestData: CreateEventRequest & EventTargetRequestFields = {
                     title,
                     subtitle: subtitle || undefined,
                     description,
@@ -199,6 +272,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                     endDateTime: new Date(endDateTime).toISOString().slice(0, 19),
                     bannerImageUrl,
                     imageUrls: allImageUrls.length > 0 ? allImageUrls : undefined,
+                    targetOrganizationIds: targetOrganizationIds.length > 0 ? targetOrganizationIds : null,
                 };
                 await AdminEventService.createEvent(requestData);
                 toast.success('이벤트가 등록되었습니다.');
@@ -323,36 +397,165 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
                             />
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">장소 *</label>
+                        <input
+                            type="text"
+                            value={place}
+                            onChange={(e) => setPlace(e.target.value)}
+                            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                            placeholder="장소 입력 (예: 학생회관 1층)"
+                            required
+                        />
+                    </div>
+
+                    {/* 타겟 설정 */}
+                    <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-sm font-medium text-gray-700">타겟 설정 <span className="text-gray-400 font-normal">(미설정 시 전체 대상, 단과대/학과 복수 선택 가능)</span></p>
+
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">장소 *</label>
-                            <input
-                                type="text"
-                                value={place}
-                                onChange={(e) => setPlace(e.target.value)}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                                placeholder="장소 입력 (예: 학생회관 1층)"
-                                required
-                            />
+                            <label className="block text-xs font-medium text-gray-600 mb-1.5">대학</label>
+                            <div className="flex flex-wrap gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setUniversityId(null);
+                                        setTargetOrganizationIds([]);
+                                    }}
+                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                        universityId == null
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    전체
+                                </button>
+                                {universities.filter((u) => u.id != null).map((uni) => {
+                                    const uniId = uni.id as number;
+                                    const selected = universityId === uniId;
+                                    return (
+                                        <button
+                                            key={uniId}
+                                            type="button"
+                                            onClick={() => {
+                                                setUniversityId(selected ? null : uniId);
+                                                setTargetOrganizationIds([]);
+                                            }}
+                                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                selected
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            {uni.name}
+                                        </button>
+                                    );
+                                })}
+                                {universities.length === 0 && <span className="text-xs text-gray-400">로딩 중...</span>}
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">대상 대학교 *</label>
-                            <select
-                                value={universityId === null ? '' : universityId}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setUniversityId(val === '' ? null : parseInt(val));
-                                }}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
-                            >
-                                <option value="">모든 학교</option>
-                                {universities.map((uni) => (
-                                    <option key={uni.id} value={uni.id}>
-                                        {uni.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+
+                        {universityId != null && (
+                            <div className="space-y-2">
+                                <label className="block text-xs font-medium text-gray-600">단과대 / 학과</label>
+                                <div className="rounded-lg border border-gray-100 bg-white px-3 py-2">
+                                    <p className="text-xs text-gray-400 mb-1.5 font-medium">
+                                        {universities.find((uni) => uni.id === universityId)?.name ?? ''}
+                                    </p>
+                                    {organizationsLoading ? (
+                                        <span className="text-xs text-gray-300">로딩 중...</span>
+                                    ) : organizations.length === 0 ? (
+                                        <span className="text-xs text-gray-300">등록된 단과대/학과가 없습니다.</span>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setTargetOrganizationIds([])}
+                                                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                    targetOrganizationIds.length === 0
+                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                전체
+                                            </button>
+                                            <div className="flex flex-col gap-3">
+                                                {organizations
+                                                    .filter((org) => org.category === OrganizationResponse.category.COLLEGE)
+                                                    .map((college) => {
+                                                        const collegeId = college.id as number;
+                                                        const collegeSelected = targetOrganizationIds.includes(collegeId);
+                                                        const collegeDepartments = organizations.filter((department) =>
+                                                            department.category === OrganizationResponse.category.DEPARTMENT &&
+                                                            department.parentId === collegeId
+                                                        );
+
+                                                        return (
+                                                            <div key={collegeId} className="flex flex-col gap-1.5 p-2 rounded-lg border border-gray-100 bg-gray-50/50">
+                                                                <div className="flex">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            if (collegeSelected) {
+                                                                                updateOrganizationTargets((prev) => prev.filter((id) => id !== collegeId && !collegeDepartments.some((department) => department.id === id)));
+                                                                            } else {
+                                                                                updateOrganizationTargets((prev) => [...prev, collegeId]);
+                                                                            }
+                                                                        }}
+                                                                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
+                                                                            collegeSelected
+                                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                                        }`}
+                                                                    >
+                                                                        {college.name}
+                                                                    </button>
+                                                                </div>
+                                                                {collegeSelected && collegeDepartments.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1.5 ml-3 pl-3 border-l-2 border-gray-200 mt-1">
+                                                                        {collegeDepartments.map((department) => {
+                                                                            const departmentId = department.id as number;
+                                                                            const departmentSelected = targetOrganizationIds.includes(departmentId);
+                                                                            return (
+                                                                                <button
+                                                                                    key={departmentId}
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        if (departmentSelected) {
+                                                                                            updateOrganizationTargets((prev) => prev.filter((id) => id !== departmentId));
+                                                                                        } else {
+                                                                                            updateOrganizationTargets((prev) => [...prev, collegeId, departmentId]);
+                                                                                        }
+                                                                                    }}
+                                                                                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors border ${
+                                                                                        departmentSelected
+                                                                                            ? 'bg-blue-500 text-white border-blue-500'
+                                                                                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                                                    }`}
+                                                                                >
+                                                                                    {department.name}
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                {organizations.some((org) =>
+                                                    org.category === OrganizationResponse.category.DEPARTMENT &&
+                                                    !organizations.some((college) => college.id === org.parentId)
+                                                ) && (
+                                                    <p className="text-[11px] text-amber-600">
+                                                        연결된 단과대학이 없는 학과는 선택 대상에서 제외됩니다.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="space-y-4">
                         <div>
