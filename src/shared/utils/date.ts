@@ -9,5 +9,5 @@ export function formatDate(dateStr: string): string {
 
 export function formatDateForInput(dateString: string): string {
     if (!dateString) return '';
-    return new Date(dateString).toISOString().slice(0, 16);
+    return dateString.slice(0, 16);
 }
