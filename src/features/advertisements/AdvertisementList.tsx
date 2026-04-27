@@ -115,10 +115,6 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
         }
     };
 
-    if (loading && ads.length === 0) {
-        return <div className="p-8 text-center text-gray-500">로딩 중...</div>;
-    }
-
     return (
         <div className="space-y-4">
             {/* 탭 */}
@@ -165,8 +161,12 @@ export function AdvertisementList({ refreshTrigger, onEdit }: AdvertisementListP
                 </select>
             </div>
 
-            {filteredAds.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">등록된 광고가 없습니다.</div>
+            {loading && ads.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">로딩 중...</div>
+            ) : filteredAds.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                    {searchTerm || statusFilter ? '검색 결과가 없습니다.' : '등록된 광고가 없습니다.'}
+                </div>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">

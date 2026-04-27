@@ -46,14 +46,6 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
         }
     };
 
-    if (loading && events.length === 0) {
-        return <div className="p-8 text-center text-gray-500">로딩 중...</div>;
-    }
-
-    if (events.length === 0) {
-        return <div className="p-8 text-center text-gray-500">등록된 이벤트가 없습니다.</div>;
-    }
-
     return (
         <div className="space-y-4">
             <SearchInput
@@ -62,6 +54,14 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                 placeholder="이벤트 제목 또는 설명 검색..."
             />
 
+            {loading && events.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">로딩 중...</div>
+            ) : events.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                    {debouncedSearchTerm ? '검색 결과가 없습니다.' : '등록된 이벤트가 없습니다.'}
+                </div>
+            ) : (
+                <>
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -139,7 +139,8 @@ export function EventList({ refreshTrigger, onEdit }: EventListProps) {
                 totalElements={totalElements}
                 onPageChange={setPage}
             />
-
+                </>
+            )}
         </div>
     );
 }
