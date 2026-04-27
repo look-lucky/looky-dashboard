@@ -137,6 +137,7 @@ export function EventModal({ onClose, onSuccess, initialData }: EventModalProps)
             const existingBanner = initialData.bannerImageUrl || null;
             const existingImgs = initialData.imageUrls || [];
             setExistingBannerUrl(existingBanner);
+            setBannerPreviewUrl(existingBanner);
             setExistingImageUrls(existingImgs);
             setPreviewUrls(existingImgs);
         }
